@@ -54,29 +54,28 @@ function headGeo(f) {
       const fr = Math.min(1, Z / .055) ** 2, G = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2 + (dy / sy) ** 2));
       const sm = (a, b, v) => { const t = THREE.MathUtils.clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
       let d = 0;
-      d += (f ? .004 : .0085) * G(X, Y - .043, f ? .05 : .058, .012);              // arco de las cejas
+      d += (f ? .003 : .0055) * G(X, Y - .043, f ? .05 : .058, .012);              // arco de las cejas
       d -= .0025 * G(X, Y - .03, .012, .008);                                       // entrecejo
       for (const sx of [-1, 1]) {
-        d -= (f ? .008 : .0105) * G(X - sx * .034, Y - .022, .02, .0135);            // cuencas (ojos hundidos, mirada adulta)
+        d -= (f ? .0055 : .007) * G(X - sx * .034, Y - .022, .02, .0135);            // cuencas (ojos hundidos, mirada adulta)
         d += (f ? .007 : .006) * G(X - sx * .05, Y + .012, .019, .014);              // pómulos
-        if (!f) d -= .004 * G(X - sx * .05, Y + .045, .016, .02);                    // mejillas hundidas
         d -= .004 * G(X - sx * .064, Y - .03, .014, .03);                            // sienes
-        d += .0035 * G(X - sx * .0115, Y + .023, .0065, .0055);                      // aletas de la nariz
+        d += .0022 * G(X - sx * .011, Y + .023, .0065, .0055);                      // aletas de la nariz
         d -= .002 * G(X - sx * .028, Y + .054, .005, .006);                          // comisuras de la boca
       }
       // nariz: puente que crece hasta la punta y baja suavemente (sin cortes)
       const nt = sm(.034, -.016, Y), below = Y < -.016 ? Math.exp(-(((Y + .016) / .0065) ** 2)) : 1;
-      d += (.0025 + (f ? .0155 : .019) * nt ** 1.4) * below * G(X, 0, (f ? .0058 : .0066) + .0055 * nt, 1);
-      d += (f ? .003 : .0038) * G(X, Y + .017, .009, .007);                          // punta redondeada
+      d += (.002 + (f ? .011 : .0135) * nt ** 1.4) * below * G(X, 0, (f ? .0058 : .0066) + .0055 * nt, 1);
+      d += (f ? .0028 : .0032) * G(X, Y + .017, .0095, .0075);                          // punta redondeada
       d -= .0022 * G(X, Y + .036, .006, .006);                                      // surco del labio (filtrum)
       d += .0048 * G(X, Y + .045, .024, .0048);                                     // labio superior
       d += .0062 * G(X, Y + .056, .021, .006);                                      // labio inferior
       d -= .003 * G(X, Y + .067, .02, .0045);                                       // hendidura bajo el labio
-      d += (f ? .0055 : .0095) * G(X, Y + .088, f ? .018 : .026, .012);             // mentón
+      d += (f ? .0045 : .0068) * G(X, Y + .088, f ? .018 : .026, .012);             // mentón
       Z += d * fr;
     }
     // mandíbula marcada en hombres, rostro más fino en mujeres
-    if (ny < -.3 && ny > -.98) { const t = Math.sin((-ny - .3) / .68 * Math.PI); X *= f ? 1 - .02 * t : 1 + .045 * t; }
+    if (ny < -.3 && ny > -.98) { const t = Math.sin((-ny - .3) / .68 * Math.PI); X *= f ? 1 - .025 * t : 1 + .022 * t; }
     // cara un poco más larga (adulta, no infantil)
     if (ny < 0) Y *= 1.06;
     p.setXYZ(i, X, Y, Z);
@@ -165,8 +164,8 @@ function faceTexture(o) {
     // barba de pocos días en hombres adultos
     if (o.gender !== 'f' && !o.beard) {
       const [bx3, by3] = faceUV(0, -.075, W, H);
-      for (let i = 0; i < 2600; i++) { const a = Math.random() * Math.PI, rr = 40 + Math.random() * 90; const x = bx3 + Math.cos(a) * rr * 1.6 * (Math.random() < .5 ? -1 : 1) * .6, y = by3 + Math.sin(a) * rr * .45 - 10; g.fillStyle = 'rgba(40,25,18,.10)'; g.fillRect(x, y, 1.4, 1.4); }
-      const [ux, uy] = faceUV(0, -.04, W, H); for (let i = 0; i < 500; i++) { g.fillStyle = 'rgba(40,25,18,.10)'; g.fillRect(ux + (Math.random() - .5) * 64, uy + Math.random() * 8, 1.3, 1.3); }
+      for (let i = 0; i < 2600; i++) { const a = Math.random() * Math.PI, rr = 40 + Math.random() * 90; const x = bx3 + Math.cos(a) * rr * 1.6 * (Math.random() < .5 ? -1 : 1) * .6, y = by3 + Math.sin(a) * rr * .45 - 10; g.fillStyle = 'rgba(40,25,18,.045)'; g.fillRect(x, y, 1.4, 1.4); }
+      const [ux, uy] = faceUV(0, -.04, W, H); for (let i = 0; i < 500; i++) { g.fillStyle = 'rgba(40,25,18,.045)'; g.fillRect(ux + (Math.random() - .5) * 64, uy + Math.random() * 8, 1.3, 1.3); }
     }
     if (o.age > 0) {
       g.strokeStyle = 'rgba(60,30,20,.25)'; g.lineWidth = 2;
@@ -282,7 +281,7 @@ export function createHuman(opt = {}) {
     pel.scale.set(1.0, .5, .6); pel.position.z = -.02;
     // mujer: cintura fina y caderas más anchas; hombre: cadera recta y normal
     const sg = latheUp(F ? [[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.168, .03], [.146, .08], [.14, .09]]
-                         : [[.152, -.36], [.163, -.3], [.176, -.2], [.182, -.11], [.18, -.04], [.172, .03], [.164, .08], [.16, .09]], 48);
+                         : [[.13, -.2], [.158, -.16], [.172, -.1], [.176, -.04], [.17, .03], [.162, .08], [.158, .09]], 48);
     const sp = sg.attributes.position;
     for (let i = 0; i < sp.count; i++) {
       const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), r0 = Math.hypot(x, z) || 1;
@@ -290,7 +289,7 @@ export function createHuman(opt = {}) {
       else sp.setZ(i, z * (F ? .9 : .86));
     }
     sg.computeVertexNormals();
-    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, F ? .66 : .7);
+    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, F ? .66 : .62);
   }
   let skirt = null;
   if (skirtOn) {
@@ -372,10 +371,10 @@ export function createHuman(opt = {}) {
   // Ojos (esfera con iris pintado) y párpados
   const eyes = [];
   for (const s of [-1, 1]) {
-    const ER = F ? .0138 : .0132, ez = .0842;
+    const ER = F ? .0145 : .0137, ez = .0848;
     const e = mesh(SG(ER, 28, 18), eyeM, head, s * .034, .026, ez); eyes.push(e);
     if (!lowQ) {
-    const lidU = mesh(SG(ER + .0008, 22, 10, 0, Math.PI * 2, 0, Math.PI * .38), faceM, head, s * .034, .026, ez); lidU.rotation.x = .05;
+    const lidU = mesh(SG(ER + .0008, 22, 10, 0, Math.PI * 2, 0, Math.PI * .33), faceM, head, s * .034, .026, ez); lidU.rotation.x = 0;
     const lidD = mesh(SG(ER + .0006, 22, 10, 0, Math.PI * 2, Math.PI * .8, Math.PI * .2), faceM, head, s * .034, .026, ez); lidD.rotation.x = -.08;
     const lashM = new THREE.MeshBasicMaterial({ color: 0x120a08 });
     const lash = mesh(new THREE.TorusGeometry(ER * .9, F ? .0017 : .001, 4, 20, Math.PI), lashM, head, s * .034, .026 + ER * .46, ez); lash.rotation.set(Math.PI / 2 + .12, 0, 0);
