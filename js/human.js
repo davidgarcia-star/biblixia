@@ -38,7 +38,13 @@ function torsoGeo(f) {
   const prof = f
     ? [[0, -.04], [.14, -.02], [.135, .08], [.125, .17], [.15, .27], [.165, .35], [.165, .41], [.15, .46], [.1, .5], [.055, .52], [0, .525]]
     : [[0, -.04], [.15, -.02], [.155, .06], [.15, .16], [.165, .26], [.185, .36], [.19, .42], [.17, .47], [.11, .51], [.06, .53], [0, .535]];
-  return latheUp(prof, 32);
+  const g = latheUp(prof, 32);
+  if (f) { // vientre plano en la mujer
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const y = p.getY(i), z = p.getZ(i); if (z > 0) { const k = Math.exp(-(((y - .1) / .1) ** 2)); p.setZ(i, z * (1 - .16 * k)); } }
+    g.computeVertexNormals();
+  }
+  return g;
 }
 // Cráneo ovalado con mentón: radio .1, escala (.9, 1.14, 1.02)
 function headGeo(f) {
@@ -68,8 +74,8 @@ function headGeo(f) {
       d += (.002 + (f ? .011 : .0135) * nt ** 1.4) * below * G(X, 0, (f ? .0058 : .0066) + .0055 * nt, 1);
       d += (f ? .0028 : .0032) * G(X, Y + .017, .0095, .0075);                          // punta redondeada
       d -= .0022 * G(X, Y + .036, .006, .006);                                      // surco del labio (filtrum)
-      d += .0048 * G(X, Y + .045, .024, .0048);                                     // labio superior
-      d += .0062 * G(X, Y + .056, .021, .006);                                      // labio inferior
+      d += (f ? .0048 : .003) * G(X, Y + .045, .024, .0048);                                     // labio superior
+      d += (f ? .0062 : .004) * G(X, Y + .056, .021, .006);                                      // labio inferior
       d -= .003 * G(X, Y + .067, .02, .0045);                                       // hendidura bajo el labio
       d += (f ? .0045 : .0068) * G(X, Y + .088, f ? .018 : .026, .012);             // mentón
       Z += d * fr;
@@ -141,19 +147,20 @@ function faceTexture(o) {
     // luz en el puente de la nariz y la frente; sombra suave en la mandíbula
     { const [bx2, by2] = faceUV(0, .0, W, H); const hl = g.createLinearGradient(bx2 - 8, 0, bx2 + 8, 0); hl.addColorStop(0, 'rgba(255,240,225,0)'); hl.addColorStop(.5, 'rgba(255,240,225,.16)'); hl.addColorStop(1, 'rgba(255,240,225,0)'); g.fillStyle = hl; g.fillRect(bx2 - 8, by2 - 40, 16, 60); }
     // labios
-    const [mx, my] = faceUV(0, -.055, W, H), mw = o.gender === 'f' ? 33 : 32, lo = o.gender === 'f' ? 14 : 11, up = 5;
+    const [mx, my] = faceUV(0, -.055, W, H), mw = o.gender === 'f' ? 33 : 29, lo = o.gender === 'f' ? 14 : 7, up = o.gender === 'f' ? 5 : 3;
     const lg = g.createLinearGradient(0, my - 10, 0, my + lo);
     lg.addColorStop(0, o.lip); lg.addColorStop(1, shade(o.lip.length ? o.lip : '#b4505a', 1.15));
     g.fillStyle = lg;
     g.beginPath();
     g.moveTo(mx - mw, my - up);
-    g.bezierCurveTo(mx - mw * .6, my - 9, mx - mw * .25, my - 12, mx, my - 7);
-    g.bezierCurveTo(mx + mw * .25, my - 12, mx + mw * .6, my - 9, mx + mw, my - up);
+    const bow = o.gender === 'f' ? 1 : .45;
+    g.bezierCurveTo(mx - mw * .6, my - 9 * bow, mx - mw * .25, my - 12 * bow, mx, my - 7 * bow);
+    g.bezierCurveTo(mx + mw * .25, my - 12 * bow, mx + mw * .6, my - 9 * bow, mx + mw, my - up);
     g.bezierCurveTo(mx + mw * .5, my + lo, mx - mw * .5, my + lo, mx - mw, my - up);
     g.fill();
     g.strokeStyle = 'rgba(70,20,25,.65)'; g.lineWidth = 2.2;
     g.beginPath(); g.moveTo(mx - mw - 2, my - up - 1); g.quadraticCurveTo(mx, my + 5, mx + mw + 2, my - up - 1); g.stroke();
-    g.fillStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.ellipse(mx + 4, my + 5, mw * .3, 2.5, 0, 0, 7); g.fill();
+    if (o.gender === 'f') { g.fillStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.ellipse(mx + 4, my + 5, mw * .3, 2.5, 0, 0, 7); g.fill(); }
     // hoyuelos de la sonrisa
     g.strokeStyle = 'rgba(120,60,45,.25)'; g.lineWidth = 2;
     for (const s of [-1, 1]) { g.beginPath(); g.arc(mx + s * (mw + 6), my - up - 2, 5, s > 0 ? -.6 : Math.PI - .9, s > 0 ? .9 : Math.PI + .6); g.stroke(); }
@@ -240,7 +247,7 @@ export function createHuman(opt = {}) {
   Q = o.detail ?? 1;
   const lowQ = Q < .5; // figuras lejanas: sin dedos, párpados ni pestañas
   const F = o.gender === 'f', robe = o.outfit === 'robe';
-  o.lip = F ? shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb04a5a), .55).getHex(), .9) : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb05050), .35).getHex(), .82); o.brow = shade(o.hairColor, .9);
+  o.lip = F ? shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb04a5a), .55).getHex(), .9) : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0x8a4a40), .2).getHex(), .86); o.brow = shade(o.hairColor, .9);
   if (o.beard && !o.beard.color) o.beard.color = o.hairColor;
 
   const skin = new THREE.MeshPhysicalMaterial({ color: o.skin, roughness: .5, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
@@ -280,7 +287,7 @@ export function createHuman(opt = {}) {
     // Pantalón: cadera lisa y natural (sin bulto adelante) que une la cintura con los muslos
     pel.scale.set(1.0, .5, .6); pel.position.z = -.02;
     // mujer: cintura fina y caderas más anchas; hombre: cadera recta y normal
-    const sg = latheUp(F ? [[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.168, .03], [.146, .08], [.14, .09]]
+    const sg = latheUp(F ? [[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.165, .03], [.138, .08], [.13, .09]]
                          : [[.13, -.2], [.158, -.16], [.172, -.1], [.176, -.04], [.17, .03], [.162, .08], [.158, .09]], 48);
     const sp = sg.attributes.position;
     for (let i = 0; i < sp.count; i++) {
@@ -317,7 +324,7 @@ export function createHuman(opt = {}) {
   // Torso
   const spine = grp(hips, 0, .06, 0);
   const torso = mesh(torsoGeo(F), robe ? robeM : topM, spine); torso.scale.set(1, 1, .66);
-  if (F && !robe) { for (const s of [-1, 1]) { const b = mesh(SG(.07, 18, 14), topM, spine, s * .045, .32, .05); b.scale.set(1.1, .85, .6); } }
+  if (F && !robe) { for (const s of [-1, 1]) { const b = mesh(SG(.078, 20, 16), topM, spine, s * .046, .325, .056); b.scale.set(1.08, .9, .7); } }
   if (TS === 'abrigo' && !F) mesh(new THREE.BoxGeometry(.2, .1, .035), top2, spine, 0, .14, .112).rotation.x = -.15;
   if (TS === 'abrigo') {
     mesh(new THREE.CylinderGeometry(.003, .003, .12, 6), gold, spine, -.025, .4, .12).rotation.x = .2;
