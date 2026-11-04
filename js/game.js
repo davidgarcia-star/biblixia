@@ -1183,6 +1183,37 @@ function blocked(x, z, y) {
    CÁMARA Y ENTRADA
    ========================================================= */
 const cam = { yaw: 0, pitch: .3, dist: 5.6, cur: new THREE.Vector3(), look: new THREE.Vector3() };
+/* ---------- Vistas de cámara: cerca, normal, lejos y primera persona (solo se ven las manos) ---------- */
+const CAM_MODES = [{ id: 'normal', name: '🎥 Vista normal', dist: 5.6 }, { id: 'cerca', name: '🔎 Vista de cerca', dist: 3.2 }, { id: 'lejos', name: '🔭 Vista de lejos', dist: 10 }, { id: 'fp', name: '👀 Primera persona', dist: 0 }];
+let camMode = 0;
+try { camMode = Math.max(0, CAM_MODES.findIndex(m => m.id === localStorage.getItem('biblixia_cam'))); } catch (e) {}
+const fpArms = new THREE.Group(); camera.add(fpArms); scene.add(camera); fpArms.visible = false;
+function buildFpArms() {
+  fpArms.clear();
+  const o = playerOpts(), skinM = new THREE.MeshStandardMaterial({ color: o.skin, roughness: .55 });
+  const sleeveCol = o.outfit === 'robe' ? (o.skins ? o.skin : o.robe) : o.top;
+  const shortS = o.outfit === 'robe' ? !!o.skins : ['camiseta', 'camisa'].includes(o.topStyle);
+  const sleeveM = new THREE.MeshStandardMaterial({ color: sleeveCol, roughness: .85 });
+  for (const sx of [-1, 1]) {
+    const arm = new THREE.Group(); arm.position.set(sx * .27, -.3, -.42); arm.rotation.set(-1.25, sx * .18, sx * -.12);
+    const fore = new THREE.Mesh(new THREE.CylinderGeometry(.04, .048, .34, 14), shortS ? skinM : sleeveM); fore.position.y = -.12; arm.add(fore);
+    const hg = new THREE.Group(); hg.rotation.y = Math.PI; arm.add(hg); // se ve el dorso de la mano
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 12), skinM); hand.scale.set(.8, 1.15, .55); hand.position.y = .09; hg.add(hand);
+    for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0105, .045, 3, 6), skinM); f.position.set((k - 1.5) * .019, .16, .012); f.rotation.x = .35; hg.add(f); }
+    const th = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .04, 3, 6), skinM); th.position.set(sx * .045, .1, .02); th.rotation.z = -sx * .7; hg.add(th);
+    if (!shortS) { const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .03, 14), sleeveM); cuff.position.y = .03; arm.add(cuff); }
+    arm.userData.sx = sx; fpArms.add(arm);
+  }
+  fpArms.traverse(m => { if (m.isMesh) { m.castShadow = false; m.renderOrder = 10; } });
+}
+function setCamMode(i, announce = true) {
+  camMode = (i + CAM_MODES.length) % CAM_MODES.length; const m = CAM_MODES[camMode];
+  if (m.id !== 'fp') { cam.dist = m.dist; fpArms.visible = false; camera.near = .3; } else { buildFpArms(); camera.near = .05; }
+  camera.updateProjectionMatrix();
+  try { localStorage.setItem('biblixia_cam', m.id); } catch (e) {}
+  if (announce) { toast(m.name, '#ffd34d'); sound.click(); }
+}
+const isFP = () => CAM_MODES[camMode].id === 'fp' && !P.driving && state !== 'menu' && state !== 'creator';
 const keys = {};
 let jumpPressed = false, takePressed = false, runToggle = false, look = { id: null, x: 0, y: 0 }, joy = { id: null, x: 0, y: 0, active: false };
 addEventListener('keydown', e => {
@@ -1196,6 +1227,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyT' && !keys.KeyT) takePressed = true;
   if (e.code === 'KeyR' && !keys.KeyR && state === 'play') toggleTurbo();
   if (e.code === 'KeyC' && !keys.KeyC && state === 'play') toggleRun();
+  if (e.code === 'KeyV' && !keys.KeyV && (state === 'play' || state === 'pause')) setCamMode(camMode + 1);
   if (e.code === 'KeyQ' && !keys.KeyQ && state === 'play') swapPair();
   if (e.code === 'KeyM' && !keys.KeyM) { if (state === 'play') openMap(); else if (state === 'map') closeMap(); }
   keys[e.code] = true;
@@ -1276,6 +1308,7 @@ async function startLevelNow(i) {
   world = buildWorld(L);
   goal = L.goal; collected = 0; timeLeft = L.time;
   P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null;
+  setCamMode(camMode, false);
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
   const nuevos = VERSES.map((_, k) => k).filter(k => !save.verses.includes(k)).sort(() => Math.random() - .5);
@@ -1527,6 +1560,7 @@ function update(dt) {
     let d = want - P.heading; d = Math.atan2(Math.sin(d), Math.cos(d));
     P.heading += d * Math.min(1, dt * 12);
   }
+  if (isFP()) { let d2 = cam.yaw - P.heading; d2 = Math.atan2(Math.sin(d2), Math.cos(d2)); if (mag === 0 || iz > 0) P.heading += d2 * Math.min(1, dt * 14); }
   const vx = Math.sin(P.heading) * P.speed, vz = Math.cos(P.heading) * P.speed;
 
   fwdHeld = !!(keys.KeyW || keys.ArrowUp);
@@ -1580,6 +1614,13 @@ function update(dt) {
   if (P.inv > 0) P.inv -= dt;
   for (const c of world.cars) {
     c.obj.position.x += c.dir * c.speed * dt;
+    // sonido: el carro se oye al pasar cerca y pita si el jugador está delante
+    {
+      const now = performance.now() / 1000, dx = P.pos.x - c.obj.position.x, dz = P.pos.z - c.obj.position.z, dd = Math.hypot(dx, dz), ahead = dx * c.dir > 0;
+      const right = Math.cos(cam.yaw) * -dx + Math.sin(cam.yaw) * dz; // izquierda/derecha respecto a la cámara
+      if (dd < 22 && ahead && dd > 6 && (!c.passT || now - c.passT > 4)) { c.passT = now; sound.carPass(Math.min(.9, 9 / dd), THREE.MathUtils.clamp(-right / 10, -1, 1), c.dir); }
+      if (ahead && Math.abs(dz) < 3.2 && dx * c.dir < 14 && P.pos.y < 2 && (!c.honkT || now - c.honkT > 3.5)) { c.honkT = now; sound.honk(Math.min(1, 12 / Math.max(3, dd)), THREE.MathUtils.clamp(-right / 10, -1, 1)); }
+    }
     if (c.obj.position.x > c.max) c.obj.position.x = c.min; if (c.obj.position.x < c.min) c.obj.position.x = c.max;
     if (P.inv <= 0 && P.pos.y < 1.5 && Math.abs(P.pos.x - c.obj.position.x) < 2.2 + RADIUS && Math.abs(P.pos.z - c.obj.position.z) < .95 + RADIUS) {
       P.inv = 1.6; timeLeft = Math.max(0, timeLeft - 5); sound.hurt(); toast('−5 s');
@@ -1647,6 +1688,20 @@ function spawnBurst(p) {
 
 const tmpV2 = new THREE.Vector3();
 function updateCamera(dt, follow = true) {
+  if (isFP()) {
+    // ojos del jugador: la mirada sigue el giro del ratón / dedo
+    const eye = tmpV2.set(P.pos.x + Math.sin(cam.yaw) * .12, P.pos.y + 1.6 + Math.sin(human.phase * 2) * Math.min(.03, P.speed * .004), P.pos.z + Math.cos(cam.yaw) * .12);
+    camera.position.copy(eye); cam.cur.copy(eye);
+    const look = -(cam.pitch - .3) * 1.5;
+    camera.lookAt(eye.x + Math.sin(cam.yaw) * Math.cos(look), eye.y + Math.sin(look), eye.z + Math.cos(cam.yaw) * Math.cos(look));
+    cam.look.copy(eye);
+    fpArms.visible = true;
+    const sw = Math.sin(human.phase) * Math.min(1, P.speed / 6);
+    for (const a of fpArms.children) { const sx = a.userData.sx; a.position.y = -.3 + sw * sx * .03; a.position.z = -.42 + sw * sx * .05; a.rotation.x = P.climb ? -2.6 : -1.25 + sw * sx * .12; }
+    if (camera.fov !== 70) { camera.fov = 70; camera.updateProjectionMatrix(); }
+    return;
+  }
+  fpArms.visible = false;
   const head = tmpV.set(P.pos.x, P.pos.y + 1.55, P.pos.z);
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
   const want = new THREE.Vector3(head.x - Math.sin(cam.yaw) * cam.dist * cp, head.y + cam.dist * sp, head.z - Math.cos(cam.yaw) * cam.dist * cp);
@@ -1789,7 +1844,7 @@ function loop() {
   // Personaje
   human.root.position.copy(P.pos);
   human.root.rotation.y = state === 'creator' ? t * .8 : P.heading;
-  human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2);
+  human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
   if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1 });
@@ -1958,6 +2013,7 @@ function exitGame() { sound.click(); window.close(); setTimeout(() => { if (!win
 $('btnHome').onclick = goHome; $('btnPauseHome').onclick = goHome;
 $('btnExit').onclick = exitGame; $('btnPauseExit').onclick = exitGame;
 $('btnPause').onclick = () => { sound.click(); pauseGame(); };
+$('btnCam').onclick = () => setCamMode(camMode + 1);
 $('btnMap').onclick = () => { sound.click(); openMap(); }; $('minimap').addEventListener('click', () => openMap());
 $('bigmapClose').onclick = () => { sound.click(); closeMap(); };
 addEventListener('resize', () => { if (state === 'map') drawBigMap(); });

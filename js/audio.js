@@ -150,6 +150,28 @@ export class Sound {
     };
     cry(t, .9, 3400, 1900); cry(t + 1.0, .28, 3000, 2400); cry(t + 1.32, .28, 3000, 2300); cry(t + 1.64, .45, 3100, 2000);
   }
+  // Carro que pasa: motor + llantas, con efecto de acercarse y alejarse
+  carPass(vol, pan, dir = 1) {
+    const a = this.unlock(); if (!a || !this.sfxOn || vol < .02) return;
+    const bus = this._bus(vol, pan), t = a.currentTime, dur = 1.8;
+    const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter();
+    o.type = 'sawtooth'; o2.type = 'square'; o.frequency.setValueAtTime(95, t); o.frequency.linearRampToValueAtTime(70, t + dur); o2.frequency.setValueAtTime(48, t); o2.frequency.linearRampToValueAtTime(36, t + dur);
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(700, t); lp.frequency.linearRampToValueAtTime(1300, t + dur * .45); lp.frequency.linearRampToValueAtTime(500, t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.32, t + dur * .45); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(lp); o2.connect(lp); lp.connect(g).connect(bus); [o, o2].forEach(n => { n.start(t); n.stop(t + dur + .05); });
+    const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = .6; const ng = a.createGain();
+    ng.gain.setValueAtTime(.0001, t); ng.gain.exponentialRampToValueAtTime(.35, t + dur * .45); ng.gain.exponentialRampToValueAtTime(.0001, t + dur); src.connect(bp).connect(ng).connect(bus); src.start(t); src.stop(t + dur + .05);
+  }
+  // Pito / bocina de carro (dos tonos)
+  honk(vol = 1, pan = 0) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const bus = this._bus(.5 * vol, pan), t = a.currentTime;
+    for (const [w, d] of [[0, .22], [.3, .45]]) for (const f of [415, 523]) {
+      const o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(); o.type = 'square'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 2200;
+      g.gain.setValueAtTime(.0001, t + w); g.gain.exponentialRampToValueAtTime(.22, t + w + .02); g.gain.setValueAtTime(.22, t + w + d - .04); g.gain.exponentialRampToValueAtTime(.0001, t + w + d);
+      o.connect(lp).connect(g).connect(bus); o.start(t + w); o.stop(t + w + d + .05);
+    }
+  }
   coin() { this.note(1318, .12, { type: 'triangle', vol: .14 }); this.note(1976, .5, { type: 'triangle', vol: .12, when: .07 }); this.note(2637, .6, { type: 'sine', vol: .05, when: .12 }); }
   talk() { this.note(587, .4, { type: 'sine', vol: .07 }); this.note(880, .6, { type: 'sine', vol: .05, when: .1 }); }
   // Efecto al recibir un regalo: campanitas que suben + destello
