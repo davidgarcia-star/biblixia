@@ -53,3 +53,4 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 ## Compilación (carga rápida)
 El juego se publica empaquetado y comprimido en `js/biblixia.min.js` (un solo archivo, ~3 veces más liviano).
 Después de cambiar cualquier archivo de `js/`, ejecuta `sh build.sh` (necesita [esbuild](https://esbuild.github.io/)) y sube también `js/biblixia.min.js`.
+También se puede compilar con [Bun](https://bun.sh/): `bun build-bun.mjs`.

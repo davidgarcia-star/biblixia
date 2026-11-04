@@ -50,12 +50,17 @@ const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoi
 const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
-// Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde, recargar una sola vez (en vez de quedarse a medio cargar)
+// Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde: guardar y recargar UNA sola vez
+// (antes había dos avisos y uno recargaba siempre, lo que podía dejar el juego recargándose sin parar)
 canvas.addEventListener('webglcontextlost', e => {
   e.preventDefault();
+  try { persist(); } catch (_) {}
   let again = false; try { again = sessionStorage.getItem('bx_reload') === '1'; sessionStorage.setItem('bx_reload', '1'); } catch (_) { again = true; }
-  if (!again) setTimeout(() => location.reload(), 600);
+  const gl = document.getElementById('glLost'); if (gl) gl.classList.remove('hidden');
+  if (!again) setTimeout(() => location.reload(), 1500);
+  else if (gl) gl.querySelector('.sub').textContent = 'Tu teléfono se quedó sin memoria gráfica. Cierra otras apps y vuelve a abrir el juego.';
 }, false);
+canvas.addEventListener('webglcontextrestored', () => { const gl = document.getElementById('glLost'); if (gl) gl.classList.add('hidden'); }, false);
 setTimeout(() => { try { sessionStorage.removeItem('bx_reload'); } catch (_) {} }, 60000);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
@@ -63,8 +68,6 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-// Si el teléfono pierde los gráficos (poca memoria), el juego se recupera solo
-canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); try { persist(); } catch (er) {} const gl = document.getElementById('glLost'); if (gl) gl.classList.remove('hidden'); setTimeout(() => location.reload(), 2500); }, false);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, 2600);
 addEventListener('resize', () => {
@@ -173,7 +176,7 @@ function applyTime(mode) {
   sunDir.copy(T2.stars ? moonDir : skyDir); if (sunDir.y < .34) sunDir.y = .34; sunDir.normalize(); // el sol de la tarde da sombras visibles (no tan largas)
   sun.color.set(T2.sunC); sun.intensity = T2.sunI; hemi.intensity = T2.hemiI; hemi.color.set(T2.hemiS); hemi.groundColor.set(T2.hemiG);
   renderer.toneMappingExposure = T2.exp; scene.fog.color.set(T2.fog); scene.fog.near = T2.fogN; scene.fog.far = T2.fogF;
-  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02); scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
+  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: isTouch ? 128 : 256 }); // en el celular, más liviano scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
   if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else { scene.background = null; sky.visible = true; }
   if (world && world.ark && world.ark.rainbow) world.ark.rainbow.visible = !T2.stars;
   stars.visible = T2.stars; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
@@ -407,10 +410,28 @@ M.sea.onBeforeCompile = sh => {
    MUNDO
    ========================================================= */
 let world = null;
+// Preparar los sombreadores por partes (unos cuantos objetos a la vez) para no congelar la pantalla:
+// en muchos celulares compilar todo de una sola vez bloquea el juego varios segundos.
+async function warmShaders(root, cam) {
+  const seen = new Set(), batch = [];
+  root.traverse(o => { if (!o.material) return; for (const m of [].concat(o.material)) if (m && !seen.has(m)) { seen.add(m); batch.push(o); break; } });
+  const t0 = performance.now(); let tick = performance.now();
+  for (const o of batch) {
+    try {
+      const mats = renderer.compile(o, cam, scene);
+      // esperar a que estén listos (sin la extensión de compilación paralela, esto espera aquí mismo)
+      for (const m of mats) { const pr = renderer.properties.get(m).currentProgram; if (pr && pr.isReady) pr.isReady(); }
+    } catch (e) {}
+    if (performance.now() - tick > 40) { await idle(); tick = performance.now(); }
+    if (performance.now() - t0 > 20000) break;
+  }
+}
+// Pausa breve para que el navegador respire (dibuja la pantalla y atiende los toques) mientras se construye el mundo
+const idle = () => new Promise(r => setTimeout(r, 0));
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), M.asphalt);
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
-function buildWorld(cfg) {
+async function buildWorld(cfg) {
   if (world) { scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.userData.own) [].concat(o.material).forEach(m => { m.map && m.map.dispose(); m.emissiveMap && m.emissiveMap.dispose(); m.dispose(); }); }); }
   const r = rng(cfg.seed);
   const N = cfg.grid, T = N * PITCH + STREET, O = -T / 2;
@@ -475,7 +496,7 @@ function buildWorld(cfg) {
   types[0] = 'casa'; types[1] = 'oficinas'; types[2] = 'iglesia';
   if (!types.includes('plaza')) types[types.length - 1] = 'plaza';
 
-  for (let bi = 0; bi < N; bi++) for (let bj = 0; bj < N; bj++) {
+  for (let bi = 0; bi < N; bi++) { if (bi) await idle(); for (let bj = 0; bj < N; bj++) {
     const x0 = O + bi * PITCH + STREET, z0 = O + bj * PITCH + STREET, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
     const type = types[bi * N + bj];
     W.blocks = W.blocks || []; W.blocks.push([x0, z0, type]);
@@ -554,7 +575,9 @@ function buildWorld(cfg) {
       npcSpots.push([cx, cz - 13], [cx, cz + 13], [cx - 13, cz], [cx + 13, cz]);
     }
   }
+  }
 
+  await idle();
   // Calles: líneas, pasos de cebra, monedas
   for (let i = 0; i <= N; i++) {
     const sc = streetCenters[i];
@@ -592,6 +615,7 @@ function buildWorld(cfg) {
   addBox(O - BEACH - 1400, O - BEACH - 2, O - NZ - 50, O + T + SZ + 50, 999, 0, 'sea'); addBox(O + T + DES, O + T + DES + 50, O - NZ - 50, O + T + SZ + 50, 999);
   addBox(O - BEACH - 60, O + T + DES + 50, O - NZ - 50, O - NZ, 999); addBox(O - BEACH - 60, O + T + DES + 50, O + T + SZ, O + T + SZ + 50, 999);
 
+  await idle();
   // Instanciar faroles
   {
     const pole = new THREE.InstancedMesh(new THREE.CylinderGeometry(.07, .1, 6.5, 10), M.darkMetal, lamps.length);
@@ -610,6 +634,7 @@ function buildWorld(cfg) {
     pole.castShadow = arm.castShadow = true;
     group.add(pole, arm, head);
   }
+  await idle();
   // Instanciar árboles
   {
     const n = trees.length;
@@ -645,6 +670,7 @@ function buildWorld(cfg) {
     group.add(trunk, fol);
   }
 
+  await idle();
   // ===== Desierto con el tabernáculo y el campamento de Israel =====
   {
     const X0 = O + T, tcx = X0 + DES / 2, tcz = 0;
@@ -690,6 +716,7 @@ function buildWorld(cfg) {
     W.treasureSpots = { holy: tab.holyGift, holiest: tab.holiestGift };
   }
 
+  await idle();
   // ===== Al sur: el arca de Noé y el valle de Ela =====
   {
     const Z0 = O + T, Wt = T + DES;
@@ -709,6 +736,7 @@ function buildWorld(cfg) {
     npcSpots.push([O + 30, Z0 + 14], [O + Wt / 2 + 30, Z0 + 20]);
   }
 
+  await idle();
   // ===== Al occidente: la playa, el mar, el muelle y el barco =====
   {
     const SX = O - BEACH, Zc = O + T / 2, Zlen = T + SZ + 120;
@@ -803,6 +831,7 @@ function buildWorld(cfg) {
     W.treasureSpots = Object.assign(W.treasureSpots || {}, { ship: [shipX + 8, pz0, deckY], ship2: [shipX - 2.5, pz0 - 1.6, deckY] });
   }
 
+  await idle();
   // ===== Al norte: lugares bíblicos (algunos se abren al pasar niveles) =====
   {
     const pl = buildPlaces({ group, addBox, blockers, x0: O, x1: O + T + DES, zN: O - NZ, zS: O, unlocked: save.unlocked, rnd: r, levelNames: LEVELS.map(l => l.name) });
@@ -814,10 +843,13 @@ function buildWorld(cfg) {
     plantBiblicalTrees(O + 4, O + T + DES - 4, O - NZ + 6, O - NZ + 14, 18, [], ['cedro', 'olivo', 'palmera']);
   }
 
+  await idle();
   // Vida en la ciudad: peatones, niños, comerciantes, casa del jugador y oficinas
   W.life = buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks: W.blocks, playerName: (save.player && save.player.name) || '', npcSpots });
+  await idle();
   { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); } }
 
+  await idle();
   // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
   {
     const pts = [], free = (x, z) => !colliders.some(c => c.top > .3 && x > c.minX - 1.2 && x < c.maxX + 1.2 && z > c.minZ - 1.2 && z < c.maxZ + 1.2);
@@ -854,6 +886,7 @@ function buildWorld(cfg) {
     }
   }
 
+  await idle();
   // Elegir monedas
   const want = cfg.coins, platN = Math.min(platSpots.length, Math.round(want * cfg.plat * .5));
   const pick = [], spaced = (p, d) => pick.every(q => Math.hypot(q[0] - p[0], q[1] - p[1]) > d);
@@ -893,6 +926,7 @@ function buildWorld(cfg) {
     }
   }
 
+  await idle();
   // Relojes: tómalos para ganar más tiempo (en todos los niveles)
   W.clocks = [];
   {
@@ -923,6 +957,7 @@ function buildWorld(cfg) {
     }
   }
 
+  await idle();
   // Personajes bíblicos
   {
     const defs = forLevel(cfg.idx + 1);
@@ -961,6 +996,7 @@ function buildWorld(cfg) {
     }
   }
 
+  await idle();
   // Autos (solo en calles horizontales para evitar choques entre ellos)
   const carColors = [0xd7261e, 0x1f4fbf, 0xf1f1f1, 0x111215, 0x9aa3ad, 0x0f6d5f, 0xe0a31a];
   for (let k = 0; k < cfg.cars; k++) {
@@ -972,8 +1008,10 @@ function buildWorld(cfg) {
     group.add(car);
     W.cars.push({ obj: car, dir, speed: cfg.carSpeed * (.8 + r() * .4), min: O - 10, max: O + T + 3 });
   }
+  await idle();
   // Unir todas las piezas fijas de la ciudad en pocas mallas (muchas menos llamadas de dibujo)
   { treeGroup.updateMatrixWorld(true); group.add(bakeStatic(treeGroup)); }
+  await idle();
   {
     const S = new THREE.Group();
     for (const o of group.children.slice()) if (o.isMesh && !o.isInstancedMesh && !o.userData.live) S.add(o);
@@ -981,6 +1019,7 @@ function buildWorld(cfg) {
     const baked = bakeStatic(S); group.add(baked);
     W.staticMeshes = S.children.length;
   }
+  await idle();
   // cuerpos móviles con su tamaño
   const BODY_R = { elefante: 1.5, jirafa: .9, camello: 1.1, caballo: .9, oso: .9, cebra: .8, leon: .8, leona: .75, ciervo: .65, oveja: .55, mono: .35, gallo: .25, gallina: .25 };
   W.dyn = [];
@@ -995,6 +1034,7 @@ function buildWorld(cfg) {
   if (W.ark) for (const a of W.ark.lodItems) W.lod.push({ obj: a, range: 110, animal: true });
   if (W.ark) for (const a of W.ark.insideItems) W.lod.push({ obj: a, range: 70 });
   for (const c of W.cars) W.lod.push({ obj: c.obj, range: 170 });
+  await idle();
   W.cull = buildCull(group);
   W.start = new THREE.Vector3(startX, 0, startZ);
   W.startYaw = Math.atan2(-startX, -startZ);
@@ -1419,10 +1459,11 @@ async function startLevel(i) {
   try { await startLevelNow(i); } finally { building = false; ld.classList.add('hidden'); }
 }
 async function startLevelNow(i) {
+  await menuReady; // si el mundo de la portada aún se está construyendo, esperar (no construir dos a la vez)
   lvlIdx = i; L = LEVELS[i];
   // Si el mundo de la portada ya es este nivel (Básico), se reutiliza: no se construye dos veces
   const wkey = worldKey(i);
-  if (!(world && world.key === wkey && !world.used)) { world = buildWorld(L); world.key = wkey; }
+  if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
   P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false;
@@ -1448,7 +1489,7 @@ async function startLevelNow(i) {
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
   camera.updateMatrixWorld(); updateCull(camera.position);
-  try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch (e) {}
+  await warmShaders(scene, camera);
   lastNow = performance.now();
   state = 'play'; ensureMusic();
 }
@@ -1960,6 +2001,7 @@ let lastNow = performance.now(), elapsed = 0; const perf = { acc: 0, n: 0 };
 let mmTimer = 0, lodTimer = 0, worshipT = 0, worshipStep = 0;
 function loop() {
   requestAnimationFrame(loop);
+  if (building) { lastNow = performance.now(); return; }
   const now = performance.now(), raw = (now - lastNow) / 1000, dt = Math.min(raw, .05); lastNow = now; elapsed += dt; const t = elapsed;
   // Resolución automática suave: solo baja un poco si el equipo va lento (nunca quita sombras ni detalle)
   if (!building && (state === 'play' || state === 'menu') && raw < .5) {
@@ -2252,18 +2294,29 @@ renderTimeButtons();
 
 // Carga rápida: la portada aparece al instante y el mundo 3D de fondo se construye justo después
 $('loading').classList.add('hidden');
-const buildMenuWorld = () => {
-  world = buildWorld(LEVELS[0]); world.key = worldKey(0);
+const buildMenuWorld = async () => {
+  const w = await buildWorld(LEVELS[0]); world = w; world.key = worldKey(0);
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
   P.pos.set(world.desert.tcx + 34, 0, world.desert.tcz - 2);
   P.pos.y = 0; P.heading = -1.2;
   lodTimer = 1;
   // Compilar los sombreadores en segundo plano antes del primer cuadro (así la portada no se congela en el celular)
   camera.position.set(P.pos.x + 20, 15, P.pos.z + 20); camera.lookAt(P.pos.x, 2, P.pos.z); camera.updateMatrixWorld(); updateCull(camera.position);
-  let go = false; const start = () => { if (!go) { go = true; loop(); } };
-  try { const pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : null; if (pr) { pr.then(start, start); setTimeout(start, 6000); } else start(); } catch (e) { start(); }
+  await warmShaders(scene, camera);
+  lastNow = performance.now(); loop();
 };
-requestAnimationFrame(() => setTimeout(() => { applyTime(save.time || 'dia'); buildMenuWorld(); }, 30));
+// La portada aparece primero; después, paso a paso: cielo y luz, mundo 3D, sombreadores
+let menuReadyDone;
+const menuReady = new Promise(r => menuReadyDone = r);
+setTimeout(async () => {
+  // primero se prepara el sombreador del cielo (aparte), luego se calcula la luz del cielo
+  try { if (renderer.compileAsync) await Promise.race([renderer.compileAsync(envScene, camera), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
+  await idle();
+  try { applyTime(save.time || 'dia'); } catch (e) {}
+  await idle();
+  try { await buildMenuWorld(); } catch (e) { console.error(e); try { loop(); } catch (_) {} }
+  menuReadyDone();
+}, 60);
 
 // Acceso para pruebas
 window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };
