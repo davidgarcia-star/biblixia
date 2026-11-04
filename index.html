@@ -3,15 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#0b1220">
-<title>BIBLIXIA – ¡Aprende, juega y vive la Biblia!</title>
+<meta name="theme-color" content="#0b0802">
+<title>BIBLIXIA – Juego bíblico 3D | ¡Aprende, juega y vive la Biblia!</title>
+<meta name="description" content="BIBLIXIA es un juego bíblico cristiano en 3D, gratis: recorre el tabernáculo, el arca de Noé y el valle de David y Goliat, recoge monedas con versículos de la Biblia (LBLA) y habla con profetas y apóstoles. Creado por Luis David Esteban García · MIPROAA.">
+<meta name="keywords" content="BIBLIXIA, Biblixia, juego bíblico, juego biblico, juegos bíblicos, juego cristiano, juego de la Biblia, Biblia 3D, tabernáculo, arca de Noé, David y Goliat, profetas, apóstoles, versículos, LBLA, MIPROAA, Luis David Esteban García">
+<meta name="author" content="Luis David Esteban García · MIPROAA">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://davidgarcia-star.github.io/biblixia/">
 <link rel="icon" type="image/png" href="img/logo.png">
-<link rel="apple-touch-icon" href="img/logo.png">
-<meta name="description" content="BIBLIXIA – ¡Aprende, juega y vive la Biblia! Juego bíblico en 3D. MIPROAA Ministerio Profético Ardiendo Por El Avivamiento.">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BIBLIXIA">
+<!-- Vista previa al compartir (WhatsApp, Facebook, X) -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_DO">
+<meta property="og:site_name" content="BIBLIXIA">
+<meta property="og:title" content="BIBLIXIA – Juego bíblico 3D | ¡Aprende, juega y vive la Biblia!">
+<meta property="og:description" content="Juego bíblico cristiano en 3D: el tabernáculo, el arca de Noé, David y Goliat, profetas y apóstoles. ¡Gratis!">
+<meta property="og:url" content="https://davidgarcia-star.github.io/biblixia/">
+<meta property="og:image" content="https://davidgarcia-star.github.io/biblixia/img/og-biblixia.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="BIBLIXIA – ¡Aprende, juega y vive la Biblia!">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BIBLIXIA – Juego bíblico 3D">
+<meta name="twitter:description" content="¡Aprende, juega y vive la Biblia! Tabernáculo, arca de Noé, David y Goliat, profetas y apóstoles.">
+<meta name="twitter:image" content="https://davidgarcia-star.github.io/biblixia/img/og-biblixia.jpg">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "BIBLIXIA",
+  "alternateName": ["Biblixia", "BIBLIXIA – ¡Aprende, juega y vive la Biblia!", "Juego bíblico BIBLIXIA"],
+  "description": "Juego bíblico cristiano en 3D: recorre el tabernáculo, el arca de Noé y el valle de David y Goliat, recoge monedas con versículos de la Biblia (LBLA) y habla con profetas y apóstoles.",
+  "url": "https://davidgarcia-star.github.io/biblixia/",
+  "image": "https://davidgarcia-star.github.io/biblixia/img/og-biblixia.jpg",
+  "inLanguage": "es",
+  "genre": ["Juego bíblico", "Educativo", "Aventura 3D"],
+  "keywords": "juego bíblico, juego cristiano, Biblia, tabernáculo, arca de Noé, David y Goliat",
+  "gamePlatform": ["Navegador web", "Android", "iOS", "PC"],
+  "applicationCategory": "Game",
+  "operatingSystem": "Cualquiera (navegador web)",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Luis David Esteban García" },
+  "publisher": { "@type": "Organization", "name": "MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento", "url": "https://davidgarcia-star.github.io/luisdavidgarcia/" }
+}
+</script>
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">{"imports":{"three":"./js/vendor/three.module.js","three/addons/":"./js/vendor/addons/"}}</script>
 </head>
 <body>
+<noscript>
+  <h1>BIBLIXIA – ¡Aprende, juega y vive la Biblia!</h1>
+  <p>BIBLIXIA es un juego bíblico cristiano en 3D. Recorre una ciudad moderna, el tabernáculo con su atrio, el altar de bronce, el Lugar Santo, el Lugar Santísimo y el arca del pacto; el arca de Noé con los animales y el valle de Ela, donde David enfrenta a Goliat. Recoge monedas con versículos de La Biblia de las Américas y habla con profetas y apóstoles. Para jugar, activa JavaScript.</p>
+  <p>Creado por Luis David Esteban García · MIPROAA Ministerio Profético Ardiendo Por El Avivamiento.</p>
+</noscript>
 <canvas id="game"></canvas>
 
 <div class="topbar" id="topbar">

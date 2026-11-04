@@ -1,0 +1,17 @@
+{
+  "name": "BIBLIXIA – ¡Aprende, juega y vive la Biblia!",
+  "short_name": "BIBLIXIA",
+  "description": "Juego bíblico cristiano en 3D: tabernáculo, arca de Noé, David y Goliat, profetas y apóstoles.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0b0802",
+  "theme_color": "#0b0802",
+  "categories": ["games", "education"],
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
