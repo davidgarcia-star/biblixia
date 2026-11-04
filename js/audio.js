@@ -110,6 +110,38 @@ export class Sound {
       default: voice(300, 250, .5, { formants: [600, 1200], gain: .25 });
     }
   }
+  // Rugido de león: gruñido grave que crece y se apaga, con respiración áspera
+  roar(vol = 1) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const t = a.currentTime + .02, out = a.createGain(); out.gain.value = .9 * vol; out.connect(this.sfx); if (this.rev) out.connect(this.rev);
+    const dist = a.createWaveShaper(), cur = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; cur[i] = Math.tanh(x * 3.2); } dist.curve = cur; dist.connect(out);
+    const env = (g, peak, at, hold, rel, t0) => { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(peak, t0 + at); g.gain.setValueAtTime(peak, t0 + at + hold); g.gain.exponentialRampToValueAtTime(.0001, t0 + at + hold + rel); };
+    const growl = (f0, f1, t0, dur, gain) => {
+      const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+      o.type = 'sawtooth'; o2.type = 'square'; o.frequency.setValueAtTime(f0, t0); o.frequency.linearRampToValueAtTime(f1, t0 + dur * .35); o.frequency.exponentialRampToValueAtTime(f0 * .55, t0 + dur);
+      o2.frequency.setValueAtTime(f0 * .5, t0); o2.frequency.exponentialRampToValueAtTime(f0 * .3, t0 + dur);
+      lfo.frequency.value = 28; lg.gain.value = f1 * .18; lfo.connect(lg).connect(o.frequency);
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t0); lp.frequency.linearRampToValueAtTime(1500, t0 + dur * .35); lp.frequency.exponentialRampToValueAtTime(300, t0 + dur); lp.Q.value = 4;
+      o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(dist); env(g, gain, dur * .25, dur * .25, dur * .5, t0);
+      [o, o2, lfo].forEach(n => { n.start(t0); n.stop(t0 + dur + .1); });
+    };
+    const breath = (t0, dur, gain) => { const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = .8; const g = a.createGain(); src.connect(bp).connect(g).connect(out); env(g, gain, dur * .3, dur * .2, dur * .5, t0); src.start(t0); src.stop(t0 + dur + .1); };
+    growl(95, 180, t, 2.1, .55); breath(t, 2.1, .35); growl(80, 140, t + 2.3, 1.0, .3); breath(t + 2.3, .9, .2);
+  }
+  // Grito de águila: chillidos agudos descendentes con trino
+  eagle(vol = 1) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const t = a.currentTime + .02, out = a.createGain(); out.gain.value = .5 * vol; out.connect(this.sfx); if (this.rev) out.connect(this.rev);
+    const cry = (t0, dur, f0, f1) => {
+      const o = a.createOscillator(), g = a.createGain(), l = a.createOscillator(), lg = a.createGain(), hp = a.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t0); o.frequency.linearRampToValueAtTime(f0 * 1.08, t0 + dur * .15); o.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+      l.frequency.value = 38; lg.gain.value = 160; l.connect(lg).connect(o.frequency);
+      hp.type = 'bandpass'; hp.frequency.value = 3000; hp.Q.value = 1.2; o.connect(hp).connect(g).connect(out);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.5, t0 + .03); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      [o, l].forEach(n => { n.start(t0); n.stop(t0 + dur + .05); });
+    };
+    cry(t, .9, 3400, 1900); cry(t + 1.0, .28, 3000, 2400); cry(t + 1.32, .28, 3000, 2300); cry(t + 1.64, .45, 3100, 2000);
+  }
   coin() { this.note(1318, .12, { type: 'triangle', vol: .14 }); this.note(1976, .5, { type: 'triangle', vol: .12, when: .07 }); this.note(2637, .6, { type: 'sine', vol: .05, when: .12 }); }
   talk() { this.note(587, .4, { type: 'sine', vol: .07 }); this.note(880, .6, { type: 'sine', vol: .05, when: .1 }); }
   // Efecto al recibir un regalo: campanitas que suben + destello
