@@ -1,31 +1,41 @@
-# Monedas de Fe
+# BIBLIXIA – ¡Aprende, juega y vive la Biblia!
 
-Juego de plataformas bíblico: un muñeco camina y salta recogiendo monedas. Cada moneda muestra un versículo de **La Biblia de las Américas (LBLA)**. Hay que recoger las monedas que pide el nivel antes de que se acabe el tiempo.
+Juego bíblico en 3D. Recorre una ciudad moderna, el desierto con el **tabernáculo** y la zona del **arca de Noé** y el **valle de Ela**. Recoge monedas antes de que se acabe el tiempo: cada moneda muestra un versículo de **La Biblia de las Américas (LBLA)**. Habla con profetas, apóstoles y personajes de la Biblia y recibe sus regalos.
 
 Creado por **Luis David Esteban García** · MIPROAA Ministerio Profético Ardiendo Por El Avivamiento.
 
-## Cómo jugar
-- ← → o A / D: caminar · Espacio / ↑ / W: saltar · P o Esc: pausa
-- En el teléfono aparecen botones en la pantalla.
-- El reloj se detiene mientras lees cada versículo.
-- Si caes a un hoyo o tocas las espinas pierdes 5 segundos.
-- Mientras más tiempo te sobre, más estrellas (1 a 3).
-
-## Niveles
-| Nivel | Tiempo | Meta |
+## Controles
+| Acción | Computadora | Teléfono |
 |---|---|---|
-| Básico | 90 s | 50 % de las monedas |
-| Intermedio | 100 s | 60 % (aparecen hoyos) |
-| Avanzado | 110 s | 70 % (espinas y plataformas altas) |
-| Experto | 115 s | 78 % |
-| Master | 120 s | 88 % |
+| Avanzar / retroceder | `W` / `S` o `↑` / `↓` | ▲ / ▼ |
+| Izquierda / derecha | `A` / `D` o `←` / `→` | ◀ / ▶ |
+| Correr | Mantener `↑` o `W` presionada (o `Shift`) | Mantener ▲ o botón CORRER |
+| Saltar | `Espacio` | SALTAR |
+| Tomar regalo / hablar | `T` | TOMAR |
+| Girar la cámara | Arrastrar con el ratón | Arrastrar en la pantalla |
+| Pausa | `P` o `Esc` | ❚❚ |
 
-Los niveles se desbloquean al completar el anterior. El progreso y los versículos descubiertos se guardan en el navegador (sección **Mis versículos**).
+## Contenido
+- **Personaje propio**: jugador o jugadora (con falda), tono de piel, color de ropa y nombre en la espalda (una sola palabra, solo letras, máximo 10).
+- **5 niveles** (Básico, Intermedio, Avanzado, Experto, Master) con tiempo límite y meta de monedas; autos en la calle a partir del nivel 2.
+- **Tabernáculo** (Éxodo 25–27; 30; 36–40), escala 1 codo = 0,5 m: atrio de 100 × 50 codos con 60 columnas, puerta, altar de bronce, fuente, Lugar Santo (mesa de los panes, candelabro, altar del incienso), velo, Lugar Santísimo y arca del pacto con los querubines, columna de nube y campamento de Israel.
+- **Arca de Noé** (Génesis 6–9): 300 × 50 × 30 codos, puerta al costado con rampa, animales de dos en dos, palomas y arcoíris.
+- **David y Goliat** (1 Samuel 17): Goliat con casco de bronce, cota de malla y lanza, el escudero, el ejército filisteo, el arroyo con piedras lisas y David girando su honda.
+- **39 personajes bíblicos** con mensaje, cita y regalo (+10 segundos): Moisés, Noé, David, Samuel, Natán, Elías, Eliseo, Débora, Isaías, Jeremías, Ezequiel, Daniel, los 12 profetas menores, Juan el Bautista, Ana y los apóstoles (Pedro, Andrés, Jacobo, Juan, Felipe, Bartolomé, Tomás, Mateo, Jacobo hijo de Alfeo, Tadeo, Simón el Zelote, Matías y Pablo).
+- **Mi colección**: versículos descubiertos y regalos recibidos (se guardan en el navegador).
+- Barra superior con contador de visitantes, Inicio, Sitio Web y Salir; logo de MIPROAA y redes sociales.
 
 ## Ejecutar
-Es un solo archivo: abre `index.html` en el navegador. Para publicarlo con GitHub Pages: Settings → Pages → rama `main`, carpeta `/`.
+Necesita un servidor web (usa módulos de JavaScript). Con GitHub Pages: *Settings → Pages → rama `main`, carpeta `/`*. En la computadora: `python3 -m http.server` y abrir `http://localhost:8000`.
 
-## Editar versículos
-Están en la lista `VERSES` dentro de `index.html` (texto y referencia).
+## Archivos
+- `index.html`, `css/style.css` – interfaz
+- `js/game.js` – mundo, física, niveles, menús
+- `js/human.js` – personajes 3D (rostro, pelo, ropa, animación)
+- `js/characters.js` – personajes bíblicos, mensajes y regalos
+- `js/tabernacle.js` – el tabernáculo y el campamento
+- `js/scenes.js` – el arca de Noé, los animales, David y Goliat
+- `js/verses.js` – versículos (LBLA)
+- `js/vendor/` – three.js (licencia MIT)
 
-Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman Foundation. Usadas con permiso. www.LBLA.com
+Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman Foundation. Usadas con permiso.
