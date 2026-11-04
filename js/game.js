@@ -163,6 +163,31 @@ const sunGlow = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.set(260, 260, 1); scene.add(sp); return sp;
 })();
+// Bandada de aves que planea en círculos alto en el cielo y aletea de vez en cuando (de día y al atardecer)
+const birds = (() => {
+  const grp = new THREE.Group(), list = [];
+  const mat = new THREE.MeshBasicMaterial({ color: 0x1c1e24, side: THREE.DoubleSide, fog: false });
+  const wing = s => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, .35, 0, 0, -.3, s * 1.6, .05, -.15], 3)); return g; };
+  const gL = wing(-1), gR = wing(1), gB = new THREE.BufferGeometry(); gB.setAttribute('position', new THREE.Float32BufferAttribute([-.12, 0, -.5, .12, 0, -.5, 0, 0, .7], 3));
+  for (let i = 0; i < 9; i++) {
+    const b = new THREE.Group(); b.add(new THREE.Mesh(gB, mat)); const L = new THREE.Mesh(gL, mat), R = new THREE.Mesh(gR, mat); b.add(L, R);
+    b.scale.setScalar(1.3 + Math.random() * .5); b.children.forEach(m => { m.frustumCulled = false; });
+    list.push({ b, L, R, off: new THREE.Vector3((Math.random() - .5) * 26, (Math.random() - .5) * 6, (Math.random() - .5) * 26), ph: Math.random() * 6.28, fs: 7 + Math.random() * 3 }); grp.add(b);
+  }
+  scene.add(grp);
+  let a = 0;
+  return {
+    grp, update(dt, t, cp) {
+      if (!grp.visible) return;
+      a += dt * .09; const R0 = 70, cx = cp.x + Math.cos(a) * R0, cz = cp.z + Math.sin(a) * R0, dir = -a; // miran hacia donde vuelan (tangente al círculo)
+      for (const k of list) {
+        const flap = Math.sin(t * .7 + k.ph) > .2 ? Math.sin(t * k.fs + k.ph) * .7 : .12 + Math.sin(t * 1.5 + k.ph) * .05; // aletean y luego planean
+        k.L.rotation.z = -flap; k.R.rotation.z = flap;
+        k.b.position.set(cx + k.off.x, 48 + k.off.y + Math.sin(t * .5 + k.ph) * 1.5, cz + k.off.z); k.b.rotation.set(0, dir, Math.sin(t * .3 + k.ph) * .15);
+      }
+    }
+  };
+})();
 const TIMES = {
   dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
@@ -179,7 +204,7 @@ function applyTime(mode) {
   if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: isTouch ? 128 : 256 }); // en el celular, más liviano scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
   if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else { scene.background = null; sky.visible = true; }
   if (world && world.ark && world.ark.rainbow) world.ark.rainbow.visible = !T2.stars;
-  stars.visible = T2.stars; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
+  stars.visible = T2.stars; birds.grp.visible = !T2.stars; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
   skyClouds.grp.children.forEach((c, i) => { c.visible = i < T2.clouds; });
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
@@ -2015,6 +2040,7 @@ function loop() {
     }
   }
   if (state === 'play') update(dt);
+  birds.update(dt, elapsed, camera.position);
 
   if (world) {
     followShip();
