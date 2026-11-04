@@ -49,3 +49,7 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 - **Vestimentas**: moderna, túnica y manto, pastor, levita y sumo sacerdote Aarón (se desbloquea al completar el nivel Intermedio), con más colores.
 - **Mapa completo** (tecla `M` o botón 🗺), **turbo** (tecla `R` o botón ⚡), pantalla completa (tecla `F`), joystick de bola en el celular.
 - Cada regalo cuenta como una moneda y suma 10 segundos. Niños jugando con voces y pasos que se oyen según la distancia.
+
+## Compilación (carga rápida)
+El juego se publica empaquetado y comprimido en `js/biblixia.min.js` (un solo archivo, ~3 veces más liviano).
+Después de cambiar cualquier archivo de `js/`, ejecuta `sh build.sh` (necesita [esbuild](https://esbuild.github.io/)) y sube también `js/biblixia.min.js`.

@@ -153,7 +153,7 @@ const sunGlow = (() => {
 const TIMES = {
   dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
-  noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0x9ab8ff, sunI: .7, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
+  noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
 const moonDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 42), THREE.MathUtils.degToRad(130));
 function applyTime(mode) {
@@ -1058,9 +1058,9 @@ function playerOpts(pl = save.player) {
 }
 // Adán y Eva: túnicas de pieles que Dios les hizo (Génesis 3:21)
 function pairOpts(who, pl = save.player) {
-  const base = { name: who === 'eva' ? 'EVA' : 'ADÁN', skin: SKINS[pl.skin] ?? SKINS[2], detail: 1, outfit: 'robe', sash: 0x4a3a1e };
-  if (who === 'eva') return { ...base, gender: 'f', robe: 0x9a7350, mantle: 0x6e4c2c, hair: 'long', hairColor: 0x3a2314, eye: 0x4a6b3a };
-  return { ...base, gender: 'm', robe: 0x86603c, mantle: 0x5a3e24, hair: 'short', hairColor: 0x24160c, beard: { color: 0x24160c, len: .1 }, eye: 0x5a3a22 };
+  const base = { name: who === 'eva' ? 'EVA' : 'ADÁN', skin: SKINS[pl.skin] ?? SKINS[2], detail: 1, outfit: 'robe', skins: true, mantle: null, sash: 0x5a3a1e };
+  if (who === 'eva') return { ...base, gender: 'f', robe: 0x9a7350, hair: 'long', hairColor: 0x3a2314, eye: 0x4a6b3a };
+  return { ...base, gender: 'm', robe: 0x86603c, hair: 'short', hairColor: 0x24160c, beard: { color: 0x24160c, len: .1 }, eye: 0x5a3a22 };
 }
 const isPair = () => outfitOK(save.player.outfit) && save.player.outfit === 'adaneva';
 let human = createHuman(playerOpts());
@@ -1209,7 +1209,7 @@ canvas.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY 
 addEventListener('mouseup', () => drag = null);
 addEventListener('mousemove', e => {
   if (!drag || state !== 'play') return;
-  cam.yaw -= (e.clientX - drag.x) * .005; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * .004, .05, 1.1);
+  cam.yaw -= (e.clientX - drag.x) * .005; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * .004, -.12, 1.1);
   drag = { x: e.clientX, y: e.clientY };
 });
 canvas.addEventListener('wheel', e => { cam.dist = THREE.MathUtils.clamp(cam.dist + e.deltaY * .005, 3, 11); }, { passive: true });
@@ -1247,7 +1247,7 @@ addEventListener('touchstart', e => {
 }, { passive: true });
 addEventListener('touchmove', e => {
   for (const t of e.changedTouches) if (t.identifier === look.id) {
-    cam.yaw -= (t.clientX - look.x) * .008; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (t.clientY - look.y) * .005, .05, 1.1);
+    cam.yaw -= (t.clientX - look.x) * .008; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (t.clientY - look.y) * .005, -.12, 1.1);
     look.x = t.clientX; look.y = t.clientY;
   }
 }, { passive: true });
@@ -1645,6 +1645,7 @@ function spawnBurst(p) {
   }
 }
 
+const tmpV2 = new THREE.Vector3();
 function updateCamera(dt, follow = true) {
   const head = tmpV.set(P.pos.x, P.pos.y + 1.55, P.pos.z);
   const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
@@ -1654,9 +1655,12 @@ function updateCamera(dt, follow = true) {
   ray.set(head, dir); ray.far = len;
   const hit = ray.intersectObjects(world.blockers, false)[0];
   if (hit) want.copy(head).addScaledVector(dir, Math.max(1.2, hit.distance - .4));
+  if (want.y < P.pos.y + .45) want.y = P.pos.y + .45;   // la cámara no baja del suelo
   cam.cur.lerp(want, follow ? Math.min(1, dt * 10) : 1);
   camera.position.copy(cam.cur);
-  cam.look.lerp(head, Math.min(1, dt * 14));
+  // mirando hacia arriba: se ve un poco más de cielo
+  const upLook = cam.pitch < .05 ? (.05 - cam.pitch) * 7 : 0;
+  cam.look.lerp(tmpV2.set(head.x, head.y + upLook, head.z), Math.min(1, dt * 14));
   camera.lookAt(cam.look);
   // sensación de velocidad: la cámara se abre un poco al correr
   const fovT = 58 + THREE.MathUtils.clamp((P.speed - WALK) / (TURBO - WALK), 0, 1) * 9;
@@ -1976,20 +1980,22 @@ $('btnMusic').onclick = toggleMusic; $('tbMusic').onclick = toggleMusic;
 $('btnSfx').onclick = toggleSfx; $('tbSfx').onclick = toggleSfx;
 updSound();
 
-// Hora del día elegida (día por defecto)
-applyTime(save.time || 'dia');
+// Hora del día elegida (día por defecto): se aplica justo después de mostrar la portada
 function renderTimeButtons() {
   document.querySelectorAll('.time-opts').forEach(box => { box.innerHTML = ''; for (const [k, v] of Object.entries(TIMES)) { const b = document.createElement('button'); b.className = 'opt small' + ((save.time || 'dia') === k ? ' sel' : ''); b.textContent = v.name; b.onclick = () => { sound.click(); applyTime(k); renderTimeButtons(); }; box.appendChild(b); } });
 }
 renderTimeButtons();
 
-// Escena de fondo del menú
-world = buildWorld(LEVELS[0]);
-if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
-P.pos.set(world.desert.tcx + 34, 0, world.desert.tcz - 2);
-P.pos.y = 0; P.heading = -1.2;
+// Carga rápida: la portada aparece al instante y el mundo 3D de fondo se construye justo después
 $('loading').classList.add('hidden');
-loop();
+const buildMenuWorld = () => {
+  world = buildWorld(LEVELS[0]);
+  if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
+  P.pos.set(world.desert.tcx + 34, 0, world.desert.tcz - 2);
+  P.pos.y = 0; P.heading = -1.2;
+  loop();
+};
+requestAnimationFrame(() => setTimeout(() => { applyTime(save.time || 'dia'); buildMenuWorld(); }, 30));
 
 // Acceso para pruebas
 window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };

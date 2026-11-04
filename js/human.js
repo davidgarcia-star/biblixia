@@ -220,6 +220,7 @@ function clothTexture(color, kind = 'knit') {
     if (kind === 'denim') { for (let i = 0; i < H; i += 2) { g.fillStyle = `rgba(255,255,255,${.03 + Math.random() * .05})`; g.fillRect(0, i, W, 1); } }
     for (let i = 0; i < 5000; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.07)'; g.fillRect(Math.random() * W, Math.random() * H, 2, 1); }
     if (kind === 'pleat') { for (let i = 0; i < W; i += 16) { const gg = g.createLinearGradient(i, 0, i + 16, 0); gg.addColorStop(0, 'rgba(0,0,0,.22)'); gg.addColorStop(.5, 'rgba(255,255,255,.08)'); gg.addColorStop(1, 'rgba(0,0,0,.22)'); g.fillStyle = gg; g.fillRect(i, 0, 16, H); } }
+    if (kind === 'fur') { for (let i = 0; i < 2600; i++) { const x = Math.random() * W, y = Math.random() * H, l = 4 + Math.random() * 9, a = Math.PI / 2 + (Math.random() - .5) * .8; g.strokeStyle = Math.random() < .5 ? 'rgba(255,235,200,.13)' : 'rgba(30,15,5,.2)'; g.lineWidth = 1 + Math.random(); g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); g.stroke(); } for (let i = 0; i < 6; i++) { const x = Math.random() * W, y = Math.random() * H, r = 18 + Math.random() * 30, gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(40,20,5,.25)'); gr.addColorStop(1, 'rgba(40,20,5,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); } }
     if (kind === 'linen') { g.strokeStyle = 'rgba(0,0,0,.07)'; for (let i = 0; i < W; i += 6) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 3, H); g.stroke(); } }
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3);
@@ -261,11 +262,12 @@ export function createHuman(opt = {}) {
   const shoeM = new THREE.MeshStandardMaterial({ color: robe ? 0x6a4528 : o.shoes, roughness: .55 });
   const soleM = new THREE.MeshStandardMaterial({ color: robe ? 0x3b2616 : 0x2b2b2b, roughness: .8 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xffc93c, metalness: 1, roughness: .25 });
-  const robeM = new THREE.MeshStandardMaterial({ map: clothTexture(o.robe, 'linen'), roughness: .95, side: THREE.DoubleSide });
+  const SK = robe && o.skins; // Adán y Eva: túnicas cortas de pieles (Génesis 3:21)
+  const robeM = new THREE.MeshStandardMaterial({ map: clothTexture(o.robe, SK ? 'fur' : 'linen'), roughness: .95, side: THREE.DoubleSide });
   const mantleM = new THREE.MeshStandardMaterial({ map: clothTexture(o.mantle, 'linen'), roughness: .95, side: THREE.DoubleSide });
   const sashM = new THREE.MeshStandardMaterial({ color: o.sash, roughness: .8 });
   const clothM = new THREE.MeshStandardMaterial({ map: clothTexture(o.cloth, 'linen'), roughness: .95, side: THREE.DoubleSide });
-  const sleeveM = robe ? robeM : topM;
+  const sleeveM = SK ? skin : robe ? robeM : topM;
   // estilo de la parte de arriba (ropa moderna): abrigo, camiseta, camisa corta, manga larga, chaqueta
   const TS = robe ? 'robe' : (o.topStyle || 'abrigo');
   const shortS = TS === 'camiseta' || TS === 'camisa';
@@ -280,7 +282,7 @@ export function createHuman(opt = {}) {
   const skirtOn = F && !robe && o.legwear !== 'pantalon';
   if (F && !robe && o.legwear === 'vestido') o.skirt = o.top; // vestido: falda del mismo color que la blusa
   const skirtM = new THREE.MeshStandardMaterial({ map: clothTexture(o.skirt ?? 0x2d3a6a, 'pleat'), roughness: .8, side: THREE.DoubleSide });
-  const legM = robe ? robeM : skirtOn ? skin : pantsM;
+  const legM = SK ? skin : robe ? robeM : skirtOn ? skin : pantsM;
   const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.12 : 1.02, .58, F ? .8 : .72);
   if (!robe && !F) mesh(new THREE.CylinderGeometry(.166, .166, .035, 32), soleM, hips, 0, .07, 0).scale.set(1, 1, .74);
   if (!robe && !skirtOn) {
@@ -323,7 +325,7 @@ export function createHuman(opt = {}) {
 
   // Torso
   const spine = grp(hips, 0, .06, 0);
-  const torso = mesh(torsoGeo(F), robe ? robeM : topM, spine); torso.scale.set(1, 1, .66);
+  const torso = mesh(torsoGeo(F), SK ? skin : robe ? robeM : topM, spine); torso.scale.set(1, 1, .66);
   if (F && !robe) { for (const s of [-1, 1]) { const b = mesh(SG(.078, 20, 16), topM, spine, s * .046, .325, .056); b.scale.set(1.08, .9, .7); } }
   if (TS === 'abrigo' && !F) mesh(new THREE.BoxGeometry(.2, .1, .035), top2, spine, 0, .14, .112).rotation.x = -.15;
   if (TS === 'abrigo') {
@@ -456,7 +458,22 @@ export function createHuman(opt = {}) {
   }
 
   // Túnica, manto y cinto (personajes bíblicos)
-  if (robe) {
+  if (robe && SK) {
+    // túnica corta de piel con borde irregular: Adán de la cintura al muslo con tira al hombro; Eva del pecho a la rodilla
+    const prof = F ? [[.215, .5], [.22, .56], [.215, .75], [.19, .95], [.175, 1.1], [.19, 1.22], [.18, 1.32], [.165, 1.36]]
+                   : [[.225, .56], [.23, .62], [.215, .8], [.2, .95], [.198, 1.02]];
+    const g = latheUp(prof, 44), p = g.attributes.position;
+    const yb = prof[0][1];
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (y < yb + .03) { const a = Math.atan2(z, x); p.setY(i, y + Math.abs(Math.sin(a * 7)) * .05 + Math.sin(a * 13) * .015); } }
+    g.computeVertexNormals();
+    const rb = mesh(g, robeM, root); rb.scale.set(1, 1, F ? .74 : .76);
+    // tira de piel: Adán en diagonal desde el hombro; Eva con dos tirantes sobre los hombros
+    if (!F) { const strap = mesh(new THREE.TorusGeometry(.215, .035, 8, 40), robeM, root, 0, 1.2, 0); strap.rotation.set(Math.PI / 2, .62, 0); strap.scale.set(1, .7, 1); }
+    else for (const sx of [-1, 1]) { const st = mesh(new THREE.TorusGeometry(.085, .018, 6, 20, Math.PI), robeM, root, sx * .085, 1.33, 0); st.rotation.y = Math.PI / 2; st.scale.set(1.05, .9, 1); }
+    // cordón atado a la cintura
+    const cord = mesh(new THREE.TorusGeometry(.2, .012, 6, 34), sashM, root, 0, .98, 0); cord.rotation.x = Math.PI / 2; cord.scale.set(1, .78, 1);
+  }
+  if (robe && !SK) {
     const rb = mesh(latheUp([[.29, .02], [.3, .05], [.27, .35], [.22, .7], [.2, .95], [.2, 1.15], [.21, 1.3], [.2, 1.4], [.15, 1.46], [.08, 1.5]], 40), robeM, root);
     rb.scale.set(1, 1, .78);
     if (o.mantle !== null) {
@@ -494,7 +511,7 @@ export function createHuman(opt = {}) {
     mesh(limbGeo(F ? .046 : .052, F ? .038 : .043, .28, .006), shortS ? skin : sleeveM, shoulder);
     if (shortS) { mesh(limbGeo(F ? .056 : .062, F ? .052 : .058, .13, 0), sleeveM, shoulder, 0, .01, 0); mesh(new THREE.CylinderGeometry(F ? .052 : .058, F ? .053 : .059, .02, 16), top2, shoulder, 0, -.115, 0); }
     const elbow = grp(shoulder, 0, -.28, 0);
-    mesh(robe ? limbGeo(.05, .062, .2, 0) : limbGeo(F ? .04 : .046, F ? .034 : .04, .2, .004), shortS ? skin : sleeveM, elbow);
+    mesh(robe && !SK ? limbGeo(.05, .062, .2, 0) : limbGeo(F ? .04 : .046, F ? .034 : .04, .2, .004), shortS ? skin : sleeveM, elbow);
     if (!robe && !shortS) mesh(new THREE.CylinderGeometry(.041, .043, .035, 14), TS === 'chaqueta' || TS === 'traje' ? whiteM : top2, elbow, 0, -.2, 0);
     mesh(limbGeo(.031, .027, .05), skin, elbow, 0, -.21, 0);
     const hand = grp(elbow, 0, -.27, 0);
