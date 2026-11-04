@@ -276,20 +276,21 @@ export function createHuman(opt = {}) {
   const skirtM = new THREE.MeshStandardMaterial({ map: clothTexture(o.skirt ?? 0x2d3a6a, 'pleat'), roughness: .8, side: THREE.DoubleSide });
   const legM = robe ? robeM : skirtOn ? skin : pantsM;
   const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.12 : 1.02, .58, F ? .8 : .72);
-  if (!robe && !F) mesh(new THREE.CylinderGeometry(.162, .162, .035, 32), soleM, hips, 0, .06, 0).scale.set(1, 1, .8);
-  if (F && !robe && !skirtOn) {
-    // Pantalón de mujer: cadera lisa y natural (sin bulto adelante) que une la cintura con los muslos
+  if (!robe && !F) mesh(new THREE.CylinderGeometry(.166, .166, .035, 32), soleM, hips, 0, .07, 0).scale.set(1, 1, .74);
+  if (!robe && !skirtOn) {
+    // Pantalón: cadera lisa y natural (sin bulto adelante) que une la cintura con los muslos
     pel.scale.set(1.0, .5, .6); pel.position.z = -.02;
-    // cintura fina y caderas más anchas (silueta femenina), frente plano y glúteos redondeados integrados
-    const sg = latheUp([[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.168, .03], [.146, .08], [.14, .09]], 48);
+    // mujer: cintura fina y caderas más anchas; hombre: cadera recta y normal
+    const sg = latheUp(F ? [[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.168, .03], [.146, .08], [.14, .09]]
+                         : [[.152, -.36], [.163, -.3], [.176, -.2], [.182, -.11], [.18, -.04], [.172, .03], [.164, .08], [.16, .09]], 48);
     const sp = sg.attributes.position;
     for (let i = 0; i < sp.count; i++) {
       const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), r0 = Math.hypot(x, z) || 1;
-      if (z < 0) { const back = -z / r0, bump = Math.exp(-(((y + .13) / .12) ** 2)); sp.setZ(i, z * (1 + .3 * bump * back ** 1.5)); }
-      else sp.setZ(i, z * .9);
+      if (z < 0) { const back = -z / r0, bump = Math.exp(-(((y + .13) / .12) ** 2)); sp.setZ(i, z * (1 + (F ? .3 : .14) * bump * back ** 1.5)); }
+      else sp.setZ(i, z * (F ? .9 : .86));
     }
     sg.computeVertexNormals();
-    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, .66);
+    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, F ? .66 : .7);
   }
   let skirt = null;
   if (skirtOn) {
@@ -384,7 +385,15 @@ export function createHuman(opt = {}) {
   // punta y aletas de la nariz (el puente ya está esculpido en la cabeza)
   const nose = null;
   // Orejas
-  for (const s of [-1, 1]) { const e = mesh(SG(.02, 14, 10), skin, head, s * .088, .005, -.008); e.scale.set(.4, 1.05, .7); }
+  // orejas con forma real: pabellón, borde (hélix), lóbulo y concha interior
+  const earIn = new THREE.MeshStandardMaterial({ color: new THREE.Color(o.skin).multiplyScalar(.72), roughness: .6 });
+  for (const s of [-1, 1]) {
+    const ear = grp(head, s * .089, .002, -.006); ear.rotation.set(0, s * .32, s * .08); ear.scale.setScalar(1.12);
+    const pin = mesh(SG(.026, 18, 14), skin, ear); pin.scale.set(.32, 1.18, .74);
+    const rim = mesh(new THREE.TorusGeometry(.021, .0045, 8, 22, Math.PI * 1.45), skin, ear, s * .006, .004, 0); rim.rotation.set(0, s * Math.PI / 2, Math.PI * .55); rim.scale.set(1, 1.3, 1);
+    const lobe = mesh(SG(.0085, 12, 10), skin, ear, s * .002, -.026, .004); lobe.scale.set(.6, 1, .9);
+    const con = mesh(SG(.012, 12, 10), earIn, ear, s * .0055, -.002, .003); con.scale.set(.25, 1.2, .9);
+  }
 
   // Pelo
   const hairTop = (r, theta, rotX, lift) => {
