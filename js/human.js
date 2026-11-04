@@ -273,7 +273,7 @@ export function createHuman(opt = {}) {
     mesh(new THREE.CylinderGeometry(.003, .003, .12, 6), gold, spine, .025, .4, .12).rotation.x = .2;
   }
   // Nombre en la espalda
-  if (o.name && !robe) {
+  if (o.name && !robe && !F) { // la jugadora (Marga) va sin nombre en la espalda
     const nm = new THREE.MeshStandardMaterial({ map: nameTexture(o.name.toUpperCase(), '#ffd34d'), transparent: true, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2 });
     const back = mesh(new THREE.CylinderGeometry(F ? .17 : .19, F ? .17 : .19, .1, 24, 1, true, Math.PI - .85, 1.7), nm, spine, 0, .33, -.004);
     back.scale.set(1, 1, .7); back.castShadow = false;
@@ -369,7 +369,7 @@ export function createHuman(opt = {}) {
     }
     const sh = mesh(new THREE.TorusGeometry(.2, .022, 10, 40), sashM, root, 0, .98, 0); sh.rotation.x = Math.PI / 2; sh.scale.set(1, .8, 1);
     // nombre en la espalda también con túnica
-    if (o.name) {
+    if (o.name && !F) {
       const nm = new THREE.MeshStandardMaterial({ map: nameTexture(o.name.toUpperCase(), '#ffd34d'), transparent: true, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2 });
       const r0 = o.mantle !== null ? .238 : .212;
       const back = mesh(new THREE.CylinderGeometry(r0, r0, .11, 24, 1, true, Math.PI - .85, 1.7), nm, root, 0, 1.22, 0); back.scale.set(1.04, 1, o.mantle !== null ? .87 : .8); back.castShadow = false;
