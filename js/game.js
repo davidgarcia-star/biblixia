@@ -14,6 +14,7 @@ import { buildPlaces } from './places.js';
 import { CHARACTERS, TREASURES, forLevel, createCharacter, nameSprite, giftBox } from './characters.js';
 import { Sound } from './audio.js';
 import { buildLife } from './life.js';
+import { buildPriests } from './priests.js';
 
 /* =========================================================
    CONFIGURACIÓN DE NIVELES
@@ -662,6 +663,8 @@ function buildWorld(cfg) {
     const tb = tab.bounds;
     buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
     W.desert = { X0, tcx, tcz, tb };
+    // sacerdotes, levitas, el arca en procesión y los corderos del sacrificio (desde el nivel Básico)
+    W.priests = buildPriests({ group, tab, r, addBox });
     // Niños corriendo y jugando en el campamento
     W.kids = [];
     const kidCols = [0xc0392b, 0x2a4a9a, 0xe0a31a, 0x2e7d4f, 0x8a5a9a, 0xd8c6a0];
@@ -1841,6 +1844,7 @@ function loop() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
+    if (world.priests) world.priests.update(dt, t, camera.position);
     if (world.ark) world.ark.update(t, dt);
     if (world.life) world.life.update(dt, t, camera.position, P.pos);
     if (world.kids) for (const kd of world.kids) {

@@ -252,6 +252,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     zones: zones.filter(z => z.text),
     bounds: { x0, x1, z0, z1 }, gate: [x1, cz],
     holyGift: [veilX + 3.2, cz], holiestGift: [hhX + 2.3, cz + 1.3], aaronSpot: [veilX + 7, cz],
+    altar: [altX, cz, aw / 2, ah], laver: [lavX, cz],
     entrance: new THREE.Vector3(x1 + 4, 0, cz),
     update(t) {
       for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
