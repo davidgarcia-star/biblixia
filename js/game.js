@@ -80,7 +80,7 @@ scene.fog = new THREE.Fog(0xd8b9a0, 110, 760);
 const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x4b3a2c, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffcf9e, 3.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1536 : 4096, isTouch ? 1536 : 4096); sun.shadow.radius = 3;
+sun.shadow.mapSize.set(isTouch ? 1536 : 4096, isTouch ? 1536 : 4096); sun.shadow.radius = 1.4;
 const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
@@ -92,11 +92,11 @@ function updateNightAndBlobs(dt) {
     if (!show) { b.visible = false; return; }
     const f = P.driving && pos === P.pos ? pos.y : floorAt(pos.x, pos.z, pos.y + .05), h = Math.max(0, pos.y - f);
     const k = THREE.MathUtils.clamp(1 - h / 3.5, .35, 1);
-    b.visible = true; b.position.set(pos.x, f + .035, pos.z); b.scale.set(.95 * k, 1, .95 * k);
+    b.visible = true; b.position.set(pos.x, f + .035, pos.z); b.scale.set(.62 * k, 1, .5 * k);
   };
   put(blobs.p, P.pos, live && state !== 'menu' && human.root.visible !== false);
   put(blobs.m, mate ? mate.root.position : P.pos, live && !!mate && mate.root.visible);
-  blobMat.opacity = night ? .38 : save.time === 'atardecer' ? .5 : .55;
+  blobMat.opacity = night ? .4 : save.time === 'atardecer' ? .3 : .28; // solo sombra de contacto: la sombra real del sol tiene la forma del jugador
   // luces de noche
   if (world && world.lightPools) world.lightPools.visible = night;
   playerLamp.intensity = night && live ? 14 : 0;
@@ -1128,7 +1128,7 @@ function updateMate(dt, t) {
   animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t });
 }
 const P = { holdFwd: 0, pos: new THREE.Vector3(), vy: 0, onGround: true, heading: 0, speed: 0, inv: 0, phase: 0, land: 0 };
-const RADIUS = .32, STEP = .55, JUMP_V = 7.2, GRAV = 20, WALK = 4.3, RUN = 9.2, TURBO = 12.5;
+const RADIUS = .32, STEP = .22, JUMP_V = 7.2, GRAV = 20, WALK = 4.3, RUN = 9.2, TURBO = 12.5;
 queueMicrotask(() => { if (isPair()) rebuildPlayer(); });
 
 const topOf = (c, z) => c.ramp ? c.ramp.y0 + (c.ramp.y1 - c.ramp.y0) * THREE.MathUtils.clamp((z - c.ramp.z0) / (c.ramp.z1 - c.ramp.z0), 0, 1) : c.top;
@@ -1139,6 +1139,37 @@ function floorAt(x, z, y) {
     if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { const tp = c.ramp ? topOf(c, z) : c.top; if (tp <= y + STEP && tp > f) f = tp; }
   }
   return f;
+}
+let fwdHeld = false;
+// borde alcanzable con las manos delante del jugador
+function tryGrab() {
+  const fx = Math.sin(P.heading), fz = Math.cos(P.heading);
+  for (const d of [RADIUS + .12, RADIUS + .4]) {
+    const px = P.pos.x + fx * d, pz = P.pos.z + fz * d;
+    let best = null;
+    for (const c of world.colliders) {
+      if (c.ramp || c.top > 900 || (c.tag === 'ship' && world.boat && world.boat.away)) continue;
+      if (px > c.minX && px < c.maxX && pz > c.minZ && pz < c.maxZ) {
+        const h = c.top - P.pos.y;
+        if (h > STEP && h < 2.45 && (!best || c.top > best.top)) best = c;
+      }
+    }
+    if (best) {
+      const tx = P.pos.x + fx * (d + .45), tz = P.pos.z + fz * (d + .45);
+      // que haya espacio arriba para pararse
+      if (floorAt(tx, tz, best.top + .05) > best.top + STEP) return;
+      P.climb = { t: 0, y0: P.pos.y, top: best.top, x0: P.pos.x, z0: P.pos.z, tx, tz };
+      P.vy = 0; P.speed = 0; sound.step('hard', false); return;
+    }
+  }
+}
+function climbStep(dt) {
+  const c = P.climb; c.t += dt;
+  const hang = c.top - 1.95;
+  if (c.t < .28) { const k = c.t / .28; P.pos.y = c.y0 + (Math.max(hang, c.y0) - c.y0) * k; }            // se cuelga del borde
+  else if (c.t < .95) { const k = (c.t - .28) / .67, e = k * k * (3 - 2 * k); P.pos.y = Math.max(hang, c.y0) + (c.top - Math.max(hang, c.y0)) * e; P.pos.x = c.x0 + (c.tx - c.x0) * Math.max(0, e * 1.3 - .3); P.pos.z = c.z0 + (c.tz - c.z0) * Math.max(0, e * 1.3 - .3); }
+  else { P.pos.set(c.tx, c.top, c.tz); P.onGround = true; P.vy = 0; P.climb = null; sound.step('hard', true); }
+  updateHUD();
 }
 function blocked(x, z, y) {
   for (const c of world.colliders) {
@@ -1244,7 +1275,7 @@ async function startLevelNow(i) {
   lvlIdx = i; L = LEVELS[i];
   world = buildWorld(L);
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0;
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
   const nuevos = VERSES.map((_, k) => k).filter(k => !save.verses.includes(k)).sort(() => Math.random() - .5);
@@ -1498,10 +1529,14 @@ function update(dt) {
   }
   const vx = Math.sin(P.heading) * P.speed, vz = Math.cos(P.heading) * P.speed;
 
+  fwdHeld = !!(keys.KeyW || keys.ArrowUp);
   // Movimiento con colisiones por eje
   const nx = P.pos.x + vx * dt; if (!blocked(nx, P.pos.z, P.pos.y)) P.pos.x = nx;
   const nz = P.pos.z + vz * dt; if (!blocked(P.pos.x, nz, P.pos.y)) P.pos.z = nz;
 
+  // Agarrarse del borde y subir: en el aire, empujando hacia adelante (flecha arriba / W / joystick)
+  if (P.climb) { climbStep(dt); jumpPressed = false; return; }
+  if (!P.onGround && (fwdHeld || (joy.active && -joy.y > .35))) tryGrab();
   // Salto y gravedad
   if (jumpPressed && P.onGround) { P.vy = JUMP_V; P.onGround = false; sound.jump(); }
   jumpPressed = false;
@@ -1753,7 +1788,7 @@ function loop() {
   human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2);
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {

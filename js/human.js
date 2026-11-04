@@ -516,7 +516,7 @@ export function createHuman(opt = {}) {
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -547,6 +547,13 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0 
     P.headX = -P.spineX * .6;
   }
   if (land > 0) P.hipY -= land * .5;
+  // trepar: brazos arriba agarrando el borde, luego empuja y sube la pierna
+  if (climb >= 0) {
+    const k2 = Math.min(1, Math.max(0, (climb - .28) / .67));
+    P.s0x = P.s1x = -2.9 + k2 * 2.3; P.s0z = -.18; P.s1z = .18; P.e0 = P.e1 = -.2 - k2 * 1.2;
+    P.t0 = -.2 - k2 * 1.3; P.k0 = .4 + k2 * 1.4; P.t1 = .15; P.k1 = .3 + k2 * .4; P.a0 = P.a1 = 0;
+    P.spineX = .15 + k2 * .35; P.spineY = 0; P.headX = -.25 + k2 * .3; P.hipY = .93;
+  }
   // gesto de mal olor: se tapa la nariz y mueve la cabeza
   if (gesture > 0) { P.s1x = -2.45; P.s1z = .55; P.e1 = -2.1; P.headX = .15; }
   const k = Math.min(1, dt * 16);
