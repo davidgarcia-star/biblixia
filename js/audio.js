@@ -43,16 +43,70 @@ export class Sound {
     if (wet && this.rev && (bus === 'music' ? this.musicOn : this.sfxOn)) g.connect(this.rev);
     o.start(t); o.stop(t + dur + .05);
   }
-  // Pasos: suelo duro (calle), arena o pasto; al correr suenan más fuertes y secos
+  // Pasos realistas: talón + punta del pie, con el timbre de cada suelo (calle, arena, pasto, madera y agua),
+  // pequeñas variaciones en cada pisada y un pie a cada lado (estéreo)
   step(surface = 'hard', run = false) {
-    const a = this.unlock(); if (!a || !this.sfxOn) return;
-    const t = a.currentTime, src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = (run ? 1.25 : 1) * (.9 + Math.random() * .2);
-    const f = a.createBiquadFilter(); f.type = surface === 'hard' ? 'bandpass' : 'lowpass';
-    f.frequency.value = surface === 'hard' ? 1800 : surface === 'sand' ? 700 : 900; f.Q.value = surface === 'hard' ? 1.2 : .7;
-    const g = a.createGain(); const v = (run ? .32 : .22) * (surface === 'hard' ? 1 : 1.3);
-    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + (surface === 'hard' ? .09 : .16));
-    src.connect(f).connect(g).connect(this.sfx); src.start(t); src.stop(t + .25);
-    if (surface === 'hard') this.note(110 + Math.random() * 20, .06, { type: 'sine', vol: run ? .09 : .06, wet: false });
+    const a = this.unlock(); if (!a || !this.sfxOn || !this.noise) return;
+    const t = a.currentTime, V = (run ? 1 : .72) * (.85 + Math.random() * .3);
+    this._foot = !this._foot;
+    let out = this.sfx;
+    if (a.createStereoPanner) { const p = a.createStereoPanner(); p.pan.value = this._foot ? .12 : -.12; p.connect(this.sfx); out = p; }
+    const burst = (when, dur, type, freq, q, vol, rate = 1, attack = .003) => {
+      const src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = rate * (.92 + Math.random() * .16);
+      const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = a.createGain(), t0 = t + when; g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + attack); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      src.connect(f).connect(g).connect(out); src.start(t0, Math.random() * .05); src.stop(t0 + dur + .03);
+    };
+    const thud = (when, f0, dur, vol, type = 'sine') => {
+      const o = a.createOscillator(), g = a.createGain(), t0 = t + when; o.type = type;
+      o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f0 * .55, t0 + dur);
+      g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .004); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      o.connect(g).connect(out); o.start(t0); o.stop(t0 + dur + .02);
+    };
+    const toe = run ? .03 : .055;
+    if (surface === 'sand') {
+      thud(0, 70, .09, .1 * V);
+      for (let i = 0; i < 5; i++) burst(i * .018 + Math.random() * .01, .05, 'bandpass', 1300 + Math.random() * 1600, 1.4, (.1 + Math.random() * .08) * V);
+      burst(toe + .02, .07, 'lowpass', 900, .6, .07 * V);
+    } else if (surface === 'grass') {
+      burst(0, .14, 'bandpass', 1100, .8, .13 * V, .8, .02);
+      burst(.02, .1, 'highpass', 4200, .6, .05 * V, 1, .01);
+      thud(0, 75, .07, .07 * V);
+    } else if (surface === 'wood') {
+      thud(0, 150, .11, .2 * V, 'triangle'); thud(0, 95, .14, .12 * V);
+      burst(0, .045, 'bandpass', 1200, 2, .1 * V);
+      burst(toe, .04, 'bandpass', 2000, 2, .06 * V);
+    } else if (surface === 'water') {
+      burst(0, .22, 'bandpass', 1300 + Math.random() * 500, 1, .22 * V, 1, .012);
+      burst(.03, .3, 'highpass', 3500, .5, .07 * V, 1, .02);
+      thud(.04, 260 + Math.random() * 80, .12, .05 * V);
+    } else {
+      thud(0, 95 + Math.random() * 20, .08, .16 * V);
+      burst(0, .045, 'bandpass', 2000 + Math.random() * 700, 1.6, .2 * V);
+      burst(toe, .03, 'highpass', 3200, .8, .09 * V);
+      if (run) burst(toe + .015, .06, 'highpass', 5000, .5, .03, 1.3, .01); // roce de la suela
+    }
+  }
+  // Brazada al nadar: chapoteo de agua y burbujas
+  swim(vol = 1) {
+    const a = this.unlock(); if (!a || !this.sfxOn || !this.noise) return;
+    const t = a.currentTime;
+    [[0, .28, 1400, .2], [.06, .35, 700, .12]].forEach(([w, d, f, v]) => {
+      const src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = .7 + Math.random() * .3;
+      const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f * (.85 + Math.random() * .3); bp.Q.value = .9;
+      const g = a.createGain(); g.gain.setValueAtTime(.0001, t + w); g.gain.exponentialRampToValueAtTime(v * vol, t + w + .03); g.gain.exponentialRampToValueAtTime(.0001, t + w + d);
+      src.connect(bp).connect(g).connect(this.sfx); src.start(t + w); src.stop(t + w + d + .05);
+    });
+    for (let i = 0; i < 3; i++) this.note(500 + Math.random() * 500, .05, { type: 'sine', vol: .025 * vol, when: .1 + i * .05 + Math.random() * .04, slide: 300, wet: false });
+  }
+  // Zambullida al entrar al agua
+  splash(vol = 1) {
+    const a = this.unlock(); if (!a || !this.sfxOn || !this.noise) return;
+    const t = a.currentTime, src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = .5;
+    const bp = a.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.setValueAtTime(3500, t); bp.frequency.exponentialRampToValueAtTime(500, t + .5);
+    const g = a.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.45 * vol, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .55);
+    src.connect(bp).connect(g).connect(this.sfx); src.start(t); src.stop(t + .6);
+    for (let i = 0; i < 5; i++) this.note(300 + Math.random() * 600, .06, { type: 'sine', vol: .03 * vol, when: .15 + i * .06, slide: 250, wet: false });
   }
   // Sonido con posición: volumen según la distancia y lado izquierdo/derecho
   _bus(vol, pan) {
@@ -81,6 +135,21 @@ export class Sound {
       f2.type = 'bandpass'; f2.frequency.value = kind === 0 ? 2400 : 1800 + Math.random() * 800; f2.Q.value = 8;
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.18, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + (kind === 0 ? .11 : .2));
       o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(bus); o.start(t); o.stop(t + .25);
+    }
+  }
+  // Personas conversando a lo lejos (sílabas de voz adulta, sin palabras)
+  chatter(vol, pan, female = false) {
+    const a = this.unlock(); if (!a || !this.sfxOn || vol < .01) return;
+    const bus = this._bus(vol * .8, pan), t0 = a.currentTime, base = (female ? 200 : 115) * (.9 + Math.random() * .2);
+    const n = 3 + (Math.random() * 4 | 0);
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * (.14 + Math.random() * .08), o = a.createOscillator(), g = a.createGain(), f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter();
+      o.type = 'sawtooth'; const p0 = base * (1 + (Math.random() - .5) * .25);
+      o.frequency.setValueAtTime(p0, t); o.frequency.linearRampToValueAtTime(p0 * (i === n - 1 ? .85 : 1.05), t + .12);
+      f1.type = 'bandpass'; f1.frequency.value = 500 + Math.random() * 400; f1.Q.value = 5;
+      f2.type = 'bandpass'; f2.frequency.value = 1200 + Math.random() * 900; f2.Q.value = 7;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.13, t + .025); g.gain.exponentialRampToValueAtTime(.0001, t + .13);
+      o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(bus); o.start(t); o.stop(t + .16);
     }
   }
   // Sonidos de animales sintetizados (volumen y lado según la posición)

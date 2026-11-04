@@ -99,8 +99,13 @@ function faceUV(x, y, W, H) {
 
 // ---------- Texturas ----------
 function faceTexture(o) {
-  const key = ['face', o.skin, o.gender, o.lip, o.brow, o.age].join();
-  return canvasTex(key, 1024, 512, (g, W, H) => {
+  // personajes secundarios: cara a media resolución (4 veces menos memoria; carga más rápido en celulares)
+  const small = Q < 1;
+  const key = ['face', o.skin, o.gender, o.lip, o.brow, o.age, small ? 's' : ''].join();
+  return canvasTex(key, small ? 512 : 1024, small ? 256 : 512, (g0) => { if (small) g0.scale(.5, .5); faceDraw(g0, 1024, 512, o); });
+}
+function faceDraw(g, W, H, o) {
+  {
     g.fillStyle = hex(o.skin); g.fillRect(0, 0, W, H);
     const [fx, fy] = faceUV(0, 0, W, H);
     let gr = g.createRadialGradient(fx, fy, 10, fx, fy, W * .3);
@@ -178,7 +183,7 @@ function faceTexture(o) {
       g.strokeStyle = 'rgba(60,30,20,.25)'; g.lineWidth = 2;
       for (let k = 0; k < 3; k++) { const [x1, y1] = faceUV(-.03, .055 + k * .007, W, H), [x2] = faceUV(.03, .055, W, H); g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2, y1 - 4, x2, y1); g.stroke(); }
     }
-  });
+  }
 }
 function eyeTexture(color) {
   return canvasTex('eye' + color, 256, 128, (g, W, H) => {
@@ -529,11 +534,11 @@ export function createHuman(opt = {}) {
     const st = mesh(new THREE.CylinderGeometry(.018, .024, 1.9, 8), wood, arms[1].hand, 0, -.12, .04); st.rotation.x = .08;
     mesh(new THREE.TorusGeometry(.055, .017, 6, 12, Math.PI), wood, arms[1].hand, 0, .86, .04);
   }
-  return { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, opts: o, staff: !!o.staff };
+  return { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -571,6 +576,26 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     P.t0 = -.2 - k2 * 1.3; P.k0 = .4 + k2 * 1.4; P.t1 = .15; P.k1 = .3 + k2 * .4; P.a0 = P.a1 = 0;
     P.spineX = .15 + k2 * .35; P.spineY = 0; P.headX = -.25 + k2 * .3; P.hipY = .93;
   }
+  // nadar: crol con brazadas alternas y patada de las piernas; quieto, flota moviendo brazos y piernas
+  let pitch = 0;
+  if (swim) {
+    const moving = speed > .5;
+    h.swimPh = (h.swimPh || 0) + dt * (moving ? 2.4 + speed * .75 : 2.2);
+    const sp = h.swimPh, s1 = Math.sin(sp), kick = Math.sin(sp * 2.6);
+    if (moving) {
+      pitch = 1.3;
+      P.s0x = -1.65 + 1.5 * s1; P.s1x = -1.65 - 1.5 * s1; P.s0z = -.22; P.s1z = .22;
+      P.e0 = -.2 - .5 * Math.max(0, Math.cos(sp)); P.e1 = -.2 - .5 * Math.max(0, -Math.cos(sp));
+      P.t0 = .3 * kick; P.t1 = -.3 * kick; P.k0 = .2 + .25 * Math.max(0, kick); P.k1 = .2 + .25 * Math.max(0, -kick); P.a0 = P.a1 = .5;
+      P.spineX = 0; P.spineY = s1 * .22; P.headX = -1.0 + Math.max(0, s1) * .15;
+    } else {
+      pitch = .3;
+      P.s0x = -.5 + .35 * s1; P.s1x = -.5 + .35 * s1; P.s0z = -.85 + .3 * Math.sin(sp * 1.3); P.s1z = .85 - .3 * Math.sin(sp * 1.3); P.e0 = P.e1 = -.6;
+      P.t0 = -.45 + .35 * s1; P.t1 = -.45 - .35 * s1; P.k0 = .9 + .3 * s1; P.k1 = .9 - .3 * s1; P.a0 = P.a1 = .2;
+      P.spineX = .05; P.spineY = 0; P.headX = -.2;
+    }
+    P.hipY = .93;
+  }
   // gesto de mal olor: se tapa la nariz y mueve la cabeza
   if (gesture > 0) { P.s1x = -2.45; P.s1z = .55; P.e1 = -2.1; P.headX = .15; }
   const k = Math.min(1, dt * 16);
@@ -583,6 +608,8 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
   S(h.arms[0].elbow.rotation, 'x', P.e0); S(h.arms[1].elbow.rotation, 'x', P.e1);
   S(h.spine.rotation, 'x', P.spineX); S(h.spine.rotation, 'y', P.spineY);
   S(h.hips.rotation, 'y', -P.spineY * .6);
+  if (swim || h.hips.rotation.x) h.hips.rotation.x = lerp(h.hips.rotation.x, pitch, Math.min(1, dt * 6));
+  if (Math.abs(h.hips.rotation.x) < .002) h.hips.rotation.x = 0;
   S(h.hips.position, 'y', P.hipY);
   S(h.head.rotation, 'x', P.headX);
   h.head.rotation.y = -h.spine.rotation.y * .8 + (gesture > 0 ? Math.sin(t * 9) * .35 : 0);

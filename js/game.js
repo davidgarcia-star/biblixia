@@ -50,6 +50,13 @@ const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoi
 const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
+// Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde, recargar una sola vez (en vez de quedarse a medio cargar)
+canvas.addEventListener('webglcontextlost', e => {
+  e.preventDefault();
+  let again = false; try { again = sessionStorage.getItem('bx_reload') === '1'; sessionStorage.setItem('bx_reload', '1'); } catch (_) { again = true; }
+  if (!again) setTimeout(() => location.reload(), 600);
+}, false);
+setTimeout(() => { try { sessionStorage.removeItem('bx_reload'); } catch (_) {} }, 60000);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -717,6 +724,56 @@ function buildWorld(cfg) {
       for (let k = 0; k < 7; k++) { const lf = new THREE.Mesh(new THREE.PlaneGeometry(.7, 3.4), palmL); lf.geometry.translate(0, 1.6, 0); lf.position.set(px, 7, pz); lf.rotation.set(-1.0, k / 7 * 6.28, 0, 'YXZ'); lf.castShadow = true; group.add(lf); }
       addBox(px - .25, px + .25, pz - .25, pz + .25, 7);
     }
+    // Gente en la playa: familias sobre toallas bajo sombrillas, personas conversando, bañistas en la orilla y niños jugando
+    {
+      W.beachFolk = []; W.kids = W.kids || [];
+      const BSK = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
+      const shirts = [0xe74c3c, 0x2e86de, 0xf1c40f, 0x16a085, 0xffffff, 0xff7f50, 0x8e44ad, 0x1abc9c];
+      const shorts = [0x1f3a5f, 0x2c3e50, 0x6d8a9e, 0xc0a080, 0x34495e];
+      const spots = [O - 30, O - 22, O - 14].flatMap(x => [Zc - 46, Zc - 26, Zc + 22, Zc + 44, Zc + 70].map(z => [x + (r() - .5) * 4, z + (r() - .5) * 8])).filter(([, z]) => z > O + 6 && z < O + T + SZ - 6);
+      const umbCols = [0xe74c3c, 0x2e86de, 0xf1c40f, 0x16a085, 0xff7f50];
+      const poleM = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: .5, metalness: .3 });
+      const person = (k, extra = {}) => createHuman({ detail: .45, gender: k % 2 ? 'f' : 'm', skin: BSK[(r() * 6) | 0], top: shirts[(r() * shirts.length) | 0], topStyle: 'camiseta', pants: shorts[(r() * shorts.length) | 0], hair: k % 2 ? (r() < .5 ? 'long' : 'ponytail') : 'short', hairColor: [0x1d130c, 0x3a2314, 0x6a4a2a, 0x0e0a08][(r() * 4) | 0], ...extra });
+      spots.slice(0, 7).forEach(([x, z], i) => {
+        // sombrilla y toalla
+        const um = new THREE.Group(); um.position.set(x, 0, z); group.add(um);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 2.4, 6), poleM); pole.position.y = 1.2; um.add(pole);
+        const top = new THREE.Mesh(new THREE.ConeGeometry(1.5, .55, 12, 1, true), new THREE.MeshStandardMaterial({ color: umbCols[i % umbCols.length], roughness: .8, side: THREE.DoubleSide })); top.position.y = 2.45; top.castShadow = true; um.add(top);
+        const towel = new THREE.Mesh(new THREE.PlaneGeometry(.9, 1.9), new THREE.MeshStandardMaterial({ color: shirts[(i * 3) % shirts.length], roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 })); towel.rotation.x = -Math.PI / 2; towel.position.set(x + 1, .1, z); group.add(towel);
+        addBox(x - .1, x + .1, z - .1, z + .1, 2.4);
+        // una persona acostada tomando el sol (boca arriba sobre la toalla)
+        if (i % 2 === 0) {
+          const h = person(i); for (const a of h.arms) { a.shoulder.rotation.x = -2.6; a.elbow.rotation.x = -1.2; }
+          const b = bakeStatic(h.root); b.rotation.x = -Math.PI / 2; b.position.set(x + 1, .2, z + .9); group.add(b);
+        }
+        // personas conversando de pie junto a la sombrilla
+        const n = i % 2 === 0 ? 1 : 2;
+        for (let j = 0; j < n; j++) {
+          const h = person(i + j + 1); const px = x - .9 - j * 1.1, pz = z + (j ? .9 : -.6);
+          h.root.position.set(px, .08, pz); h.root.rotation.y = j ? Math.PI * .8 : -Math.PI * .3 + (n === 1 ? 0 : .5); group.add(h.root);
+          W.beachFolk.push({ h, x: px, z: pz, female: h.opts.gender === 'f', talk: Math.random() * 4, gesture: Math.random() * 6 });
+        }
+      });
+      // bañistas de pie en la orilla, con el agua a la cintura
+      for (let k = 0; k < 4; k++) {
+        const h = person(k + 3); const px = SX - 4 - r() * 2, pz = Zc + (k < 2 ? -30 - k * 9 : 28 + k * 8);
+        h.root.position.set(px, -.95, pz); h.root.rotation.y = r() * 6.28; group.add(h.root);
+        W.beachFolk.push({ h, x: px, z: pz, female: h.opts.gender === 'f', talk: Math.random() * 4, gesture: Math.random() * 6, water: true });
+      }
+      // niños jugando y corriendo en la arena (con sus risas y voces)
+      const kidC = [0xff5e57, 0x3ec1d3, 0xffd32a, 0x7bed9f, 0xff9ff3, 0x70a1ff];
+      for (let k = 0; k < 6; k++) {
+        const girl = k % 2 === 1;
+        const kid = createHuman({ detail: .45, gender: girl ? 'f' : 'm', top: kidC[k], topStyle: 'camiseta', pants: shorts[k % shorts.length], hair: girl ? 'ponytail' : 'short', hairColor: [0x2a1a10, 0x4a2a14, 0x1a100a][k % 3], skin: BSK[(k * 2 + 1) % 6] });
+        kid.root.scale.setScalar(.6); group.add(kid.root);
+        const ring = k < 3 ? { cx: O - 18, cz: Zc - 36, r: 3 + k * 1.4 } : { cx: O - 20, cz: Zc + 34, r: 2.5 + (k - 3) * 1.6 };
+        W.kids.push({ h: kid, ...ring, a: k * 2.1, sp: (k % 2 ? -1 : 1) * (.7 + k * .06), jump: 0 });
+      }
+      // pelota de playa que rebota entre los niños
+      const ballTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d'); ['#ff4757', '#ffffff', '#1e90ff', '#ffffff', '#ffd32a', '#ffffff'].forEach((col, i) => { g.fillStyle = col; g.fillRect(i * 128 / 6, 0, 128 / 6 + 1, 64); }); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), new THREE.MeshStandardMaterial({ map: ballTex, roughness: .4 })); ball.castShadow = true; group.add(ball);
+      W.beachBall = { obj: ball, cx: O - 18, cz: Zc - 36 };
+    }
     // muelle de madera
     const pierLen = 70, pz0 = Zc, pierX1 = SX + 2, pierX0 = SX - pierLen;
     const deck = new THREE.Mesh(new THREE.BoxGeometry(pierLen + 2, .3, 4.4), M.wood); deck.position.set((pierX0 + pierX1) / 2, .45, pz0); deck.castShadow = deck.receiveShadow = true; group.add(deck);
@@ -929,6 +986,7 @@ function buildWorld(cfg) {
   W.dyn = [];
   if (W.ark) for (const a of W.ark.lodItems) if (a.userData && a.userData.kind) W.dyn.push({ obj: a, r: BODY_R[a.userData.kind] || .6 });
   if (W.kids) for (const kd of W.kids) W.dyn.push({ obj: kd.h.root, r: .28 });
+  if (W.beachFolk) for (const bf of W.beachFolk) W.dyn.push({ obj: bf.h.root, r: .3 });
   if (W.life) for (const w of W.life.walkers) W.dyn.push({ obj: w.h.root, r: .3 });
   // Lista de objetos que se ocultan cuando quedan lejos de la cámara
   W.lod = [];
@@ -1186,9 +1244,14 @@ function climbStep(dt) {
   else { P.pos.set(c.tx, c.top, c.tz); P.onGround = true; P.vy = 0; P.climb = null; sound.step('hard', true); }
   updateHUD();
 }
-function blocked(x, z, y) {
+// Desde el nivel Intermedio se puede nadar en el mar (hasta unos 250 m de la orilla)
+const canSwim = () => lvlIdx >= 1 && !!world.seaInfo;
+function blocked(x, z, y, swimmer = false) {
+  const sw = swimmer && canSwim();
+  if (sw && x < world.seaInfo.SX - 250) return true;
   for (const c of world.colliders) {
     if (c.tag === 'ship' && world.boat && world.boat.away) continue;
+    if (sw && c.tag === 'sea') continue;
     if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) return true; }
   }
   return false;
@@ -1324,7 +1387,7 @@ async function startLevelNow(i) {
   lvlIdx = i; L = LEVELS[i];
   world = buildWorld(L);
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null;
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false;
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -1585,7 +1648,12 @@ function update(dt) {
   const rx = -fz, rz = fx;                                          // derecha
   let dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
   const dl = Math.hypot(dx, dz);
-  const target = mag > 0 ? (P.turbo ? TURBO : run ? RUN : WALK) * mag : 0;
+  // ¿Está en el agua? (más allá de la orilla y no sobre el muelle ni el barco)
+  let inWater = false, waterY = 0;
+  if (canSwim() && P.pos.x < world.seaInfo.SX && !P.climb && floorAt(P.pos.x, P.pos.z, P.pos.y) < .3) {
+    inWater = true; waterY = -1.2 * THREE.MathUtils.clamp((world.seaInfo.SX - P.pos.x) / 4, 0, 1) - (P.swim && P.speed > .5 ? .14 : 0);
+  }
+  const target = mag > 0 ? (P.swim ? (P.turbo ? 5.6 : run ? 4.3 : 2.7) : (P.turbo ? TURBO : run ? RUN : WALK) * (inWater ? .6 : 1)) * mag : 0;
   P.speed += (target - P.speed) * Math.min(1, dt * (P.onGround ? 10 : 3));
   if (dl > 0.01 && mag > 0) {
     dx /= dl; dz /= dl;
@@ -1598,12 +1666,29 @@ function update(dt) {
 
   fwdHeld = !!(keys.KeyW || keys.ArrowUp);
   // Movimiento con colisiones por eje
-  const nx = P.pos.x + vx * dt; if (!blocked(nx, P.pos.z, P.pos.y)) P.pos.x = nx;
-  const nz = P.pos.z + vz * dt; if (!blocked(P.pos.x, nz, P.pos.y)) P.pos.z = nz;
+  const nx = P.pos.x + vx * dt; if (!blocked(nx, P.pos.z, P.pos.y, true)) P.pos.x = nx;
+  const nz = P.pos.z + vz * dt; if (!blocked(P.pos.x, nz, P.pos.y, true)) P.pos.z = nz;
 
   // Agarrarse del borde y subir: en el aire, empujando hacia adelante (flecha arriba / W / joystick)
   if (P.climb) { climbStep(dt); jumpPressed = false; return; }
-  if (!P.onGround && (fwdHeld || (joy.active && -joy.y > .35))) tryGrab();
+  if ((!P.onGround || P.swim) && (fwdHeld || (joy.active && -joy.y > .35))) tryGrab();
+  if (P.climb) { P.swim = false; jumpPressed = false; return; }
+  if (inWater) {
+    // Agua: flota a la altura del pecho, nada si está hondo y chapotea al caminar en la orilla
+    if (jumpPressed && P.onGround && !P.swim) { P.vy = JUMP_V * .6; P.onGround = false; sound.swim(.6); }
+    jumpPressed = false;
+    if (!P.onGround) {
+      P.vy -= GRAV * dt; P.pos.y += P.vy * dt;
+      if (P.pos.y <= waterY && P.vy <= 0) { if (P.vy < -4) sound.splash(Math.min(1, -P.vy / 10)); P.pos.y = waterY; P.vy = 0; P.onGround = true; }
+    } else P.pos.y += (waterY - P.pos.y) * Math.min(1, dt * 5);
+    const was = P.swim; P.swim = P.onGround && waterY < -.75 && P.pos.y < -.6;
+    if (P.swim && !was) { toast('🏊 ¡Estás nadando!', '#7ecbff'); if (!P.splashT || performance.now() - P.splashT > 3000) { P.splashT = performance.now(); sound.splash(.6); } }
+    P.land = 0;
+    if (P.speed > .5) {
+      const st = P.swim ? Math.floor(human.swimPh / Math.PI) : Math.floor(human.phase / Math.PI);
+      if (st !== P.lastStep) { P.lastStep = st; if (P.swim) sound.swim(P.speed > 3.5 ? 1 : .7); else sound.step('water', P.speed > 4); }
+    }
+  } else { P.swim = false;
   // Salto y gravedad
   if (jumpPressed && P.onGround) { P.vy = JUMP_V; P.onGround = false; sound.jump(); }
   jumpPressed = false;
@@ -1621,11 +1706,14 @@ function update(dt) {
     const st = Math.floor(human.phase / Math.PI);
     if (st !== P.lastStep) {
       P.lastStep = st;
-      const d = world.desert, sth = world.south;
-      const surface = (d && P.pos.x > d.X0 && P.pos.y < .3) ? 'sand' : (sth && P.pos.z > sth.Z0 && P.pos.y < .3) ? 'grass' : 'hard';
+      const d = world.desert, sth = world.south, si = world.seaInfo;
+      const onWood = si && P.pos.x < si.SX + 2.5 && P.pos.y > .3 && P.pos.y < 1.6;          // muelle o cubierta del barco
+      const onBeach = si && P.pos.x < world.O && P.pos.x > si.SX - .5 && P.pos.y < .3;        // arena de la playa
+      const surface = onWood ? 'wood' : onBeach ? 'sand' : (d && P.pos.x > d.X0 && P.pos.y < .3) ? 'sand' : (sth && P.pos.z > sth.Z0 && P.pos.y < .3) ? 'grass' : 'hard';
       sound.step(surface, P.speed > 6.2);
     }
   } else P.lastStep = Math.floor(human.phase / Math.PI);
+  }
 
   // Cuerpos que se mueven (animales y niños): el jugador no los atraviesa
   if (world.dyn) for (const b of world.dyn) {
@@ -1877,6 +1965,22 @@ function loop() {
         }
       }
     }
+    // gente de la playa: respiran, gesticulan al hablar y se oyen sus voces de cerca
+    if (world.beachFolk) for (const bf of world.beachFolk) {
+      const near = Math.hypot(bf.x - camera.position.x, bf.z - camera.position.z) < 110; bf.h.root.visible = near; if (!near) continue;
+      animateHuman(bf.h, dt, { speed: 0, onGround: true, vy: 0, land: 0, t: t + bf.gesture });
+      bf.gesture += dt;
+      const g2 = Math.sin(bf.gesture * .9); if (g2 > .6 && !bf.water) { bf.h.arms[1].shoulder.rotation.x = -.5 - (g2 - .6) * 1.5; bf.h.arms[1].elbow.rotation.x = -1.2; }
+      if (bf.water) bf.h.root.position.y = -.95 + Math.sin(t * 1.3 + bf.x) * .05;
+      if (state === 'play') {
+        const dx2 = bf.x - P.pos.x, dz2 = bf.z - P.pos.z, dist = Math.hypot(dx2, dz2);
+        if (dist < 35) {
+          bf.talk -= dt;
+          if (bf.talk <= 0) { bf.talk = 2.5 + Math.random() * 5; const vol = Math.pow(1 - dist / 35, 2) * .8, pan = (dx2 * -Math.cos(cam.yaw) + dz2 * Math.sin(cam.yaw)) / Math.max(1, dist); sound.chatter(vol, pan, bf.female); }
+        }
+      }
+    }
+    if (world.beachBall) { const bb = world.beachBall, k3 = t * 1.1; bb.obj.position.set(bb.cx + Math.sin(k3) * 3, .22 + Math.abs(Math.sin(k3 * 3)) * 1.6, bb.cz + Math.sin(k3 * .7) * 1.2); bb.obj.rotation.x = t * 3; bb.obj.rotation.z = t * 2; }
     if (world.valley) world.valley.update(t, dt);
     for (const n of world.npcs) if (!n.given) { n.gift.rotation.y = t * 1.5; n.gift.position.y = (n.gy ?? 2.75) + Math.sin(t * 2 + n.x) * .08; }
     if (M.sea.userData.shader) M.sea.userData.shader.uniforms.uTime.value = t;
@@ -1905,7 +2009,7 @@ function loop() {
   human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {
