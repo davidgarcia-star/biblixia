@@ -1966,22 +1966,14 @@ window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { retur
   })(last);
 })();
 
-/* ---------- Portada: el león ruge y el águila grita (al entrar, en cuanto el navegador permite el sonido) ---------- */
+/* ---------- Portada: un rugido de león una sola vez al entrar (o al primer toque si el navegador bloquea el sonido) ---------- */
 (() => {
-  const sp = document.getElementById('splash'), bz = document.querySelector('.beasts'); if (!sp || !bz) return;
-  const LION = 14000, t0 = performance.now() + 2200;
-  let lastL = -1, lastE = -1, first = true;
-  const roar = () => { if (sp.classList.contains('hidden')) return; sound.roar(); bz.classList.remove('roar'); void bz.offsetWidth; bz.classList.add('roar'); };
-  const eagle = () => { if (!sp.classList.contains('hidden')) sound.eagle(.8); };
-  // intentar sonar en cuanto se abre; si el navegador lo bloquea, suena al primer toque
-  const tryAuto = () => { try { const a = sound.unlock(); if (a && a.state === 'suspended') a.resume(); return a && a.state === 'running'; } catch (e) { return false; } };
-  const kick = () => { if (!first) return; if (tryAuto()) { first = false; roar(); setTimeout(eagle, 2600); } };
-  setTimeout(kick, 1300);
-  ['pointerdown', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => setTimeout(kick, 30), { passive: true }));
-  setInterval(() => {
-    if (first || sp.classList.contains('hidden')) return;
-    const k = Math.floor((performance.now() - t0) / LION);
-    if (k !== lastL && (performance.now() - t0) % LION > 2800) { lastL = k; roar(); }
-    if (k !== lastE && (performance.now() - t0) % LION > 8500) { lastE = k; eagle(); }
-  }, 400);
+  const sp = document.getElementById('splash'); if (!sp) return;
+  let done = false;
+  const go = () => {
+    if (done || sp.classList.contains('hidden')) return;
+    try { const a = sound.unlock(); if (!a) return; if (a.state !== 'running') { a.resume().then(() => { if (!done && a.state === 'running') { done = true; sound.roar(); } }).catch(() => {}); return; } done = true; sound.roar(); } catch (e) {}
+  };
+  setTimeout(go, 1200);
+  ['pointerdown', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => setTimeout(go, 30), { passive: true }));
 })();
