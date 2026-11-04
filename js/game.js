@@ -1010,7 +1010,8 @@ function playerOpts(pl = save.player) {
   if (out === 'levita') return { ...base, outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: top, hair: f ? 'cloth' : 'turban', cloth: 0xf4f0e6 };
   if (out === 'adaneva') return pairOpts(f ? 'eva' : 'adan', pl);
   if (out === 'aaron') return { ...base, gender: 'm', outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: 0x5b2a7a, hair: 'turban', priest: true, beard: { color: 0x5a4a3a, len: .13 }, hairColor: 0x4a3a2a };
-  return { ...base, top, pants: bot, skirt: bot, legwear: f ? pl.legwear : 'pantalon', topStyle: pl.topStyle || 'abrigo', hair: f ? 'long' : 'short', shoes: 0xf2f2f0 };
+  const suit = pl.topStyle === 'traje';
+  return { ...base, top, pants: suit ? new THREE.Color(top).multiplyScalar(.92).getHex() : bot, skirt: suit ? top : bot, legwear: f ? pl.legwear : 'pantalon', topStyle: pl.topStyle || 'abrigo', tie: bot, hair: f ? 'long' : 'short', shoes: 0xf2f2f0 };
 }
 // Adán y Eva: túnicas de pieles que Dios les hizo (Génesis 3:21)
 function pairOpts(who, pl = save.player) {
@@ -1815,10 +1816,13 @@ function refreshCreator() {
   document.querySelectorAll('[data-leg]').forEach(b => b.classList.toggle('sel', b.dataset.leg === (draft.legwear || 'falda')));
   const dress = draft.gender === 'f' && draft.legwear === 'vestido' && !robeOut;
   $('lblBottom').textContent = robeOut ? 'Color del manto' : (draft.gender === 'f' && draft.legwear === 'falda') ? 'Color de la falda' : 'Color del pantalón';
-  $('lblBottom').classList.toggle('hidden', dress); $('bottoms').classList.toggle('hidden', dress);
+  const suitOn = !robeOut && draft.topStyle === 'traje';
+  if (suitOn) $('lblBottom').textContent = 'Color de la corbata';
+  const hideBot = dress || (suitOn && draft.gender === 'f');
+  $('lblBottom').classList.toggle('hidden', hideBot); $('bottoms').classList.toggle('hidden', hideBot);
   $('topRow').classList.toggle('hidden', robeOut); $('lblTopStyle').classList.toggle('hidden', robeOut);
   document.querySelectorAll('[data-topstyle]').forEach(b => b.classList.toggle('sel', b.dataset.topstyle === (draft.topStyle || 'abrigo')));
-  if (!robeOut) $('lblTop').textContent = dress ? 'Color del vestido' : 'Color de la ropa';
+  if (!robeOut) $('lblTop').textContent = dress ? 'Color del vestido' : suitOn ? 'Color del traje' : 'Color de la ropa';
   const ol = $('outfits'); ol.innerHTML = '';
   OUTFITS.forEach(o => {
     const locked = o.req && save.unlocked < o.req, b = document.createElement('button');

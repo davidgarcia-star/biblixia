@@ -42,13 +42,44 @@ function torsoGeo(f) {
 }
 // Cráneo ovalado con mentón: radio .1, escala (.9, 1.14, 1.02)
 function headGeo(f) {
-  const g = SG(.1, 48, 36), p = g.attributes.position;
+  const g = SG(.1, 96, 72), p = g.attributes.position;
   for (let i = 0; i < p.count; i++) {
     let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const ny = y / .1;
     if (ny < 0) { const k = 1 - (f ? .27 : .22) * Math.pow(-ny, 1.6); x *= k; z *= (1 - .1 * -ny); y *= f ? 1.02 : 1.05; }
     if (z < 0) z *= 1.05;
-    p.setXYZ(i, x * .94, y * 1.12, z * 1.02);
+    let X = x * .94, Y = y * 1.12, Z = z * 1.02;
+    // Esculpido del rostro (proporciones de adulto): frente, cejas, cuencas, pómulos, nariz, labios, mentón y mandíbula
+    if (Z > 0) {
+      const fr = Math.min(1, Z / .055) ** 2, G = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2 + (dy / sy) ** 2));
+      const sm = (a, b, v) => { const t = THREE.MathUtils.clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      let d = 0;
+      d += (f ? .004 : .0085) * G(X, Y - .043, f ? .05 : .058, .012);              // arco de las cejas
+      d -= .0025 * G(X, Y - .03, .012, .008);                                       // entrecejo
+      for (const sx of [-1, 1]) {
+        d -= (f ? .008 : .0105) * G(X - sx * .034, Y - .022, .02, .0135);            // cuencas (ojos hundidos, mirada adulta)
+        d += (f ? .007 : .006) * G(X - sx * .05, Y + .012, .019, .014);              // pómulos
+        if (!f) d -= .004 * G(X - sx * .05, Y + .045, .016, .02);                    // mejillas hundidas
+        d -= .004 * G(X - sx * .064, Y - .03, .014, .03);                            // sienes
+        d += .0035 * G(X - sx * .0115, Y + .023, .0065, .0055);                      // aletas de la nariz
+        d -= .002 * G(X - sx * .028, Y + .054, .005, .006);                          // comisuras de la boca
+      }
+      // nariz: puente que crece hasta la punta y baja suavemente (sin cortes)
+      const nt = sm(.034, -.016, Y), below = Y < -.016 ? Math.exp(-(((Y + .016) / .0065) ** 2)) : 1;
+      d += (.0025 + (f ? .0155 : .019) * nt ** 1.4) * below * G(X, 0, (f ? .0058 : .0066) + .0055 * nt, 1);
+      d += (f ? .003 : .0038) * G(X, Y + .017, .009, .007);                          // punta redondeada
+      d -= .0022 * G(X, Y + .036, .006, .006);                                      // surco del labio (filtrum)
+      d += .0048 * G(X, Y + .045, .024, .0048);                                     // labio superior
+      d += .0062 * G(X, Y + .056, .021, .006);                                      // labio inferior
+      d -= .003 * G(X, Y + .067, .02, .0045);                                       // hendidura bajo el labio
+      d += (f ? .0055 : .0095) * G(X, Y + .088, f ? .018 : .026, .012);             // mentón
+      Z += d * fr;
+    }
+    // mandíbula marcada en hombres, rostro más fino en mujeres
+    if (ny < -.3 && ny > -.98) { const t = Math.sin((-ny - .3) / .68 * Math.PI); X *= f ? 1 - .02 * t : 1 + .045 * t; }
+    // cara un poco más larga (adulta, no infantil)
+    if (ny < 0) Y *= 1.06;
+    p.setXYZ(i, X, Y, Z);
   }
   g.computeVertexNormals();
   return g;
@@ -74,7 +105,7 @@ function faceTexture(o) {
     // mejillas
     for (const s of [-1, 1]) {
       const [cx, cy] = faceUV(s * .045, -.042, W, H);
-      gr = g.createRadialGradient(cx, cy, 2, cx, cy, 38); gr.addColorStop(0, o.gender === 'f' ? 'rgba(240,110,120,.42)' : 'rgba(215,110,95,.22)'); gr.addColorStop(1, 'rgba(200,90,80,0)');
+      gr = g.createRadialGradient(cx, cy, 2, cx, cy, 38); gr.addColorStop(0, o.gender === 'f' ? 'rgba(220,110,110,.2)' : 'rgba(200,110,95,.12)'); gr.addColorStop(1, 'rgba(200,90,80,0)');
       g.fillStyle = gr; g.fillRect(cx - 40, cy - 40, 80, 80);
     }
     // cuencas, delineado y cejas  (ojos en y=.006 relativo al centro)
@@ -104,10 +135,14 @@ function faceTexture(o) {
     }
     // sombra bajo la nariz
     const [nx, ny] = faceUV(0, -.033, W, H);
-    gr = g.createRadialGradient(nx, ny, 2, nx, ny, 20); gr.addColorStop(0, 'rgba(70,35,25,.3)'); gr.addColorStop(1, 'rgba(70,35,25,0)');
+    gr = g.createRadialGradient(nx, ny, 2, nx, ny, 16); gr.addColorStop(0, 'rgba(70,35,25,.1)'); gr.addColorStop(1, 'rgba(70,35,25,0)');
     g.fillStyle = gr; g.fillRect(nx - 24, ny - 24, 48, 48);
+    // fosas nasales suaves
+    for (const s of [-1, 1]) { const [qx, qy] = faceUV(s * .0065, -.0285, W, H); g.fillStyle = 'rgba(60,25,20,.16)'; g.beginPath(); g.ellipse(qx, qy, 4, 2, s * .4, 0, 7); g.fill(); }
+    // luz en el puente de la nariz y la frente; sombra suave en la mandíbula
+    { const [bx2, by2] = faceUV(0, .0, W, H); const hl = g.createLinearGradient(bx2 - 8, 0, bx2 + 8, 0); hl.addColorStop(0, 'rgba(255,240,225,0)'); hl.addColorStop(.5, 'rgba(255,240,225,.16)'); hl.addColorStop(1, 'rgba(255,240,225,0)'); g.fillStyle = hl; g.fillRect(bx2 - 8, by2 - 40, 16, 60); }
     // labios
-    const [mx, my] = faceUV(0, -.056, W, H), mw = o.gender === 'f' ? 27 : 25, lo = o.gender === 'f' ? 14 : 10, up = 5;
+    const [mx, my] = faceUV(0, -.055, W, H), mw = o.gender === 'f' ? 33 : 32, lo = o.gender === 'f' ? 14 : 11, up = 5;
     const lg = g.createLinearGradient(0, my - 10, 0, my + lo);
     lg.addColorStop(0, o.lip); lg.addColorStop(1, shade(o.lip.length ? o.lip : '#b4505a', 1.15));
     g.fillStyle = lg;
@@ -123,6 +158,16 @@ function faceTexture(o) {
     // hoyuelos de la sonrisa
     g.strokeStyle = 'rgba(120,60,45,.25)'; g.lineWidth = 2;
     for (const s of [-1, 1]) { g.beginPath(); g.arc(mx + s * (mw + 6), my - up - 2, 5, s > 0 ? -.6 : Math.PI - .9, s > 0 ? .9 : Math.PI + .6); g.stroke(); }
+    // sombreado natural (oclusión): cuencas, costados de la nariz, bajo el labio y la mandíbula
+    for (const sx of [-1, 1]) { const [ax, ay] = faceUV(sx * .034, .02, W, H); const oc = g.createRadialGradient(ax, ay, 4, ax, ay, 34); oc.addColorStop(0, 'rgba(60,30,25,.16)'); oc.addColorStop(1, 'rgba(60,30,25,0)'); g.fillStyle = oc; g.fillRect(ax - 36, ay - 36, 72, 72);
+      const [cx2, cy2] = faceUV(sx * .016, -.008, W, H); const sn = g.createRadialGradient(cx2, cy2, 2, cx2, cy2, 16); sn.addColorStop(0, 'rgba(70,35,28,.12)'); sn.addColorStop(1, 'rgba(70,35,28,0)'); g.fillStyle = sn; g.fillRect(cx2 - 18, cy2 - 18, 36, 36); }
+    { const [jx, jy] = faceUV(0, -.1, W, H); const jw = g.createLinearGradient(0, jy - 30, 0, jy + 30); jw.addColorStop(0, 'rgba(50,25,20,0)'); jw.addColorStop(1, 'rgba(50,25,20,.22)'); g.fillStyle = jw; g.fillRect(0, jy - 30, W, 60); }
+    // barba de pocos días en hombres adultos
+    if (o.gender !== 'f' && !o.beard) {
+      const [bx3, by3] = faceUV(0, -.075, W, H);
+      for (let i = 0; i < 2600; i++) { const a = Math.random() * Math.PI, rr = 40 + Math.random() * 90; const x = bx3 + Math.cos(a) * rr * 1.6 * (Math.random() < .5 ? -1 : 1) * .6, y = by3 + Math.sin(a) * rr * .45 - 10; g.fillStyle = 'rgba(40,25,18,.10)'; g.fillRect(x, y, 1.4, 1.4); }
+      const [ux, uy] = faceUV(0, -.04, W, H); for (let i = 0; i < 500; i++) { g.fillStyle = 'rgba(40,25,18,.10)'; g.fillRect(ux + (Math.random() - .5) * 64, uy + Math.random() * 8, 1.3, 1.3); }
+    }
     if (o.age > 0) {
       g.strokeStyle = 'rgba(60,30,20,.25)'; g.lineWidth = 2;
       for (let k = 0; k < 3; k++) { const [x1, y1] = faceUV(-.03, .055 + k * .007, W, H), [x2] = faceUV(.03, .055, W, H); g.beginPath(); g.moveTo(x1, y1); g.quadraticCurveTo((x1 + x2) / 2, y1 - 4, x2, y1); g.stroke(); }
@@ -196,7 +241,7 @@ export function createHuman(opt = {}) {
   Q = o.detail ?? 1;
   const lowQ = Q < .5; // figuras lejanas: sin dedos, párpados ni pestañas
   const F = o.gender === 'f', robe = o.outfit === 'robe';
-  o.lip = F ? '#c4566a' : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb05050), .35).getHex(), .82); o.brow = shade(o.hairColor, .9);
+  o.lip = F ? shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb04a5a), .55).getHex(), .9) : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb05050), .35).getHex(), .82); o.brow = shade(o.hairColor, .9);
   if (o.beard && !o.beard.color) o.beard.color = o.hairColor;
 
   const skin = new THREE.MeshPhysicalMaterial({ color: o.skin, roughness: .5, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
@@ -287,12 +332,28 @@ export function createHuman(opt = {}) {
   const chest = grp(spine, 0, F ? .45 : .46, 0);
   if (TS === 'abrigo') { const hood = mesh(new THREE.TorusGeometry(.085, .03, 10, 28), top2, chest, 0, .04, -.03); hood.rotation.x = Math.PI / 2 - .35; hood.scale.set(1.15, 1, 1); }
   if (TS === 'camiseta') { const crew = mesh(new THREE.TorusGeometry(.052, .011, 8, 28), top2, chest, 0, .055, .004); crew.rotation.x = Math.PI / 2 - .12; crew.scale.set(1, 1.15, 1); }
-  if (TS === 'camisa' || TS === 'mangalarga' || TS === 'chaqueta') {
+  if (TS === 'camisa' || TS === 'mangalarga' || TS === 'chaqueta' || TS === 'traje') {
     // cuello de camisa y botones
-    const colM = TS === 'chaqueta' ? whiteM : top2;
+    const colM = TS === 'chaqueta' || TS === 'traje' ? whiteM : top2;
     for (const sx of [-1, 1]) { const c = mesh(new THREE.BoxGeometry(.06, .045, .01), colM, chest, sx * .032, .045, .066); c.rotation.set(-.35, sx * .45, sx * .55); }
     const back = mesh(new THREE.CylinderGeometry(.058, .062, .04, 18, 1, true, Math.PI * .6, Math.PI * .8), colM, chest, 0, .06, -.004); back.scale.set(1, 1, .9);
-    if (TS !== 'chaqueta') for (let k = 0; k < 5; k++) mesh(new THREE.SphereGeometry(.007, 8, 6), btnM, spine, 0, .42 - k * .075, F ? .118 : .121 - k * .002);
+    if (TS !== 'chaqueta' && TS !== 'traje') for (let k = 0; k < 5; k++) mesh(new THREE.SphereGeometry(.007, 8, 6), btnM, spine, 0, .42 - k * .075, F ? .118 : .121 - k * .002);
+  }
+  if (TS === 'traje') {
+    // traje moderno: saco fino entallado, camisa blanca, solapas, corbata (hombre) y pañuelo de bolsillo
+    const zf = F ? .113 : .119;
+    const shirt = mesh(new THREE.BoxGeometry(F ? .07 : .085, .2, .01), whiteM, spine, 0, .35, zf); shirt.rotation.x = -.05;
+    for (const sx of [-1, 1]) {
+      const lp = mesh(new THREE.BoxGeometry(.045, .23, .014), top2, spine, sx * .052, .33, zf + .003); lp.rotation.z = sx * -.32;
+      const notch = mesh(new THREE.BoxGeometry(.04, .03, .014), top2, spine, sx * .07, .44, zf - .004); notch.rotation.z = sx * .6;
+    }
+    if (!F) {
+      const tieM = new THREE.MeshStandardMaterial({ color: o.tie ?? 0x8a1c24, roughness: .45, metalness: .1 });
+      mesh(new THREE.BoxGeometry(.024, .022, .016), tieM, spine, 0, .445, zf + .006);
+      const tie = mesh(new THREE.CylinderGeometry(.018, .01, .2, 4), tieM, spine, 0, .33, zf + .006); tie.rotation.y = Math.PI / 4; tie.scale.set(1, 1, .35);
+    }
+    mesh(new THREE.BoxGeometry(.04, .012, .006), whiteM, spine, F ? .075 : .09, .36, zf - .006).rotation.z = .15;
+    for (let k = 0; k < 2; k++) mesh(new THREE.SphereGeometry(.0075, 8, 6), new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: .3 }), spine, 0, .2 - k * .07, zf + .004);
   }
   if (TS === 'chaqueta') {
     // chaqueta abierta: camisa blanca al centro y solapas
@@ -310,18 +371,18 @@ export function createHuman(opt = {}) {
   // Ojos (esfera con iris pintado) y párpados
   const eyes = [];
   for (const s of [-1, 1]) {
-    const ER = F ? .0142 : .0134, ez = .0862;
+    const ER = F ? .0138 : .0132, ez = .0842;
     const e = mesh(SG(ER, 28, 18), eyeM, head, s * .034, .026, ez); eyes.push(e);
     if (!lowQ) {
-    const lidU = mesh(SG(ER + .0008, 22, 10, 0, Math.PI * 2, 0, Math.PI * .34), faceM, head, s * .034, .026, ez); lidU.rotation.x = .1;
+    const lidU = mesh(SG(ER + .0008, 22, 10, 0, Math.PI * 2, 0, Math.PI * .38), faceM, head, s * .034, .026, ez); lidU.rotation.x = .05;
     const lidD = mesh(SG(ER + .0006, 22, 10, 0, Math.PI * 2, Math.PI * .8, Math.PI * .2), faceM, head, s * .034, .026, ez); lidD.rotation.x = -.08;
     const lashM = new THREE.MeshBasicMaterial({ color: 0x120a08 });
     const lash = mesh(new THREE.TorusGeometry(ER * .9, F ? .0017 : .001, 4, 20, Math.PI), lashM, head, s * .034, .026 + ER * .46, ez); lash.rotation.set(Math.PI / 2 + .12, 0, 0);
     }
   }
   // Nariz
-  const nose = mesh(SG(.0095, 16, 12), faceM, head, 0, .003, .0985); nose.scale.set(.7, 1.6, .7);
-  mesh(SG(F ? .0062 : .007, 14, 10), faceM, head, 0, -.009, .1012).scale.set(1.15, .9, 1);
+  // punta y aletas de la nariz (el puente ya está esculpido en la cabeza)
+  const nose = null;
   // Orejas
   for (const s of [-1, 1]) { const e = mesh(SG(.02, 14, 10), skin, head, s * .088, .005, -.008); e.scale.set(.4, 1.05, .7); }
 
@@ -419,7 +480,7 @@ export function createHuman(opt = {}) {
     if (shortS) { mesh(limbGeo(F ? .056 : .062, F ? .052 : .058, .13, 0), sleeveM, shoulder, 0, .01, 0); mesh(new THREE.CylinderGeometry(F ? .052 : .058, F ? .053 : .059, .02, 16), top2, shoulder, 0, -.115, 0); }
     const elbow = grp(shoulder, 0, -.28, 0);
     mesh(robe ? limbGeo(.05, .062, .2, 0) : limbGeo(F ? .04 : .046, F ? .034 : .04, .2, .004), shortS ? skin : sleeveM, elbow);
-    if (!robe && !shortS) mesh(new THREE.CylinderGeometry(.041, .043, .035, 14), TS === 'chaqueta' ? whiteM : top2, elbow, 0, -.2, 0);
+    if (!robe && !shortS) mesh(new THREE.CylinderGeometry(.041, .043, .035, 14), TS === 'chaqueta' || TS === 'traje' ? whiteM : top2, elbow, 0, -.2, 0);
     mesh(limbGeo(.031, .027, .05), skin, elbow, 0, -.21, 0);
     const hand = grp(elbow, 0, -.27, 0);
     const palm = mesh(SG(F ? .038 : .042, 16, 12), skin, hand, 0, -.02, 0); palm.scale.set(.55, 1, .9);

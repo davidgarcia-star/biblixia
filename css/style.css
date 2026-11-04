@@ -446,3 +446,6 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 /* Mapas con borde amarillo */
 #minimap{border:3px solid #f5c542!important;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 14px rgba(245,197,66,.45),0 8px 30px rgba(0,0,0,.35)!important}
 #bigmapCanvas{border:3px solid #f5c542!important;box-shadow:0 0 18px rgba(245,197,66,.4),0 20px 60px rgba(0,0,0,.6)!important}
+/* Botón para ir a Desafío Bíblico RD */
+.game-link{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;background:linear-gradient(180deg,#2a63c9,#1a3f8a);border:1px solid rgba(245,197,66,.7);box-shadow:0 6px 18px rgba(26,63,138,.45)}
+.game-link:hover{filter:brightness(1.12)}
