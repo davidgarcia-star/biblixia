@@ -103,6 +103,7 @@
     <button id="tTake" aria-label="Tomar">TOMAR<small>T</small></button>
     <button id="tRun" class="small" aria-label="Correr">CORRER</button>
     <button id="tTurbo" class="small turbo" aria-label="Turbo">⚡ TURBO</button>
+    <button id="tSwap" class="small hidden" aria-label="Cambiar entre Adán y Eva">👫 CAMBIAR</button>
   </div>
 </div>
 
@@ -143,7 +144,7 @@
 <div class="screen hidden" id="help">
   <h2>Cómo jugar</h2>
   <div class="glass help">
-    <p><b>Computadora:</b> camina con <kbd>W A S D</kbd> o con las flechas <kbd>↑ ↓ ← →</kbd>, <b>mantén presionada</b> <kbd>↑</kbd> o <kbd>W</kbd> para correr más rápido (o usa <kbd>Shift</kbd>), salta con <kbd>Espacio</kbd> y <b>toma</b> regalos con <kbd>T</kbd>. Arrastra con el ratón para girar la cámara. <kbd>R</kbd> turbo ultra rápido (desde el nivel Intermedio), <kbd>M</kbd> mapa completo, <kbd>P</kbd> pausa y <kbd>F</kbd> pantalla completa.</p>
+    <p><b>Computadora:</b> camina con <kbd>W A S D</kbd> o con las flechas <kbd>↑ ↓ ← →</kbd>, <b>mantén presionada</b> <kbd>↑</kbd> o <kbd>W</kbd> para correr más rápido (o usa <kbd>Shift</kbd>), salta con <kbd>Espacio</kbd> y <b>toma</b> regalos con <kbd>T</kbd>. Arrastra con el ratón para girar la cámara. <kbd>R</kbd> turbo ultra rápido (desde el nivel Intermedio), <kbd>Q</kbd> cambiar entre Adán y Eva (al desbloquearlos tras el nivel Intermedio), <kbd>M</kbd> mapa completo, <kbd>P</kbd> pausa y <kbd>F</kbd> pantalla completa.</p>
     <p><b>Teléfono:</b> usa los botones de flechas para caminar (mantén ▲ presionado para correr), <b>SALTAR</b> para saltar, <b>TOMAR</b> para recibir regalos y <b>CORRER</b> para ir más rápido, <b>⚡ TURBO</b> para ir ultra rápido (desde el nivel Intermedio) y 🗺 para ver el mapa completo. Arrastra el dedo en la pantalla para mirar alrededor.</p>
     <p><b>Personajes bíblicos:</b> en el camino encontrarás profetas y apóstoles. Acércate, pulsa <kbd>T</kbd> (o TOMAR) para escucharlos y recibir su regalo: ¡cada regalo suma 10 segundos!</p>
     <p><b>El tabernáculo:</b> al oriente de la ciudad, en el desierto, está el tabernáculo con su atrio, el altar de bronce, la fuente, el Lugar Santo, el velo, el Lugar Santísimo y el arca del pacto. Entra y explora cada lugar.</p>
@@ -167,8 +168,8 @@
     <p class="phint" id="pHint"></p>
     <label>Tono de piel</label><div class="chips" id="skins"></div>
     <label>Vestimenta</label><div class="outfits" id="outfits"></div>
-    <label id="lblLeg" class="hidden">Falda o pantalón</label>
-    <div class="row2 hidden" id="legRow"><button class="opt small" data-leg="falda">👗 Falda</button><button class="opt small" data-leg="pantalon">👖 Pantalón</button></div>
+    <label id="lblLeg" class="hidden">Falda o pantalón ancho</label>
+    <div class="row2 hidden" id="legRow"><button class="opt small" data-leg="falda">👗 Falda</button><button class="opt small" data-leg="pantalon">👖 Pantalón ancho</button></div>
     <label id="lblTop">Color de la ropa</label><div class="chips" id="tops"></div>
     <label id="lblBottom">Color del pantalón</label><div class="chips" id="bottoms"></div>
     <label>Hora del día</label><div class="time-opts"></div>
@@ -241,6 +242,7 @@
   </div>
 </div>
 
+<div id="glLost" class="screen hidden"><div class="spinner"></div><p class="sub">Recuperando los gráficos… tu progreso está guardado.</p></div>
 <div id="loading" class="screen"><div class="spinner"></div><p class="sub">Construyendo la ciudad…</p></div>
 
 <script type="module" src="js/game.js"></script>

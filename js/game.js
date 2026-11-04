@@ -43,7 +43,7 @@ const rng = seed => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013
 const canvas = $('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
 const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.35 : 1.75);
+const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
@@ -52,6 +52,8 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
+// Si el teléfono pierde los gráficos (poca memoria), el juego se recupera solo
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); try { persist(); } catch (er) {} const gl = document.getElementById('glLost'); if (gl) gl.classList.remove('hidden'); setTimeout(() => location.reload(), 2500); }, false);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.15, 2500);
 addEventListener('resize', () => {
@@ -622,9 +624,10 @@ function buildWorld(cfg) {
     const ship = buildShip(); const shipX = pierX0 - 16, deckY = 1.05;
     ship.position.set(shipX, 0, pz0); group.add(ship); W.ship = ship;
     ship.traverse(m => { if (m.isMesh && m.userData.block) blockers.push(m); });
-    addBox(shipX - 15, shipX + 15.2, pz0 - 3.4, pz0 + 3.4, deckY);
-    addBox(shipX - 15, shipX + 14, pz0 - 4.2, pz0 - 3.4, 999); addBox(shipX - 15, shipX + 14, pz0 + 3.4, pz0 + 4.2, 999); addBox(shipX - 17, shipX - 15, pz0 - 4.2, pz0 + 4.2, 999);
-    addBox(shipX - .4, shipX + .4, pz0 - .4, pz0 + .4, 20); // mástil
+    addBox(shipX - 15, shipX + 15.2, pz0 - 3.4, pz0 + 3.4, deckY, 0, 'ship');
+    addBox(shipX - 15, shipX + 14, pz0 - 4.2, pz0 - 3.4, 999, 0, 'ship'); addBox(shipX - 15, shipX + 14, pz0 + 3.4, pz0 + 4.2, 999, 0, 'ship'); addBox(shipX - 17, shipX - 15, pz0 - 4.2, pz0 + 4.2, 999, 0, 'ship');
+    addBox(shipX - .4, shipX + .4, pz0 - .4, pz0 + .4, 20, 0, 'ship'); // mástil
+    W.boat = { home: new THREE.Vector3(shipX, 0, pz0), heading: 0, speed: 0, away: false, deckY, minX: SX - 620, maxX: shipX, minZ: O - NZ - 150, maxZ: O + T + SZ + 150 };
     // islas y veleros a lo lejos
     for (let i = 0; i < 6; i++) { const isl = new THREE.Mesh(mountainGeo(30 + r() * 50, 20 + r() * 40, r, .2), M.island); isl.position.set(SX - 260 - r() * 400, 0, O + (r() - .3) * (T + SZ + 400)); group.add(isl); }
     W.sails = [];
@@ -636,7 +639,7 @@ function buildWorld(cfg) {
       ref: 'Jonás 1:3-4; Marcos 4:35-41; Hechos 27:22-25' });
     coinSpots.push([SX - 30, pz0, .6], [O - 20, O + 20, 0], [O - 20, O + T - 20, 0], [shipX + 6, pz0 + 1.6, deckY], [O - 12, O + T + 40, 0]);
     npcSpots.push([O - 16, pz0 + 9], [O - 16, O + T + 20]);
-    W.treasureSpots = Object.assign(W.treasureSpots || {}, { ship: [shipX - 4, pz0, deckY] });
+    W.treasureSpots = Object.assign(W.treasureSpots || {}, { ship: [shipX + 7, pz0, deckY] });
   }
 
   // ===== Al norte: lugares bíblicos (algunos se abren al pasar niveles) =====
@@ -794,7 +797,7 @@ function makeTree(kind, r) {
   return g;
 }
 function buildShip(k = 1) {
-  const g = new THREE.Group();
+  const g = new THREE.Group(); g.rotation.order = 'YXZ';
   const L = 30, W = 7.6, D = 3.6;
   // casco con proa y popa curvas (se deforma una caja)
   const hg = new THREE.BoxGeometry(L, D, W, 24, 4, 6), p = hg.attributes.position;
@@ -817,6 +820,9 @@ function buildShip(k = 1) {
   const railCurve = new THREE.CatmullRomCurve3(railPts);
   for (const sz of [-1, 1]) { const rl = new THREE.Mesh(new THREE.TubeGeometry(railCurve, 60, .09, 6), woodM); rl.scale.z = sz; g.add(rl); }
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(5, 2.2, 5), woodM); cabin.position.set(-L * .36, 2.1, 0); cabin.castShadow = true; g.add(cabin);
+  const wheel = new THREE.Mesh(new THREE.TorusGeometry(.5, .06, 8, 20), woodM); wheel.position.set(-7.6, 2.1, 0); wheel.rotation.y = Math.PI / 2; g.add(wheel);
+  for (let i = 0; i < 4; i++) { const sp = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.2, 5), woodM); sp.position.copy(wheel.position); sp.rotation.set(i * Math.PI / 4, 0, 0); sp.rotation.order = 'YXZ'; sp.rotation.y = Math.PI / 2; g.add(sp); }
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, 1.1, 6), woodM); post.position.set(-7.75, 1.55, 0); g.add(post);
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(.18, .25, 15, 10), woodM); mast.position.set(0, 8.5, 0); mast.castShadow = true; g.add(mast);
   const yard = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, 11, 8), woodM); yard.rotation.x = Math.PI / 2; yard.position.set(0, 14.2, 0); g.add(yard);
   const sailTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; const x = c.getContext('2d'); for (let i = 0; i < 8; i++) { x.fillStyle = i % 2 ? '#f2ead8' : '#b8321e'; x.fillRect(i * 8, 0, 8, 64); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
@@ -858,7 +864,8 @@ export const OUTFITS = [
   { id: 'tunica', name: '🧥 Túnica y manto' },
   { id: 'pastor', name: '🐑 Pastor' },
   { id: 'levita', name: '🤍 Levita (lino)' },
-  { id: 'aaron', name: '👑 Sumo sacerdote Aarón', req: 3, lockText: 'Se desbloquea al completar el nivel Intermedio' },
+  { id: 'adaneva', name: '🌿 Adán y Eva', req: 3, lockText: 'Se desbloquea al completar el nivel Intermedio' },
+  { id: 'aaron', name: '👑 Sumo sacerdote Aarón', req: 5, lockText: 'Se desbloquea al completar el nivel Experto' },
 ];
 if (!save.player) save.player = { gender: 'm', name: '', skin: 2, top: 0 };
 save.player = Object.assign({ bottom: 0, outfit: 'moderno', hairTone: 0, legwear: 'falda' }, save.player);
@@ -870,31 +877,97 @@ function playerOpts(pl = save.player) {
   if (out === 'tunica') return { ...base, outfit: 'robe', robe: top, mantle: bot, sash: 0x8a2b2b, hair: f ? 'cloth' : 'short', cloth: bot };
   if (out === 'pastor') return { ...base, outfit: 'robe', robe: 0xb8a074, mantle: bot, sash: 0x5a3a1e, hair: 'cloth', cloth: f ? bot : 0xe8dcc0 };
   if (out === 'levita') return { ...base, outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: top, hair: f ? 'cloth' : 'turban', cloth: 0xf4f0e6 };
+  if (out === 'adaneva') return pairOpts(f ? 'eva' : 'adan', pl);
   if (out === 'aaron') return { ...base, gender: 'm', outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: 0x5b2a7a, hair: 'turban', priest: true, beard: { color: 0x5a4a3a, len: .13 }, hairColor: 0x4a3a2a };
   return { ...base, top, pants: bot, skirt: bot, legwear: pl.legwear, hair: f ? 'long' : 'short', shoes: 0xf2f2f0 };
 }
+// Adán y Eva: túnicas de pieles que Dios les hizo (Génesis 3:21)
+function pairOpts(who, pl = save.player) {
+  const base = { name: who === 'eva' ? 'EVA' : 'ADÁN', skin: SKINS[pl.skin] ?? SKINS[2], detail: 1, outfit: 'robe', sash: 0x4a3a1e };
+  if (who === 'eva') return { ...base, gender: 'f', robe: 0x9a7350, mantle: 0x6e4c2c, hair: 'long', hairColor: 0x3a2314, eye: 0x4a6b3a };
+  return { ...base, gender: 'm', robe: 0x86603c, mantle: 0x5a3e24, hair: 'short', hairColor: 0x24160c, beard: { color: 0x24160c, len: .1 }, eye: 0x5a3a22 };
+}
+const isPair = () => outfitOK(save.player.outfit) && save.player.outfit === 'adaneva';
 let human = createHuman(playerOpts());
 scene.add(human.root);
+let mate = null; // el compañero (Adán o Eva) que sigue al jugador
+const MT = { pos: new THREE.Vector3(), vy: 0, heading: 0, speed: 0, onGround: true, stuck: 0 };
+function disposeH(h) { scene.remove(h.root); h.root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
 function rebuildPlayer() {
   const rot = human.root.rotation.y;
-  scene.remove(human.root);
-  human.root.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  disposeH(human);
   human = createHuman(playerOpts()); human.root.rotation.y = rot;
   scene.add(human.root);
+  if (mate) { disposeH(mate); mate = null; }
+  if (isPair()) {
+    mate = createHuman({ ...pairOpts(save.player.gender === 'f' ? 'adan' : 'eva'), detail: .8 });
+    scene.add(mate.root); placeMate();
+  }
+  const sw = document.getElementById('tSwap'); if (sw) sw.classList.toggle('hidden', !isPair());
+}
+function placeMate() {
+  if (!mate) return;
+  const back = P.heading + Math.PI;
+  MT.pos.set(P.pos.x + Math.sin(back) * 1.8 + Math.cos(back) * .6, P.pos.y, P.pos.z + Math.cos(back) * 1.8 - Math.sin(back) * .6);
+  MT.vy = 0; MT.speed = 0; MT.heading = P.heading; MT.stuck = 0;
+}
+// Cambiar en vivo entre Adán y Eva: el otro sigue al que manejas
+function swapPair() {
+  if (!isPair() || !mate || P.driving) return;
+  const pp = P.pos.clone(), ph = P.heading;
+  save.player.gender = save.player.gender === 'f' ? 'm' : 'f'; persist();
+  P.pos.copy(MT.pos); P.heading = MT.heading; P.vy = 0;
+  rebuildPlayer();
+  MT.pos.copy(pp); MT.heading = ph;
+  sound.gift(); toast(save.player.gender === 'f' ? '🌿 Ahora juegas con Eva · Adán te sigue' : '🌿 Ahora juegas con Adán · Eva te sigue', '#7ef0a4');
+}
+function updateMate(dt, t) {
+  if (!mate) return;
+  if (P.driving && world.ship) {
+    const b = world.boat, sh = world.ship, lx = -7, lz = 1.3;
+    MT.pos.set(sh.position.x + Math.cos(b.heading) * lx + Math.sin(b.heading) * lz, b.deckY + sh.position.y, sh.position.z - Math.sin(b.heading) * lx + Math.cos(b.heading) * lz);
+    MT.heading = P.heading; MT.speed = 0; MT.onGround = true;
+  } else {
+    const dx = P.pos.x - MT.pos.x, dz = P.pos.z - MT.pos.z, d = Math.hypot(dx, dz);
+    if (!isFinite(d) || d > 16 || Math.abs(P.pos.y - MT.pos.y) > 6 || MT.stuck > 1.5) placeMate();
+    else {
+      let sp = 0;
+      if (d > 1.9) {
+        sp = Math.min(d > 7 ? (P.turbo ? TURBO : RUN) : d > 3.5 ? RUN * .9 : WALK, (d - 1.6) * 3.2);
+        const ux = dx / d, uz = dz / d, nx = MT.pos.x + ux * sp * dt, nz = MT.pos.z + uz * sp * dt;
+        if (!blocked(nx, nz, MT.pos.y)) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
+        else if (!blocked(nx, MT.pos.z, MT.pos.y)) MT.pos.x = nx;
+        else if (!blocked(MT.pos.x, nz, MT.pos.y)) MT.pos.z = nz;
+        else { MT.stuck += dt; sp = 0; }
+        let df = Math.atan2(ux, uz) - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 8);
+      } else { let df = P.heading - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 2); }
+      MT.speed += (sp - MT.speed) * Math.min(1, dt * 10);
+      const fl = floorAt(MT.pos.x, MT.pos.z, MT.pos.y);
+      if (MT.onGround && P.vy > 4 && d < 4) { MT.vy = JUMP_V * .95; MT.onGround = false; }
+      if (!MT.onGround || MT.pos.y > fl + .02) { MT.vy -= GRAV * dt; MT.pos.y += MT.vy * dt; MT.onGround = false; if (MT.pos.y <= fl) { MT.pos.y = fl; MT.vy = 0; MT.onGround = true; } }
+      else { MT.pos.y = fl; MT.vy = 0; }
+      if (MT.speed > 1 && MT.onGround && Math.random() < dt * MT.speed * .35) sound.stepAt(.25, 0);
+    }
+  }
+  mate.root.position.copy(MT.pos); mate.root.rotation.y = MT.heading;
+  animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t });
 }
 const P = { holdFwd: 0, pos: new THREE.Vector3(), vy: 0, onGround: true, heading: 0, speed: 0, inv: 0, phase: 0, land: 0 };
-const RADIUS = .32, STEP = .55, JUMP_V = 7.2, GRAV = 20, WALK = 5.2, RUN = 8.6, TURBO = 15;
+const RADIUS = .32, STEP = .55, JUMP_V = 7.2, GRAV = 20, WALK = 5.2, RUN = 8.6, TURBO = 11;
+queueMicrotask(() => { if (isPair()) rebuildPlayer(); });
 
 const topOf = (c, z) => c.ramp ? c.ramp.y0 + (c.ramp.y1 - c.ramp.y0) * THREE.MathUtils.clamp((z - c.ramp.z0) / (c.ramp.z1 - c.ramp.z0), 0, 1) : c.top;
 function floorAt(x, z, y) {
   let f = 0;
   for (const c of world.colliders) {
+    if (c.tag === 'ship' && world.boat && world.boat.away) continue;
     if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { const tp = c.ramp ? topOf(c, z) : c.top; if (tp <= y + STEP && tp > f) f = tp; }
   }
   return f;
 }
 function blocked(x, z, y) {
   for (const c of world.colliders) {
+    if (c.tag === 'ship' && world.boat && world.boat.away) continue;
     if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.top > y + STEP) return true; }
   }
   return false;
@@ -916,6 +989,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' && !keys.Space) jumpPressed = true;
   if (e.code === 'KeyT' && !keys.KeyT) takePressed = true;
   if (e.code === 'KeyR' && !keys.KeyR && state === 'play') toggleTurbo();
+  if (e.code === 'KeyQ' && !keys.KeyQ && state === 'play') swapPair();
   if (e.code === 'KeyM' && !keys.KeyM) { if (state === 'play') openMap(); else if (state === 'map') closeMap(); }
   keys[e.code] = true;
 });
@@ -955,6 +1029,7 @@ tap('tJump', () => jumpPressed = true);
 tap('tTake', () => { if (state === 'talk') takeGift(); else takePressed = true; });
 tap('tRun', () => { runToggle = !runToggle; $('tRun').classList.toggle('active', runToggle); });
 tap('tTurbo', () => toggleTurbo());
+tap('tSwap', () => { if (state === 'play') swapPair(); });
 addEventListener('touchstart', e => {
   if (state !== 'play') return;
   for (const t of e.changedTouches) {
@@ -1004,6 +1079,8 @@ async function startLevelNow(i) {
   $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !isTouch);
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
+  P.driving = false;
+  if (mate) { placeMate(); if (isPair()) setTimeout(() => toast('🌿 Adán y Eva van juntos · ' + (isTouch ? 'toca 👫' : 'pulsa Q') + ' para cambiar', '#7ef0a4'), 1800); }
   P.turbo = false; $('tTurbo').classList.remove('active'); $('tTurbo').textContent = lvlIdx < 1 ? '🔒 TURBO' : '⚡ TURBO'; $('tTurbo').classList.toggle('locked', lvlIdx < 1);
   hudCache = {}; updateHUD();
   // precompilar los sombreadores para que no se congele al empezar
@@ -1057,6 +1134,40 @@ function endLevel(won) {
   }
   $('resStars').textContent = won ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '';
   show('result');
+}
+
+/* ---------- Conducir el barco (desde el nivel Avanzado) ---------- */
+function startDriving() {
+  const b = world.boat; P.driving = true; b.away = true; b.speed = 0; b.heading = Math.PI; world.ship.position.x = b.home.x - 6; // zarpa con la proa hacia mar abierto
+  cam.distSave = cam.dist; cam.dist = 17; cam.pitch = .28;
+  $('prompt').classList.remove('show'); toast('⛵ ¡Conduces el barco! · T para bajar', '#7ef0a4'); sound.gift();
+}
+function stopDriving() {
+  const b = world.boat; P.driving = false; b.away = false; b.speed = 0;
+  world.ship.position.set(b.home.x, 0, b.home.z); world.ship.rotation.y = 0; b.heading = 0;
+  P.pos.set(b.home.x - 4, b.deckY, b.home.z + 1.5); P.vy = 0; P.onGround = true; P.speed = 0;
+  cam.dist = cam.distSave || 5.6; toast('⚓ El barco volvió al muelle', '#ffd34d'); sound.click();
+}
+function driveBoat(dt) {
+  const b = world.boat, sh = world.ship;
+  let thr = 0, turn = 0;
+  if (keys.KeyW || keys.ArrowUp) thr += 1; if (keys.KeyS || keys.ArrowDown) thr -= .5;
+  if (keys.KeyA || keys.ArrowLeft) turn += 1; if (keys.KeyD || keys.ArrowRight) turn -= 1;
+  if (joy.active) { thr = -joy.y; turn = -joy.x; }
+  b.speed += (thr * 13 - b.speed) * Math.min(1, dt * .5);
+  b.heading += turn * dt * (.25 + Math.min(1, Math.abs(b.speed) / 8) * .45) * Math.sign(b.speed || 1);
+  const fx = Math.cos(b.heading), fz = -Math.sin(b.heading);
+  let nx = sh.position.x + fx * b.speed * dt, nz = sh.position.z + fz * b.speed * dt;
+  if (nx > b.maxX || nx < b.minX || nz < b.minZ || nz > b.maxZ) { b.speed *= -.3; nx = THREE.MathUtils.clamp(nx, b.minX, b.maxX); nz = THREE.MathUtils.clamp(nz, b.minZ, b.maxZ); }
+  sh.position.x = nx; sh.position.z = nz; sh.rotation.y = b.heading;
+  // el jugador va al timón
+  const lx = -9, lz = 0; P.pos.set(nx + Math.cos(b.heading) * lx + Math.sin(b.heading) * lz, b.deckY + sh.position.y, nz - Math.sin(b.heading) * lx + Math.cos(b.heading) * lz);
+  P.heading = Math.atan2(fx, fz); P.speed = 0; P.onGround = true;
+  cam.yaw = P.heading;
+  if (Math.abs(b.speed) > 2 && Math.random() < dt * 3) sound.stepAt(Math.min(.6, Math.abs(b.speed) / 20), 0);
+  if (takePressed) { takePressed = false; stopDriving(); }
+  // la flecha de monedas y el minimapa siguen funcionando
+  updateHUD();
 }
 
 /* ---------- Turbo (correr ultra rápido) ---------- */
@@ -1153,6 +1264,7 @@ function update(dt) {
 
   // Entrada → dirección relativa a cámara
   let ix = 0, iz = 0;
+  if (P.driving) { driveBoat(dt); return; }
   if (keys.KeyW || keys.ArrowUp) iz += 1;
   if (keys.KeyS || keys.ArrowDown) iz -= 1;
   if (keys.KeyA || keys.ArrowLeft) ix -= 1;
@@ -1251,6 +1363,17 @@ function update(dt) {
     if (d < nd) { nd = d; near = n; }
   }
   const pr = $('prompt');
+  const bt = world.boat, onDeck = bt && !bt.away && P.pos.y > bt.deckY - .2 && Math.abs(P.pos.x - (bt.home.x - 9)) < 4.5 && Math.abs(P.pos.z - bt.home.z) < 3.4;
+  if (onDeck) {
+    const can = lvlIdx >= 2;
+    pr.innerHTML = can ? `<kbd>T</kbd> ⛵ Conducir el barco` : `🔒 Podrás conducir el barco desde el nivel <b>Avanzado</b>`;
+    pr.classList.add('show'); $('tTake').classList.toggle('ready', can);
+    if (takePressed) { takePressed = false; if (can) startDriving(); else { toast('🔒 Desde el nivel Avanzado', '#ffd34d'); sound.hurt(); } }
+    takePressed = false;
+    let z0 = null; for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z0 || zz.pri > z0.pri)) z0 = zz;
+    if (z0 !== curZone) { curZone = z0; if (z0) showInfo(z0); }
+    updateHUD(); return;
+  }
   if (near) {
     pr.innerHTML = near.given ? `<kbd>T</kbd> Hablar con <b>${near.def.name}</b>` : `<kbd>T</kbd> Tomar el regalo de <b>${near.def.name}</b>`;
     pr.classList.add('show'); $('tTake').classList.add('ready');
@@ -1262,6 +1385,7 @@ function update(dt) {
   for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
   if (z !== curZone) { curZone = z; if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
+  if (!isFinite(P.pos.x) || !isFinite(P.pos.y) || !isFinite(P.pos.z)) { P.pos.copy(P.safe || world.start); P.vy = 0; P.speed = 0; } else if (P.onGround && !P.driving) (P.safe || (P.safe = new THREE.Vector3())).copy(P.pos);
   updateHUD();
 }
 
@@ -1412,6 +1536,7 @@ function loop() {
   human.root.rotation.y = state === 'creator' ? t * .8 : P.heading;
   human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2);
   if (P.smell > 0) P.smell -= dt;
+  if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
   if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }

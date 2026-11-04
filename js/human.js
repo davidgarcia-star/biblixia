@@ -395,7 +395,13 @@ export function createHuman(opt = {}) {
     arms.push({ shoulder, elbow, hand });
   }
 
-  return { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, opts: o };
+  // vara de pastor en la mano derecha (Moisés: Éxodo 4:2-4, 17)
+  if (o.staff) {
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: .8 });
+    const st = mesh(new THREE.CylinderGeometry(.018, .024, 1.9, 8), wood, arms[1].hand, 0, -.12, .04); st.rotation.x = .08;
+    mesh(new THREE.TorusGeometry(.055, .017, 6, 12, Math.PI), wood, arms[1].hand, 0, .86, .04);
+  }
+  return { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, opts: o, staff: !!o.staff };
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
