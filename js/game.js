@@ -1939,3 +1939,29 @@ window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { retur
   const ok = n => { if (!contado) guardar(MARCA, '1'); guardar(CACHE, String(n)); mostrar(n); };
   p.then(ok).catch(() => setTimeout(() => pedir(contado ? 'get' : 'hit').then(ok).catch(() => { if (previo === null) mostrar(0); }), 3000));
 })();
+
+/* ---------- Intro: brasas doradas que suben (solo mientras se ve la portada) ---------- */
+(() => {
+  const cv = document.getElementById('embers'); if (!cv) return;
+  const g = cv.getContext('2d'), sp = document.getElementById('splash'); let W = 0, H = 0, parts = [];
+  const fit = () => { const d = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * d; cv.height = H * d; g.setTransform(d, 0, 0, d, 0, 0); };
+  const spawn = () => ({ x: Math.random() * W, y: H + 10, r: .6 + Math.random() * 2.2, v: 18 + Math.random() * 55, w: Math.random() * 6.28, a: .35 + Math.random() * .6 });
+  addEventListener('resize', fit); fit();
+  for (let i = 0; i < 70; i++) { const p = spawn(); p.y = Math.random() * H; parts.push(p); }
+  let last = performance.now();
+  (function tick(now) {
+    requestAnimationFrame(tick);
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    if (sp.classList.contains('hidden')) return;
+    if (cv.clientWidth !== W || cv.clientHeight !== H) fit();
+    g.clearRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
+    for (const p of parts) {
+      p.y -= p.v * dt; p.w += dt * 1.6; p.x += Math.sin(p.w) * 12 * dt;
+      if (p.y < -10) Object.assign(p, spawn());
+      const fl = .6 + .4 * Math.sin(p.w * 3);
+      const gr = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4); gr.addColorStop(0, `rgba(255,232,160,${p.a * fl})`); gr.addColorStop(1, 'rgba(255,170,40,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y, p.r * 4, 0, 7); g.fill();
+    }
+    g.globalCompositeOperation = 'source-over';
+  })(last);
+})();
