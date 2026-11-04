@@ -215,6 +215,11 @@ export function createHuman(opt = {}) {
   const sashM = new THREE.MeshStandardMaterial({ color: o.sash, roughness: .8 });
   const clothM = new THREE.MeshStandardMaterial({ map: clothTexture(o.cloth, 'linen'), roughness: .95, side: THREE.DoubleSide });
   const sleeveM = robe ? robeM : topM;
+  // estilo de la parte de arriba (ropa moderna): abrigo, camiseta, camisa corta, manga larga, chaqueta
+  const TS = robe ? 'robe' : (o.topStyle || 'abrigo');
+  const shortS = TS === 'camiseta' || TS === 'camisa';
+  const whiteM = new THREE.MeshStandardMaterial({ map: clothTexture(0xf4f2ec), roughness: .85 });
+  const btnM = new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: .4 });
 
   const mesh = (geo, mat, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
   const grp = (parent, x = 0, y = 0, z = 0) => { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; };
@@ -222,6 +227,7 @@ export function createHuman(opt = {}) {
   const root = new THREE.Group();
   const hips = grp(root, 0, .93, 0);
   const skirtOn = F && !robe && o.legwear !== 'pantalon';
+  if (F && !robe && o.legwear === 'vestido') o.skirt = o.top; // vestido: falda del mismo color que la blusa
   const skirtM = new THREE.MeshStandardMaterial({ map: clothTexture(o.skirt ?? 0x2d3a6a, 'pleat'), roughness: .8, side: THREE.DoubleSide });
   const legM = robe ? robeM : skirtOn ? skin : pantsM;
   const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.12 : 1.02, .58, F ? .8 : .72);
@@ -267,8 +273,8 @@ export function createHuman(opt = {}) {
   const spine = grp(hips, 0, .06, 0);
   const torso = mesh(torsoGeo(F), robe ? robeM : topM, spine); torso.scale.set(1, 1, .66);
   if (F && !robe) { for (const s of [-1, 1]) { const b = mesh(SG(.07, 18, 14), topM, spine, s * .045, .32, .05); b.scale.set(1.1, .85, .6); } }
-  if (!robe && !F) mesh(new THREE.BoxGeometry(.2, .1, .035), top2, spine, 0, .14, .112).rotation.x = -.15;
-  if (!robe) {
+  if (TS === 'abrigo' && !F) mesh(new THREE.BoxGeometry(.2, .1, .035), top2, spine, 0, .14, .112).rotation.x = -.15;
+  if (TS === 'abrigo') {
     mesh(new THREE.CylinderGeometry(.003, .003, .12, 6), gold, spine, -.025, .4, .12).rotation.x = .2;
     mesh(new THREE.CylinderGeometry(.003, .003, .12, 6), gold, spine, .025, .4, .12).rotation.x = .2;
   }
@@ -279,7 +285,21 @@ export function createHuman(opt = {}) {
     back.scale.set(1, 1, .7); back.castShadow = false;
   }
   const chest = grp(spine, 0, F ? .45 : .46, 0);
-  if (!robe) { const hood = mesh(new THREE.TorusGeometry(.085, .03, 10, 28), top2, chest, 0, .04, -.03); hood.rotation.x = Math.PI / 2 - .35; hood.scale.set(1.15, 1, 1); }
+  if (TS === 'abrigo') { const hood = mesh(new THREE.TorusGeometry(.085, .03, 10, 28), top2, chest, 0, .04, -.03); hood.rotation.x = Math.PI / 2 - .35; hood.scale.set(1.15, 1, 1); }
+  if (TS === 'camiseta') { const crew = mesh(new THREE.TorusGeometry(.052, .011, 8, 28), top2, chest, 0, .055, .004); crew.rotation.x = Math.PI / 2 - .12; crew.scale.set(1, 1.15, 1); }
+  if (TS === 'camisa' || TS === 'mangalarga' || TS === 'chaqueta') {
+    // cuello de camisa y botones
+    const colM = TS === 'chaqueta' ? whiteM : top2;
+    for (const sx of [-1, 1]) { const c = mesh(new THREE.BoxGeometry(.06, .045, .01), colM, chest, sx * .032, .045, .066); c.rotation.set(-.35, sx * .45, sx * .55); }
+    const back = mesh(new THREE.CylinderGeometry(.058, .062, .04, 18, 1, true, Math.PI * .6, Math.PI * .8), colM, chest, 0, .06, -.004); back.scale.set(1, 1, .9);
+    if (TS !== 'chaqueta') for (let k = 0; k < 5; k++) mesh(new THREE.SphereGeometry(.007, 8, 6), btnM, spine, 0, .42 - k * .075, F ? .118 : .121 - k * .002);
+  }
+  if (TS === 'chaqueta') {
+    // chaqueta abierta: camisa blanca al centro y solapas
+    const shirt = mesh(new THREE.BoxGeometry(.075, .36, .01), whiteM, spine, 0, .27, F ? .112 : .118); shirt.rotation.x = -.04;
+    for (const sx of [-1, 1]) { const lp = mesh(new THREE.BoxGeometry(.035, .2, .012), top2, spine, sx * .05, .36, F ? .113 : .12); lp.rotation.z = sx * -.25; }
+    for (let k = 0; k < 3; k++) mesh(new THREE.SphereGeometry(.007, 8, 6), btnM, spine, 0, .38 - k * .09, F ? .119 : .125);
+  }
   // Cuello y cabeza
   const neck = grp(chest, 0, .05, 0);
   mesh(new THREE.CylinderGeometry(F ? .039 : .044, F ? .045 : .05, .14, 16), skin, neck, 0, .04, 0);
@@ -395,10 +415,11 @@ export function createHuman(opt = {}) {
   for (const s of [-1, 1]) {
     const shoulder = grp(chest, s * (F ? .158 : .175), -.035, 0);
     mesh(SG(F ? .05 : .056, 16, 12), sleeveM, shoulder).scale.set(1, .9, 1);
-    mesh(limbGeo(F ? .046 : .052, F ? .038 : .043, .28, .006), sleeveM, shoulder);
+    mesh(limbGeo(F ? .046 : .052, F ? .038 : .043, .28, .006), shortS ? skin : sleeveM, shoulder);
+    if (shortS) { mesh(limbGeo(F ? .056 : .062, F ? .052 : .058, .13, 0), sleeveM, shoulder, 0, .01, 0); mesh(new THREE.CylinderGeometry(F ? .052 : .058, F ? .053 : .059, .02, 16), top2, shoulder, 0, -.115, 0); }
     const elbow = grp(shoulder, 0, -.28, 0);
-    mesh(robe ? limbGeo(.05, .062, .2, 0) : limbGeo(F ? .04 : .046, F ? .034 : .04, .2, .004), sleeveM, elbow);
-    if (!robe) mesh(new THREE.CylinderGeometry(.041, .043, .035, 14), top2, elbow, 0, -.2, 0);
+    mesh(robe ? limbGeo(.05, .062, .2, 0) : limbGeo(F ? .04 : .046, F ? .034 : .04, .2, .004), shortS ? skin : sleeveM, elbow);
+    if (!robe && !shortS) mesh(new THREE.CylinderGeometry(.041, .043, .035, 14), TS === 'chaqueta' ? whiteM : top2, elbow, 0, -.2, 0);
     mesh(limbGeo(.031, .027, .05), skin, elbow, 0, -.21, 0);
     const hand = grp(elbow, 0, -.27, 0);
     const palm = mesh(SG(F ? .038 : .042, 16, 12), skin, hand, 0, -.02, 0); palm.scale.set(.55, 1, .9);
