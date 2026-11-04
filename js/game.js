@@ -41,7 +41,7 @@ const rng = seed => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013
    RENDER
    ========================================================= */
 const canvas = $('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: false });
 const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(MAX_PR);
@@ -55,7 +55,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 // Si el teléfono pierde los gráficos (poca memoria), el juego se recupera solo
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); try { persist(); } catch (er) {} const gl = document.getElementById('glLost'); if (gl) gl.classList.remove('hidden'); setTimeout(() => location.reload(), 2500); }, false);
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.15, 2500);
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, 2600);
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -83,6 +83,41 @@ sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
 const SC = 45; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
+let nightT = 0;
+function updateNightAndBlobs(dt) {
+  const night = save.time === 'noche', live = world && (state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map' || state === 'creator' || state === 'menu');
+  // sombra bajo los pies del jugador y de su compañero (Adán / Eva)
+  const put = (b, pos, show) => {
+    if (!show) { b.visible = false; return; }
+    const f = P.driving && pos === P.pos ? pos.y : floorAt(pos.x, pos.z, pos.y + .05), h = Math.max(0, pos.y - f);
+    const k = THREE.MathUtils.clamp(1 - h / 3.5, .35, 1);
+    b.visible = true; b.position.set(pos.x, f + .035, pos.z); b.scale.set(.95 * k, 1, .95 * k);
+  };
+  put(blobs.p, P.pos, live && state !== 'menu' && human.root.visible !== false);
+  put(blobs.m, mate ? mate.root.position : P.pos, live && !!mate && mate.root.visible);
+  blobMat.opacity = night ? .38 : save.time === 'atardecer' ? .5 : .55;
+  // luces de noche
+  if (world && world.lightPools) world.lightPools.visible = night;
+  playerLamp.intensity = night && live ? 14 : 0;
+  playerLamp.position.set(P.pos.x, P.pos.y + 2.7, P.pos.z);
+  if ((nightT -= dt) > 0) return; nightT = .3;
+  const pts = night && world ? world.lampPts : null;
+  if (!pts || !pts.length) { for (const l of nightLights) l.intensity = 0; return; }
+  const px = P.pos.x, pz = P.pos.z;
+  const best = pts.map(q => [(q[0] - px) ** 2 + (q[2] - pz) ** 2, q]).sort((a, b) => a[0] - b[0]);
+  nightLights.forEach((l, i) => { const q = best[i]; if (!q) { l.intensity = 0; return; } l.position.set(q[1][0], q[1][1] - .3, q[1][2]); l.intensity = 60; });
+}
+const _sq = new THREE.Quaternion(), _sv = new THREE.Vector3(), _sm = new THREE.Matrix4();
+function snapShadow(c) {
+  const texel = (SC * 2) / sun.shadow.mapSize.x;
+  _sm.lookAt(sunDir, new THREE.Vector3(0, 0, 0), Math.abs(sunDir.y) > .99 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0));
+  _sq.setFromRotationMatrix(_sm);
+  _sv.copy(c).applyQuaternion(_sq.clone().invert());
+  _sv.x = Math.round(_sv.x / texel) * texel; _sv.y = Math.round(_sv.y / texel) * texel;
+  _sv.applyQuaternion(_sq);
+  sun.target.position.copy(_sv); sun.position.copy(_sv).addScaledVector(sunDir, 150);
+  sun.target.updateMatrixWorld();
+}
 
 // Estrellas, luna y nubes propias (funcionan en cualquier versión)
 const stars = (() => {
@@ -117,14 +152,14 @@ const sunGlow = (() => {
 const TIMES = {
   dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff3e0, sunI: 2.4, hemiI: .5, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .55, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
-  noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0x9ab8ff, sunI: .7, hemiI: .22, hemiS: 0x3a4a8a, hemiG: 0x10141c, exp: 1.05, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
+  noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0x9ab8ff, sunI: .7, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
 const moonDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 42), THREE.MathUtils.degToRad(130));
 function applyTime(mode) {
   const T2 = TIMES[mode] || TIMES.atardecer; save.time = mode;
   skyDir.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - T2.elev), THREE.MathUtils.degToRad(T2.az));
   for (const sk of [sky, envSky]) { const u = sk.material.uniforms; u.sunPosition.value.copy(skyDir); u.turbidity.value = T2.turb; u.rayleigh.value = T2.ray; u.mieCoefficient.value = T2.mie; }
-  sunDir.copy(T2.stars ? moonDir : skyDir); if (sunDir.y < .08) sunDir.y = .08; sunDir.normalize();
+  sunDir.copy(T2.stars ? moonDir : skyDir); if (sunDir.y < .34) sunDir.y = .34; sunDir.normalize(); // el sol de la tarde da sombras visibles (no tan largas)
   sun.color.set(T2.sunC); sun.intensity = T2.sunI; hemi.intensity = T2.hemiI; hemi.color.set(T2.hemiS); hemi.groundColor.set(T2.hemiG);
   renderer.toneMappingExposure = T2.exp; scene.fog.color.set(T2.fog); scene.fog.near = T2.fogN; scene.fog.far = T2.fogF;
   if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02); scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
@@ -307,6 +342,20 @@ const M = {
   rock: new THREE.MeshStandardMaterial({ map: rockTex, roughness: 1 }),
 };
 
+// Luz de los faroles en el suelo (de noche)
+const lightPoolMat = new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, g => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,214,150,.75)'); gr.addColorStop(.45, 'rgba(255,190,110,.32)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }),
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+// Sombra suave bajo los pies (siempre visible, aunque el sol esté bajo)
+const blobMat = new THREE.MeshBasicMaterial({ map: canvasTex(128, 128, g => { const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(0,0,0,.85)'); gr.addColorStop(.55, 'rgba(0,0,0,.45)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }),
+  transparent: true, depthWrite: false, opacity: .55, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 });
+const blobGeo = new THREE.PlaneGeometry(1, 1); blobGeo.rotateX(-Math.PI / 2);
+const makeBlob = () => { const b = new THREE.Mesh(blobGeo, blobMat); b.renderOrder = 3; b.visible = false; scene.add(b); return b; };
+const blobs = { p: makeBlob(), m: makeBlob() };
+// Luces de noche: unas pocas luces reales que se colocan en los faroles más cercanos + un farol que acompaña al jugador
+const nightLights = [];
+for (let i = 0; i < (isTouch ? 3 : 5); i++) { const l = new THREE.PointLight(0xffc47a, 0, 22, 1.6); scene.add(l); nightLights.push(l); }
+const playerLamp = new THREE.PointLight(0xffd9a0, 0, 16, 1.4); scene.add(playerLamp);
+
 // Olas suaves en el mar (se mueven en la tarjeta gráfica, sin costo para el procesador)
 M.sea.onBeforeCompile = sh => {
   sh.uniforms.uTime = { value: 0 };
@@ -330,7 +379,7 @@ function buildWorld(cfg) {
   const N = cfg.grid, T = N * PITCH + STREET, O = -T / 2;
   const group = new THREE.Group(); scene.add(group);
   const colliders = [], blockers = [], coinSpots = [], platSpots = [], npcSpots = [];
-  const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [] };
+  const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [], lampPts: [] };
   const addBox = (minX, maxX, minZ, maxZ, top, bottom = 0, tag) => colliders.push({ minX, maxX, minZ, maxZ, top, bottom, tag });
   // Árboles de la Biblia: olivo (Salmo 52:8), higuera (Miqueas 4:4), cedro del Líbano (Salmo 92:12), palmera (Salmo 92:12)
   const treeGroup = new THREE.Group();
@@ -344,6 +393,7 @@ function buildWorld(cfg) {
       addBox(x - .35, x + .35, z - .35, z + .35, 5); placed++;
     }
   }
+  const floorAtW = (x, z) => { let f = 0; for (const c of colliders) if (c.top < .6 && !c.ramp && x > c.minX && x < c.maxX && z > c.minZ && z < c.maxZ && c.top > f) f = c.top; return f; };
   const addRamp = (minX, maxX, z0, z1, y0, y1) => colliders.push({ minX, maxX, minZ: z0, maxZ: z1, top: Math.max(y0, y1), ramp: { z0, z1, y0, y1 } });
 
   const box = (w, h, d, mat, x, y, z, opt = {}) => {
@@ -423,7 +473,7 @@ function buildWorld(cfg) {
       for (const [gx, gz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
         const gw = 11, gpx = cx + gx * 9.5, gpz = cz + gz * 9.5;
         const gm = box(gw, .5, gw, M.concrete, gpx, CURB + .25, gpz);
-        const gr = box(gw - .6, .52, gw - .6, M.grass, gpx, CURB + .26, gpz, { cast: false });
+        const gr = box(gw - .6, .5, gw - .6, M.grass, gpx, CURB + .3, gpz, { cast: false });
         addBox(gpx - gw / 2, gpx + gw / 2, gpz - gw / 2, gpz + gw / 2, CURB + .5);
         trees.push([gpx + (r() - .5) * 5, gpz + (r() - .5) * 5, 1 + r() * .5]);
         if (r() < .7) trees.push([gpx + (r() - .5) * 6, gpz + (r() - .5) * 6, .8 + r() * .4]);
@@ -454,7 +504,7 @@ function buildWorld(cfg) {
         steps.forEach((s, k) => {
           const sx = ox - px * k * 2.2, sz = oz - pz * k * 2.2;
           box(s.s, s.h, s.s, M.concrete, sx, CURB + .5 + s.h / 2, sz);
-          box(s.s + .05, .08, s.s + .05, M.led, sx, CURB + .5 + s.h - .04, sz, { cast: false });
+          box(s.s + .06, .08, s.s + .06, M.led, sx, CURB + .5 + s.h - .16, sz, { cast: false }); // franja LED bajo el borde (sin tapar la cara de arriba: evita el parpadeo azul)
           addBox(sx - s.s / 2, sx + s.s / 2, sz - s.s / 2, sz + s.s / 2, CURB + .5 + s.h);
           if (k === 2) platSpots.push([sx, sz, CURB + .5 + s.h]);
           else if (k === 0) coinSpots.push([sx, sz, CURB + .5 + s.h]);
@@ -473,11 +523,11 @@ function buildWorld(cfg) {
       for (const horiz of [true, false]) {
         const dash = new THREE.Mesh(new THREE.PlaneGeometry(.22, BLOCK - 8), M.dash);
         dash.rotation.x = -Math.PI / 2; if (horiz) dash.rotation.z = Math.PI / 2;
-        dash.position.set(horiz ? mid : sc, .02, horiz ? sc : mid); group.add(dash);
+        dash.position.set(horiz ? mid : sc, .05, horiz ? sc : mid); group.add(dash);
         for (const e of [a + 2, b - 2]) {
           const zb = new THREE.Mesh(new THREE.PlaneGeometry(STREET - 1, 3), M.zebra);
           zb.rotation.x = -Math.PI / 2; if (!horiz) zb.rotation.z = 0; else zb.rotation.z = Math.PI / 2;
-          zb.position.set(horiz ? e : sc, .021, horiz ? sc : e); group.add(zb);
+          zb.position.set(horiz ? e : sc, .045, horiz ? sc : e); group.add(zb);
         }
         const off = (r() < .5 ? -1 : 1) * 3.2;
         coinSpots.push(horiz ? [mid + (r() - .5) * 14, sc + off, 0] : [sc + off, mid + (r() - .5) * 14, 0]);
@@ -514,6 +564,7 @@ function buildWorld(cfg) {
       const dx = Math.sin(ry) * -.9, dz = Math.cos(ry) * -.9;
       o.position.set(x + dx, CURB + 6.4, z + dz); o.updateMatrix(); arm.setMatrixAt(i, o.matrix);
       o.position.set(x + dx * 1.9, CURB + 6.32, z + dz * 1.9); o.updateMatrix(); head.setMatrixAt(i, o.matrix);
+      W.lampPts.push([x + dx * 1.9, CURB + 6.1, z + dz * 1.9, CURB]);
       addBox(x - .15, x + .15, z - .15, z + .15, 7);
     });
     pole.castShadow = arm.castShadow = true;
@@ -637,9 +688,9 @@ function buildWorld(cfg) {
     W.zones.push({ id: 'mar', name: 'El mar y el barco', minX: shipX - 18, maxX: SX + 4, minZ: pz0 - 6, maxZ: pz0 + 6, pri: 3,
       text: 'Jonás huyó de Dios en un barco rumbo a Tarsis, pero el SEÑOR envió una gran tormenta. Siglos después, Jesús calmó el viento y el mar con su palabra, y el apóstol Pablo, en medio de un naufragio, animó a todos porque Dios había prometido salvarlos.',
       ref: 'Jonás 1:3-4; Marcos 4:35-41; Hechos 27:22-25' });
-    coinSpots.push([SX - 30, pz0, .6], [O - 20, O + 20, 0], [O - 20, O + T - 20, 0], [shipX + 6, pz0 + 1.6, deckY], [O - 12, O + T + 40, 0]);
+    coinSpots.push([SX - 30, pz0, .6], [O - 20, O + 20, 0], [O - 20, O + T - 20, 0], [O - 12, O + T + 40, 0]);
     npcSpots.push([O - 16, pz0 + 9], [O - 16, O + T + 20]);
-    W.treasureSpots = Object.assign(W.treasureSpots || {}, { ship: [shipX + 7, pz0, deckY] });
+    W.treasureSpots = Object.assign(W.treasureSpots || {}, { ship: [shipX + 8, pz0, deckY], ship2: [shipX - 2.5, pz0 - 1.6, deckY] });
   }
 
   // ===== Al norte: lugares bíblicos (algunos se abren al pasar niveles) =====
@@ -651,6 +702,42 @@ function buildWorld(cfg) {
     W.treasureSpots = Object.assign(W.treasureSpots || {}, pl.treasures);
     W.north = { zN: O - NZ, zS: O };
     plantBiblicalTrees(O + 4, O + T + DES - 4, O - NZ + 6, O - NZ + 14, 18, [], ['cedro', 'olivo', 'palmera']);
+  }
+
+  // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
+  {
+    const pts = [], free = (x, z) => !colliders.some(c => c.top > .3 && x > c.minX - 1.2 && x < c.maxX + 1.2 && z > c.minZ - 1.2 && z < c.maxZ + 1.2);
+    const add = (x, z) => { if (free(x, z) && pts.every(q => Math.hypot(q[0] - x, q[1] - z) > 9)) pts.push([x, z]); };
+    if (W.seaInfo) { const si = W.seaInfo; for (let z = O + 8; z < O + T + SZ - 6; z += 18) add(O - 4, z); for (let x = si.SX - 64; x < si.SX; x += 14) add(x, si.Zc + (Math.round(x / 14) % 2 ? 2.7 : -2.7)); }
+    if (W.desert) { const d = W.desert; for (let x = d.X0 + 6; x < d.X0 + DES - 4; x += 16) { add(x, O + 4); add(x, O + T - 4); } for (let z = O + 10; z < O + T - 8; z += 16) add(d.X0 + 3, z); const tb = d.tb; for (const [x, z] of [[tb.x0 - 3, tb.z0 - 3], [tb.x1 + 3, tb.z0 - 3], [tb.x0 - 3, tb.z1 + 3], [tb.x1 + 3, tb.z1 + 3], [tb.x1 + 4, d.tcz - 5], [tb.x1 + 4, d.tcz + 5]]) add(x, z); }
+    if (W.south) { const so = W.south; for (let x = O + 6; x < O + so.Wt - 4; x += 16) { add(x, so.Z0 + 4); add(x, so.Z0 + 30); } add(so.arkX - 6, so.arkZ - 16); add(so.arkX + 6, so.arkZ - 16); }
+    if (W.north) { const nn = W.north; for (let x = O + 6; x < O + T + DES - 4; x += 16) { add(x, nn.zS - 4); add(x, nn.zN + NZ / 2); } }
+    if (pts.length) {
+      const postM = new THREE.MeshStandardMaterial({ color: 0x4a3018, roughness: .85 });
+      const post = new THREE.InstancedMesh(new THREE.CylinderGeometry(.07, .1, 3.2, 8), postM, pts.length);
+      const cg1 = new THREE.BoxGeometry(.42, .07, .42); cg1.translate(0, .25, 0); const cg2 = new THREE.BoxGeometry(.34, .05, .34); cg2.translate(0, -.2, 0);
+      const cage = new THREE.InstancedMesh(mergeGeometries([cg1, cg2]), M.darkMetal, pts.length);
+      const flame = new THREE.InstancedMesh(new THREE.BoxGeometry(.26, .32, .26), M.lamp, pts.length);
+      const o = new THREE.Object3D();
+      pts.forEach(([x, z], i) => {
+        const y0 = floorAtW(x, z);
+        o.position.set(x, y0 + 1.6, z); o.updateMatrix(); post.setMatrixAt(i, o.matrix);
+        o.position.set(x, y0 + 3.4, z); o.updateMatrix(); cage.setMatrixAt(i, o.matrix);
+        o.position.set(x, y0 + 3.4, z); o.scale.set(1.05, 1.02, 1.05); o.updateMatrix(); flame.setMatrixAt(i, o.matrix); o.scale.set(1, 1, 1);
+        addBox(x - .14, x + .14, z - .14, z + .14, 3.6);
+        W.lampPts.push([x, y0 + 3.4, z, y0]);
+      });
+      post.castShadow = true;
+      group.add(post, cage, flame);
+    }
+    // Círculos de luz en el suelo bajo cada farol (solo de noche)
+    const lp = W.lampPts;
+    if (lp.length) {
+      const pool = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), lightPoolMat, lp.length);
+      const o = new THREE.Object3D(); o.rotation.x = -Math.PI / 2;
+      lp.forEach(([x, y, z, f], i) => { o.position.set(x, f + .14, z); o.scale.set(11, 11, 1); o.updateMatrix(); pool.setMatrixAt(i, o.matrix); });
+      pool.renderOrder = 2; pool.frustumCulled = false; pool.visible = save.time === 'noche'; W.lightPools = pool; group.add(pool);
+    }
   }
 
   // Elegir monedas
@@ -667,7 +754,7 @@ function buildWorld(cfg) {
   const beamGeo = new THREE.CylinderGeometry(.35, .35, 40, 16, 1, true);
   const chG = crossH.clone(); chG.translate(0, .06, 0);
   const coinMerged = mergeGeometries([coinGeo, rimGeo, crossV, chG].map(g => { const n = g.index ? g.toNonIndexed() : g; for (const k of Object.keys(n.attributes)) if (!['position', 'normal', 'uv'].includes(k)) n.deleteAttribute(k); return n; }));
-  pick.forEach((p, i) => {
+  const makeCoin = (p, i, extra = {}) => {
     const g = new THREE.Group();
     const coin = new THREE.Group();
     const c = new THREE.Mesh(coinMerged, M.gold); c.castShadow = true;
@@ -677,8 +764,50 @@ function buildWorld(cfg) {
     g.add(coin, glow, beam);
     g.position.set(p[0], p[2] + 1.1, p[1]);
     group.add(g);
-    W.coins.push({ g, coin, x: p[0], z: p[1], y: p[2] + 1.1, taken: false, phase: i * .9 });
-  });
+    const c0 = { g, coin, x: p[0], z: p[1], y: p[2] + 1.1, taken: false, phase: i * .9, ...extra };
+    W.coins.push(c0); return c0;
+  };
+  pick.forEach((p, i) => makeCoin(p, i));
+
+  // Monedas en el barco (viajan con él) y, desde el nivel Intermedio, monedas en alta mar para buscarlas navegando
+  if (W.seaInfo && W.boat) {
+    const si = W.seaInfo, b = W.boat;
+    for (const [lx, lz] of [[6.5, 1.7], [1.5, -1.8], [-4.5, 1.6]]) makeCoin([b.home.x + lx, b.home.z + lz, si.deckY], W.coins.length, { ship: [lx, lz, si.deckY] });
+    if (cfg.idx >= 1) {
+      const n = 3 + cfg.idx;
+      for (let k = 0; k < n; k++) { const a = (k / n) * Math.PI * 1.6 - .8 + (r() - .5) * .3, d = 70 + r() * 110; makeCoin([si.SX - 25 - Math.cos(a) * d, si.Zc + Math.sin(a) * d, -.2], W.coins.length, { sea: true }); }
+    }
+  }
+
+  // Relojes: tómalos para ganar más tiempo (en todos los niveles)
+  W.clocks = [];
+  {
+    const faceTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+      g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill(); g.strokeStyle = '#1a2a44'; g.lineWidth = 5;
+      for (let h = 0; h < 12; h++) { const a = h / 12 * Math.PI * 2; g.beginPath(); g.moveTo(64 + Math.sin(a) * 48, 64 - Math.cos(a) * 48); g.lineTo(64 + Math.sin(a) * 56, 64 - Math.cos(a) * 56); g.stroke(); }
+      g.fillStyle = '#1a2a44'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('+15', 64, 88);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const faceM = new THREE.MeshStandardMaterial({ map: faceTex, emissive: 0xffffff, emissiveMap: faceTex, emissiveIntensity: .35, roughness: .4 });
+    const rimM = new THREE.MeshStandardMaterial({ color: 0x4fc3ff, metalness: .6, roughness: .25, emissive: 0x1a6aa0, emissiveIntensity: .6 });
+    const handM = new THREE.MeshStandardMaterial({ color: 0x1a2a44, roughness: .5 });
+    const faceG = new THREE.CircleGeometry(.5, 40), rimG = new THREE.TorusGeometry(.52, .07, 10, 40), bellG = new THREE.SphereGeometry(.13, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const nClocks = 3 + cfg.idx;
+    const cpool = coinSpots.filter(p => Math.hypot(p[0] - startX, p[1] - startZ) > 12 && W.coins.every(c => Math.hypot(c.x - p[0], c.z - p[1]) > 5)).sort(() => r() - .5);
+    for (const p of cpool) {
+      if (W.clocks.length >= nClocks) break;
+      if (W.clocks.some(c => Math.hypot(c.x - p[0], c.z - p[1]) < 30)) continue;
+      const g = new THREE.Group(), body = new THREE.Group();
+      const f1 = new THREE.Mesh(faceG, faceM); f1.position.z = .03; const f2 = new THREE.Mesh(faceG, faceM); f2.rotation.y = Math.PI; f2.position.z = -.03;
+      const rim = new THREE.Mesh(rimG, rimM); rim.castShadow = true;
+      const hh = new THREE.Mesh(new THREE.BoxGeometry(.05, .26, .02), handM); hh.position.set(0, .11, .05);
+      const hm = new THREE.Mesh(new THREE.BoxGeometry(.04, .36, .02), handM); hm.position.set(.12, .1, .052); hm.rotation.z = -.9;
+      for (const sx of [-1, 1]) { const bl = new THREE.Mesh(bellG, rimM); bl.position.set(sx * .3, .5, 0); bl.rotation.z = -sx * .5; body.add(bl); }
+      body.add(f1, f2, rim, hh, hm);
+      const glow = new THREE.Sprite(M.glow); glow.material = M.glow; glow.scale.set(2.2, 2.2, 1);
+      g.add(body, glow); g.position.set(p[0], p[2] + 1.2, p[1]); group.add(g);
+      W.clocks.push({ g, body, x: p[0], z: p[1], y: p[2] + 1.2, taken: false, phase: W.clocks.length * 1.3 });
+    }
+  }
 
   // Personajes bíblicos
   {
@@ -695,13 +824,14 @@ function buildWorld(cfg) {
       if (!sp) continue; used.push(sp);
       const g = new THREE.Group(); g.position.set(sp[0], 0, sp[1]);
       const body = def.spot === 'david' ? null : createCharacter(def); if (body) g.add(body);
-      const label = nameSprite(def.name, def.kind); label.position.y = 2.25; g.add(label);
-      const gift = giftBox(); gift.position.y = 2.75; g.add(gift);
-      const glow = new THREE.Sprite(M.glow); glow.scale.set(1.4, 1.4, 1); glow.position.y = 2.75; g.add(glow);
+      const lyK = def.scale ? .5 : 0;
+      const label = nameSprite(def.name, def.kind); label.position.y = 2.25 - lyK; g.add(label);
+      const gift = giftBox(); gift.position.y = 2.75 - lyK; g.add(gift);
+      const glow = new THREE.Sprite(M.glow); glow.scale.set(1.4, 1.4, 1); glow.position.y = 2.75 - lyK; g.add(glow);
       g.rotation.y = Math.atan2(startX - sp[0], startZ - sp[1]);
       group.add(g);
       if (def.spot !== 'david') addBox(sp[0] - .35, sp[0] + .35, sp[1] - .35, sp[1] + .35, 1.8);
-      W.npcs.push({ def, g, body, gift, glow, x: sp[0], z: sp[1], given: false, fixed: def.spot === 'david' });
+      W.npcs.push({ def, g, body, gift, glow, x: sp[0], z: sp[1], given: false, fixed: def.spot === 'david', gy: 2.75 - lyK });
     }
     // Regalos especiales: Lugar Santo, Lugar Santísimo y el barco
     for (const def of TREASURES) {
@@ -712,7 +842,8 @@ function buildWorld(cfg) {
       const gift = giftBox(); gift.position.y = 1.0; gift.scale.setScalar(1.3); g.add(gift);
       const glow = new THREE.Sprite(M.glow); glow.scale.set(1.6, 1.6, 1); glow.position.y = 1.0; g.add(glow);
       group.add(g);
-      W.npcs.push({ def, g, body: null, gift, glow, x: sp[0], z: sp[1], y: y0, given: false, fixed: true, treasure: true, gy: 1.0 });
+      const onShip = def.spot.startsWith('ship') && W.boat ? [sp[0] - W.boat.home.x, sp[1] - W.boat.home.z] : null;
+      W.npcs.push({ def, g, body: null, gift, glow, x: sp[0], z: sp[1], y: y0, given: false, fixed: true, treasure: true, gy: 1.0, ship: onShip });
     }
   }
 
@@ -953,7 +1084,7 @@ function updateMate(dt, t) {
   animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t });
 }
 const P = { holdFwd: 0, pos: new THREE.Vector3(), vy: 0, onGround: true, heading: 0, speed: 0, inv: 0, phase: 0, land: 0 };
-const RADIUS = .32, STEP = .55, JUMP_V = 7.2, GRAV = 20, WALK = 5.2, RUN = 8.6, TURBO = 11;
+const RADIUS = .32, STEP = .55, JUMP_V = 7.2, GRAV = 20, WALK = 4.3, RUN = 9.2, TURBO = 12.5;
 queueMicrotask(() => { if (isPair()) rebuildPlayer(); });
 
 const topOf = (c, z) => c.ramp ? c.ramp.y0 + (c.ramp.y1 - c.ramp.y0) * THREE.MathUtils.clamp((z - c.ramp.z0) / (c.ramp.z1 - c.ramp.z0), 0, 1) : c.top;
@@ -989,6 +1120,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space' && !keys.Space) jumpPressed = true;
   if (e.code === 'KeyT' && !keys.KeyT) takePressed = true;
   if (e.code === 'KeyR' && !keys.KeyR && state === 'play') toggleTurbo();
+  if (e.code === 'KeyC' && !keys.KeyC && state === 'play') toggleRun();
   if (e.code === 'KeyQ' && !keys.KeyQ && state === 'play') swapPair();
   if (e.code === 'KeyM' && !keys.KeyM) { if (state === 'play') openMap(); else if (state === 'map') closeMap(); }
   keys[e.code] = true;
@@ -1027,7 +1159,8 @@ document.querySelectorAll('#touch [data-key]').forEach(btn => {
 const tap = (id, fn) => { const b = $(id); b.addEventListener('touchstart', e => { e.preventDefault(); sound.unlock(); fn(); b.classList.add('on'); }, { passive: false }); b.addEventListener('touchend', () => b.classList.remove('on')); b.addEventListener('mousedown', fn); };
 tap('tJump', () => jumpPressed = true);
 tap('tTake', () => { if (state === 'talk') takeGift(); else takePressed = true; });
-tap('tRun', () => { runToggle = !runToggle; $('tRun').classList.toggle('active', runToggle); });
+function toggleRun() { runToggle = !runToggle; $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER'; toast(runToggle ? '🏃 ¡Corriendo! (toca otra vez para caminar)' : '🚶 Caminando', '#ffd34d'); sound.click(); }
+tap('tRun', () => { if (state === 'play') toggleRun(); });
 tap('tTurbo', () => toggleTurbo());
 tap('tSwap', () => { if (state === 'play') swapPair(); });
 addEventListener('touchstart', e => {
@@ -1076,11 +1209,14 @@ async function startLevelNow(i) {
   hideScreens(); $('verse').classList.add('hidden'); $('talk').classList.add('hidden'); $('info').classList.remove('show'); curZone = null; talkNPC = null;
   human.root.rotation.y = 0;
   $('topbar').classList.add('hidden');
-  $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !isTouch);
+  $('hud').classList.remove('hidden'); $('touch').classList.remove('hidden'); $('touch').classList.toggle('pc', !isTouch);
+  $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER';
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
   P.driving = false;
   if (mate) { placeMate(); if (isPair()) setTimeout(() => toast('🌿 Adán y Eva van juntos · ' + (isTouch ? 'toca 👫' : 'pulsa Q') + ' para cambiar', '#7ef0a4'), 1800); }
+  setTimeout(() => { if (state === 'play') toast('⏰ Toma los relojes azules para ganar +' + CLOCK_SECS + ' s', '#6fd0ff'); }, 3200);
+  if (lvlIdx >= 1) setTimeout(() => { if (state === 'play') toast('⛵ ¡El barco ya está habilitado! Ve al muelle (oeste)', '#7ef0a4'); }, lvlIdx === 1 ? 5600 : 99999999);
   P.turbo = false; $('tTurbo').classList.remove('active'); $('tTurbo').textContent = lvlIdx < 1 ? '🔒 TURBO' : '⚡ TURBO'; $('tTurbo').classList.toggle('locked', lvlIdx < 1);
   hudCache = {}; updateHUD();
   // precompilar los sombreadores para que no se congele al empezar
@@ -1136,7 +1272,26 @@ function endLevel(won) {
   show('result');
 }
 
-/* ---------- Conducir el barco (desde el nivel Avanzado) ---------- */
+/* ---------- Conducir el barco (se habilita al pasar el nivel Básico) ---------- */
+// Las monedas y regalos del barco viajan con él
+function followShip() {
+  const sh = world.ship; if (!sh) return;
+  const h = sh.rotation.y, cs = Math.cos(h), sn = Math.sin(h), px = sh.position.x, pz = sh.position.z;
+  for (const c of world.coins) if (c.ship && !c.taken) { const [lx, lz] = c.ship; c.x = px + cs * lx + sn * lz; c.z = pz - sn * lx + cs * lz; c.g.position.x = c.x; c.g.position.z = c.z; }
+  for (const n of world.npcs) if (n.ship) { const [lx, lz] = n.ship; n.x = px + cs * lx + sn * lz; n.z = pz - sn * lx + cs * lz; n.g.position.x = n.x; n.g.position.z = n.z; n.g.rotation.y = h; }
+}
+const CLOCK_SECS = 15;
+function pickClock(rad) {
+  if (!world.clocks) return false;
+  for (const c of world.clocks) {
+    if (c.taken) continue;
+    if (Math.hypot(P.pos.x - c.x, P.pos.z - c.z) < rad && Math.abs(P.pos.y + 1 - c.y) < 1.6) {
+      c.taken = true; c.g.visible = false; timeLeft += CLOCK_SECS; spawnBurst(c.g.position); sound.gift();
+      toast(`⏰ ¡+${CLOCK_SECS} segundos!`, '#6fd0ff'); updateHUD(); return false;
+    }
+  }
+  return false;
+}
 function startDriving() {
   const b = world.boat; P.driving = true; b.away = true; b.speed = 0; b.heading = Math.PI; world.ship.position.x = b.home.x - 6; // zarpa con la proa hacia mar abierto
   cam.distSave = cam.dist; cam.dist = 17; cam.pitch = .28;
@@ -1166,6 +1321,15 @@ function driveBoat(dt) {
   cam.yaw = P.heading;
   if (Math.abs(b.speed) > 2 && Math.random() < dt * 3) sound.stepAt(Math.min(.6, Math.abs(b.speed) / 20), 0);
   if (takePressed) { takePressed = false; stopDriving(); }
+  // navegando también se recogen monedas y relojes del mar
+  followShip();
+  for (const c of world.coins) {
+    if (c.taken || c.ship) continue;
+    if (Math.hypot(sh.position.x - c.x, sh.position.z - c.z) < 7 || Math.hypot(P.pos.x - c.x, P.pos.z - c.z) < 2) {
+      c.taken = true; collected++; sound.coin(); spawnBurst(c.g.position); c.g.visible = false; updateHUD(); openVerse(); return;
+    }
+  }
+  if (pickClock(2)) return;
   // la flecha de monedas y el minimapa siguen funcionando
   updateHUD();
 }
@@ -1271,11 +1435,11 @@ function update(dt) {
   if (keys.KeyD || keys.ArrowRight) ix += 1;
   let mag = Math.min(1, Math.hypot(ix, iz));
   let run = keys.ShiftLeft || keys.ShiftRight;
-  if (joy.active) { ix = joy.x; iz = -joy.y; mag = Math.min(1, Math.hypot(ix, iz)); if (mag < .12) mag = 0; if (mag > .93) run = true; }
+  if (joy.active) { ix = joy.x; iz = -joy.y; mag = Math.min(1, Math.hypot(ix, iz)); if (mag < .12) mag = 0; else mag = Math.min(1, mag * 1.15); }
   if (runToggle) run = true;
   // Mantener presionada la flecha ↑ (o W) hace correr más rápido
   if ((keys.KeyW || keys.ArrowUp) && P.onGround !== null) P.holdFwd = (P.holdFwd || 0) + dt; else P.holdFwd = 0;
-  if (P.holdFwd > .9) run = true;
+  if (P.holdFwd > 1.4 && !isTouch) run = true;
   const fx = Math.sin(cam.yaw), fz = Math.cos(cam.yaw);           // adelante
   const rx = -fz, rz = fx;                                          // derecha
   let dx = fx * iz + rx * ix, dz = fz * iz + rz * ix;
@@ -1355,6 +1519,8 @@ function update(dt) {
       updateHUD(); openVerse(); return;
     }
   }
+  // Relojes: más tiempo
+  if (pickClock(1.1)) return;
   // Personajes bíblicos cercanos
   let near = null, nd = 2.8;
   for (const n of world.npcs) {
@@ -1365,10 +1531,10 @@ function update(dt) {
   const pr = $('prompt');
   const bt = world.boat, onDeck = bt && !bt.away && P.pos.y > bt.deckY - .2 && Math.abs(P.pos.x - (bt.home.x - 9)) < 4.5 && Math.abs(P.pos.z - bt.home.z) < 3.4;
   if (onDeck) {
-    const can = lvlIdx >= 2;
-    pr.innerHTML = can ? `<kbd>T</kbd> ⛵ Conducir el barco` : `🔒 Podrás conducir el barco desde el nivel <b>Avanzado</b>`;
+    const can = lvlIdx >= 1;
+    pr.innerHTML = can ? `${isTouch ? 'Toca <b>TOMAR</b>' : '<kbd>T</kbd>'} ⛵ Conducir el barco` : `🔒 El barco se habilita al pasar el nivel <b>Básico</b> (desde Intermedio)`;
     pr.classList.add('show'); $('tTake').classList.toggle('ready', can);
-    if (takePressed) { takePressed = false; if (can) startDriving(); else { toast('🔒 Desde el nivel Avanzado', '#ffd34d'); sound.hurt(); } }
+    if (takePressed) { takePressed = false; if (can) startDriving(); else { toast('🔒 Pasa el nivel Básico para usar el barco', '#ffd34d'); sound.hurt(); } }
     takePressed = false;
     let z0 = null; for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z0 || zz.pri > z0.pri)) z0 = zz;
     if (z0 !== curZone) { curZone = z0; if (z0) showInfo(z0); }
@@ -1413,6 +1579,9 @@ function updateCamera(dt, follow = true) {
   camera.position.copy(cam.cur);
   cam.look.lerp(head, Math.min(1, dt * 14));
   camera.lookAt(cam.look);
+  // sensación de velocidad: la cámara se abre un poco al correr
+  const fovT = 58 + THREE.MathUtils.clamp((P.speed - WALK) / (TURBO - WALK), 0, 1) * 9;
+  if (Math.abs(camera.fov - fovT) > .05) { camera.fov += (fovT - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
 }
 
 let hudCache = {};
@@ -1450,6 +1619,7 @@ function drawMinimap() {
   mg.fillStyle = '#ff5a5a';
   for (const c of world.cars) mg.fillRect(c.obj.position.x - 2, c.obj.position.z - 1, 4, 2);
   for (const c of world.coins) if (!c.taken) { mg.fillStyle = '#ffd34d'; mg.beginPath(); mg.arc(c.x, c.z, 2.2, 0, 7); mg.fill(); }
+  if (world.clocks) for (const c of world.clocks) if (!c.taken) { mg.fillStyle = '#4fc3ff'; mg.beginPath(); mg.arc(c.x, c.z, 2.6, 0, 7); mg.fill(); mg.strokeStyle = '#fff'; mg.lineWidth = .9; mg.stroke(); }
   mg.restore();
   // jugador
   mg.save(); mg.translate(R, R); mg.rotate(-(P.heading - cam.yaw));
@@ -1489,7 +1659,9 @@ function loop() {
   if (state === 'play') update(dt);
 
   if (world) {
+    followShip();
     for (const c of world.coins) if (!c.taken) { c.coin.rotation.y = t * 2 + c.phase; c.g.position.y = c.y + Math.sin(t * 2.2 + c.phase) * .12; }
+    if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
     if (world.ark) world.ark.update(t, dt);
@@ -1554,8 +1726,9 @@ function loop() {
 
   // Sombra que sigue al jugador
   const sc = state === 'menu' && world && world.desert ? tmpV.set(world.desert.tcx, 0, world.desert.tcz) : P.pos;
-  sun.target.position.copy(sc);
-  sun.position.copy(sc).addScaledVector(sunDir, 150);
+  // la sombra sigue al jugador en pasos del tamaño de un píxel de sombra (sin bordes que tiemblan)
+  snapShadow(sc);
+  updateNightAndBlobs(dt);
 
   if (state === 'play' && (mmTimer += dt) > .05) { mmTimer = 0; drawMinimap(); }
   if (world && (lodTimer += dt) > .25) {
@@ -1730,7 +1903,7 @@ $('loading').classList.add('hidden');
 loop();
 
 // Acceso para pruebas
-window.__game = { renderer, scene, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };
+window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };
 
 /* =========================================================
    Contador de personas que han entrado al juego (una vez por navegador)

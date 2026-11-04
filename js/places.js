@@ -30,7 +30,7 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
   const add = (geo, mat, x, y, z, live) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; (live ? P : S).add(m); return m; };
   const box = (sx, sy, sz, mat, x, y, z) => add(new THREE.BoxGeometry(sx, sy, sz), mat, x, y, z);
   const ground = std({ polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, map: tex(256, 256, g => { g.fillStyle = '#c9b48a'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 9000; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,240,200,.12)' : 'rgba(110,80,40,.12)'; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); } }, [12, 6]), roughness: 1 });
-  const gp = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0 + 4, zS - zN + 4), ground); gp.rotation.x = -Math.PI / 2; gp.position.set((x0 + x1) / 2, .07, cz); gp.receiveShadow = true; P.add(gp);
+  const gp = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0 + 4, zS - zN + 4), ground); gp.rotation.x = -Math.PI / 2; gp.position.set((x0 + x1) / 2, .1, cz); gp.receiveShadow = true; P.add(gp);
   // separadores entre lugares (piedras bajas)
   const stone = std({ map: brickTex('#a89a82', 'rgba(70,60,45,.5)', [4, 1]), roughness: .95 });
   for (let i = 1; i < n; i++) { const sx = x0 + i * w; box(.8, .7, zS - zN - 30, stone, sx, .35, cz + 6); addBox(sx - .4, sx + .4, zN + 15, zS - 3, .7); }

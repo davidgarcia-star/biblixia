@@ -432,3 +432,17 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 
 #tSwap{right:100px;bottom:142px;width:92px;height:38px;border-radius:19px;background:linear-gradient(180deg,#9fe0a8,#4f9a5a);color:#0f2a12;font-weight:800}
 #tSwap.hidden{display:none!important}
+
+/* ===== Computadora: solo botones CORRER / TURBO / CAMBIAR visibles (clic con el ratón) ===== */
+#touch.pc #joy,#touch.pc #tJump,#touch.pc #tTake{display:none!important}
+#touch.pc .actions{width:220px;height:120px}
+#touch.pc #tRun{right:0;bottom:10px;width:120px}
+#touch.pc #tTurbo{right:130px;bottom:10px}
+#touch.pc #tSwap{right:130px;bottom:58px}
+#touch.pc #tRun::after{content:' (C)';font-size:9px;opacity:.7}
+#touch.pc #tTurbo::after{content:' (R)';font-size:9px;opacity:.7}
+#tRun.active{background:linear-gradient(180deg,#ffe38a,#f5c542);color:#241800;box-shadow:0 0 14px rgba(245,197,66,.6)}
+
+/* Mapas con borde amarillo */
+#minimap{border:3px solid #f5c542!important;box-shadow:0 0 0 1px rgba(0,0,0,.45),0 0 14px rgba(245,197,66,.45),0 8px 30px rgba(0,0,0,.35)!important}
+#bigmapCanvas{border:3px solid #f5c542!important;box-shadow:0 0 18px rgba(245,197,66,.4),0 20px 60px rgba(0,0,0,.6)!important}

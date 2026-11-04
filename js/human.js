@@ -226,6 +226,20 @@ export function createHuman(opt = {}) {
   const legM = robe ? robeM : skirtOn ? skin : pantsM;
   const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.12 : 1.02, .58, F ? .8 : .72);
   if (!robe && !F) mesh(new THREE.CylinderGeometry(.162, .162, .035, 32), soleM, hips, 0, .06, 0).scale.set(1, 1, .8);
+  if (F && !robe && !skirtOn) {
+    // Pantalón de mujer: cadera lisa y natural (sin bulto adelante) que une la cintura con los muslos
+    pel.scale.set(1.0, .5, .6); pel.position.z = -.02;
+    // cintura fina y caderas más anchas (silueta femenina), frente plano y glúteos redondeados integrados
+    const sg = latheUp([[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.168, .03], [.146, .08], [.14, .09]], 48);
+    const sp = sg.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), r0 = Math.hypot(x, z) || 1;
+      if (z < 0) { const back = -z / r0, bump = Math.exp(-(((y + .13) / .12) ** 2)); sp.setZ(i, z * (1 + .3 * bump * back ** 1.5)); }
+      else sp.setZ(i, z * .9);
+    }
+    sg.computeVertexNormals();
+    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, .66);
+  }
   let skirt = null;
   if (skirtOn) {
     skirt = mesh(latheUp([[.31, -.76], [.308, -.73], [.28, -.55], [.245, -.38], [.21, -.22], [.18, -.09], [.165, .02], [.158, .075], [.15, .08]], 56), skirtM, hips, 0, 0, 0);

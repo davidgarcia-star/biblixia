@@ -40,6 +40,9 @@ export const CHARACTERS = [
   { id: 'andres', name: 'Andrés', kind: 'Apóstol', level: 1, prop: 'basket', look: { beard: { len: .05 }, hairColor: 0x3b2b1e, robe: 0xb7a07a, mantle: 0x2f5a4a },
     msg: 'Fui discípulo de Juan el Bautista y llevé a mi hermano Simón Pedro a Jesús. También le presenté al muchacho que tenía cinco panes de cebada y dos pescados, con los que Jesús alimentó a una multitud.',
     ref: 'Juan 1:40-42; 6:8-13', gift: 'La cesta de panes y peces', emoji: '🧺' },
+  { id: 'nino-panes', name: 'El niño de los panes', kind: 'Niño generoso', level: 0, prop: 'loaves', scale: .68, look: { hairColor: 0x2a1a10, hair: 'short', robe: 0xc9a86a, mantle: null, sash: 0x7a3a1e, skin: 0xb07a52 },
+    msg: '¡Hola! Yo tenía cinco panes de cebada y dos pececillos. Se los di a Jesús, Él dio gracias, los repartió y comieron como cinco mil hombres, ¡y sobraron doce cestas! Lo poco que le damos a Jesús, Él lo multiplica.',
+    ref: 'Juan 6:5-13', gift: 'Cinco panes y dos peces', emoji: '🐟' },
   // ---------- Nivel 2 ----------
   { id: 'debora', name: 'Débora', kind: 'Profetisa', level: 2, prop: 'staff', gender: 'f', look: { hairColor: 0x2a1c12, hair: 'cloth', robe: 0x8a5a7a, mantle: 0xd8c49a, cloth: 0x6a3a5a },
     msg: 'Fui profetisa y juzgaba a Israel sentada bajo una palmera. Animé a Barac a salir a la batalla, porque el SEÑOR iba delante de su pueblo, y después cantamos juntos su victoria.',
@@ -140,6 +143,8 @@ export const TREASURES = [
     msg: 'Dentro del arca del pacto se guardaban la vasija de oro con el maná, la vara de Aarón que reverdeció y las tablas del pacto. Dios alimentó a su pueblo con maná del cielo cada día en el desierto.', ref: 'Éxodo 16:31-35; Hebreos 9:4' },
   { id: 'barco', name: 'Regalo del barco', kind: 'Tesoro del mar', spot: 'ship', gift: 'El ancla de la esperanza', emoji: '⚓',
     msg: 'En medio de la tormenta, la esperanza en Dios es como un ancla del alma, segura y firme. Jesús calmó el viento y el mar con su palabra.', ref: 'Hebreos 6:19; Marcos 4:39' },
+  { id: 'barco2', name: 'Regalo de los pescadores', kind: 'Tesoro del mar', spot: 'ship2', gift: 'La red llena de peces', emoji: '🐟',
+    msg: 'Pedro había trabajado toda la noche sin pescar nada, pero obedeció a Jesús y echó la red: pescaron tantos peces que la red se rompía. Jesús le dijo: «Desde ahora serás pescador de hombres».', ref: 'Lucas 5:4-10' },
   { id: 'belen', name: 'Regalo de Belén', kind: 'Lugar bíblico', spot: 'belen', gift: 'Oro, incienso y mirra', emoji: '🎁',
     msg: 'Los magos vieron la estrella, se regocijaron con gran gozo y, al ver al niño con María, su madre, se postraron y lo adoraron. Le ofrecieron presentes: oro, incienso y mirra.', ref: 'Mateo 2:10-11' },
   { id: 'jerico', name: 'Regalo de Jericó', kind: 'Lugar bíblico', spot: 'jerico', gift: 'El cordón escarlata de Rahab', emoji: '🧵',
@@ -181,6 +186,20 @@ function prop(kind) {
   } else if (kind === 'basket') {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(.16, .12, .13, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xb08850, roughness: .9, side: THREE.DoubleSide })); b.position.set(0, 1.0, .24); g.add(b);
     for (let i = 0; i < 5; i++) { const br = new THREE.Mesh(new THREE.SphereGeometry(.045, 10, 8), new THREE.MeshStandardMaterial({ color: 0xd9a35b })); br.position.set(Math.cos(i * 1.3) * .08, 1.06, .24 + Math.sin(i * 1.3) * .06); br.scale.y = .6; g.add(br); }
+  } else if (kind === 'loaves') {
+    // canasta con cinco panes de cebada y dos peces (Juan 6:9)
+    const bm = new THREE.MeshStandardMaterial({ color: 0xa87a42, roughness: .9, side: THREE.DoubleSide });
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(.2, .15, .14, 18, 1, true), bm); b.position.set(0, 1.0, .26); g.add(b);
+    const bot = new THREE.Mesh(new THREE.CircleGeometry(.15, 18), bm); bot.rotation.x = -Math.PI / 2; bot.position.set(0, .935, .26); g.add(bot);
+    const bread = new THREE.MeshStandardMaterial({ color: 0xc98a3e, roughness: .8 });
+    [[-.09, .04], [0, .07], [.09, .04], [-.05, -.05], [.06, -.05]].forEach(([x, z]) => { const br = new THREE.Mesh(new THREE.SphereGeometry(.055, 12, 8), bread); br.scale.set(1.15, .55, .9); br.position.set(x, 1.07, .26 + z); g.add(br); });
+    const fishM = new THREE.MeshStandardMaterial({ color: 0x9fb0b8, metalness: .4, roughness: .35 });
+    for (const s of [-1, 1]) {
+      const f = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.05, 12, 8), fishM); body.scale.set(2.2, .7, .5); f.add(body);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(.04, .07, 4), fishM); tail.rotation.z = s > 0 ? Math.PI / 2 : -Math.PI / 2; tail.position.x = -.13 * 1; tail.rotation.z = Math.PI / 2; f.add(tail);
+      f.position.set(s * .03, 1.12, .26 + s * .02); f.rotation.set(0, s * .5, s * .25); g.add(f);
+    }
   } else if (kind === 'book') {
     const b = new THREE.Mesh(new THREE.BoxGeometry(.2, .26, .04), new THREE.MeshStandardMaterial({ color: 0x6a2a1a, roughness: .7 })); b.position.set(0, 1.06, .22); b.rotation.x = -.3; g.add(b);
     const c = new THREE.Mesh(new THREE.BoxGeometry(.08, .012, .045), gold); c.position.set(0, 1.08, .225); c.rotation.x = -.3; g.add(c);
@@ -192,7 +211,7 @@ function prop(kind) {
 export function createCharacter(def) {
   const h = createHuman(Object.assign({ detail: .6, outfit: 'robe', hair: 'short', gender: def.gender || 'm', skin: [0xa8714f, 0xb98260, 0x9a6444, 0xc08a66][def.id.length % 4], eye: 0x3a2414 }, def.look));
   // pose: brazos sosteniendo el objeto
-  const two = ['tablets', 'scroll', 'jar', 'net', 'basket', 'book', 'horn'].includes(def.prop);
+  const two = ['tablets', 'scroll', 'jar', 'net', 'basket', 'book', 'horn', 'loaves'].includes(def.prop);
   if (two) {
     for (const [i, s] of [[0, -1], [1, 1]]) { h.arms[i].shoulder.rotation.set(-.55, 0, s * -.12); h.arms[i].elbow.rotation.x = -1.05; }
   } else if (def.prop === 'staff') {
@@ -202,6 +221,7 @@ export function createCharacter(def) {
   h.hips.position.y = .93;
   if (def.prop) h.root.add(prop(def.prop));
   const baked = bakeStatic(h.root);
+  if (def.scale) baked.scale.setScalar(def.scale);
   return baked;
 }
 

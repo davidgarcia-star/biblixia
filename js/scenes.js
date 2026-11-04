@@ -220,8 +220,8 @@ export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
   const hay = std({ color: 0xd8b04a, roughness: 1 }), lampM = std({ color: 0xffe0a0, emissive: 0xffb050, emissiveIntensity: 2.5 }), beam = std({ color: 0x5a3a1e, roughness: .8 });
   for (let i = -6; i <= 6; i++) {
     const bx = x + i * 10;
-    const bm = new THREE.Mesh(new THREE.BoxGeometry(.35, .35, inD), beam); bm.position.set(bx, doorY + inH - .2, inZ); A.add(bm);
-    for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.BoxGeometry(.3, inH, .3), beam); pst.position.set(bx, doorY + inH / 2, inZ + sz * (inD / 2 - 4.5)); A.add(pst); }
+    const bm = new THREE.Mesh(new THREE.BoxGeometry(.35, .35, inD - .06), beam); bm.position.set(bx, doorY + inH - .2, inZ); A.add(bm);
+    for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.BoxGeometry(.3, inH - .06, .3), beam); pst.position.set(bx, doorY + inH / 2, inZ + sz * (inD / 2 - 4.5)); A.add(pst); }
     const lp = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), lampM); lp.position.set(bx + 5, doorY + inH - .9, inZ); A.add(lp);
   }
   // establos a ambos lados con cercas y heno
