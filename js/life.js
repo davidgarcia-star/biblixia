@@ -1,0 +1,257 @@
+import * as THREE from 'three';
+import { createHuman, animateHuman, bakeStatic } from './human.js';
+
+/* =========================================================
+   VIDA EN LA CIUDAD: peatones, niños, comerciantes,
+   la casa del jugador y un edificio de oficinas con varios pisos.
+   ========================================================= */
+const SKINS = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
+const TOPS = [0x1f5c70, 0x7a3b6e, 0xc0392b, 0x2e2e38, 0xe0a31a, 0x2e7d4f, 0x2a4a9a, 0xe87aa0, 0xf2f0e8, 0x8a5a2a];
+const BOTS = [0x2b3a57, 0x22243a, 0x1a1a1e, 0x6a4a2a, 0x5a6a3a, 0xe8dcc0];
+const STYLES = ['camiseta', 'camisa', 'abrigo', 'mangalarga', 'chaqueta', 'traje'];
+
+function person(r, { kid = false, detail = .45, gender } = {}) {
+  const f = gender ? gender === 'f' : r() < .5;
+  const o = { detail, gender: f ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * BOTS.length) | 0],
+    skirt: BOTS[(r() * BOTS.length) | 0], legwear: f ? ['falda', 'pantalon', 'vestido'][(r() * 3) | 0] : 'pantalon', topStyle: kid ? 'camiseta' : STYLES[(r() * STYLES.length) | 0],
+    hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e, 0x2a1a10][(r() * 4) | 0], tie: 0x8a1c24, shoes: 0xf2f2f0, name: '' };
+  const h = createHuman(o); if (kid) h.root.scale.setScalar(.62 + r() * .1);
+  return h;
+}
+
+export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks, playerName, npcSpots }) {
+  const walkers = [], acts = [], live = [];
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, ...o });
+  const box = (w, h, d, m, x, y, z, { cast = true, recv = true, parent = group } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; parent.add(b); return b; };
+  const cyl = (rt, rb, h, m, x, y, z, seg = 16) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); c.position.set(x, y, z); c.castShadow = true; c.receiveShadow = true; group.add(c); return c; };
+  const solid = (minX, maxX, minZ, maxZ, top, bottom = 0) => addBox(minX, maxX, minZ, maxZ, top, bottom);
+  const act = (x, z, y, label, fn, rad = 1.6) => acts.push({ x, z, y, label, fn, r: rad });
+  const sign = (text, sub, x, y, z, ry = 0) => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+    g.fillStyle = '#1a1206'; g.fillRect(0, 0, 512, 128); g.strokeStyle = '#f5c542'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
+    g.fillStyle = '#ffd34d'; g.font = '800 44px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(text, 256, 62); g.fillStyle = '#e9dcc0'; g.font = '600 24px system-ui, sans-serif'; g.fillText(sub, 256, 100);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, .65), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .35 }));
+    m.position.set(x, y, z); m.rotation.y = ry; group.add(m); return m;
+  };
+  const staticHuman = (opts, x, y, z, ry, pose) => {
+    const h = createHuman({ detail: .5, ...opts });
+    if (pose === 'sit') { for (const l of h.legs) { l.thigh.rotation.x = -1.5; l.knee.rotation.x = 1.5; } h.hips.position.y = .52; for (const a of h.arms) { a.shoulder.rotation.x = -.6; a.elbow.rotation.x = -.7; } }
+    if (pose === 'work') { for (const a of h.arms) { a.shoulder.rotation.x = -.7; a.elbow.rotation.x = -.9; } }
+    const b = bakeStatic(h.root); b.position.set(x, y, z); b.rotation.y = ry; group.add(b);
+    if (pose === 'sit') { const ch = new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .5), mat(0x2a2e35)); ch.position.set(x, y + .44, z); group.add(ch); const bk = new THREE.Mesh(new THREE.BoxGeometry(.5, .55, .06), mat(0x2a2e35)); bk.position.set(x - Math.sin(ry) * .26, y + .72, z - Math.cos(ry) * .26); bk.rotation.y = ry; group.add(bk); }
+    return b;
+  };
+
+  const towers = blocks.filter(b => b[2] === 'casa' || b[2] === 'oficinas' || b[2] === 'tower' || b[2] === 'plaza');
+
+  /* ---------- Casa del jugador ---------- */
+  const casa = blocks.find(b => b[2] === 'casa');
+  if (casa) {
+    const [x0, z0] = casa, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2, fy = CURB;
+    const HW = 7, HD = 5.5, H = 3, T = .22;                 // medio ancho, media profundidad, alto, grosor de pared
+    const wallM = mat(0xefe4cf, { roughness: .9 }), trimM = mat(0x8a5a36), roofM = mat(0x8a3a24, { roughness: .8 }), floorM = mat(0xb98a5a, { roughness: .6 });
+    // jardín y camino
+    box(BLOCK - 2, .04, BLOCK - 2, mat(0x5f8f3e, { roughness: 1 }), cx, fy + .02, cz, { cast: false });
+    box(1.8, .05, BLOCK / 2 - HD - 1, mat(0xc9b89a), cx, fy + .03, z0 + (BLOCK / 2 - HD - 1) / 2 + 1, { cast: false });
+    box(HW * 2, .06, HD * 2, floorM, cx, fy + .03, cz, { cast: false });
+    const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD, DW = 1.4;
+    const wall = (ax, az, bx, bz) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const m = box(w, H, d, wallM, (ax + bx) / 2, fy + H / 2, (az + bz) / 2); blockers.push(m); solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H); };
+    wall(X0, Z1, X1, Z1); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1);
+    wall(X0, Z0, cx - DW / 2, Z0); wall(cx + DW / 2, Z0, X1, Z0);                       // puerta al frente
+    box(DW + .3, .35, T + .05, wallM, cx, fy + H - .17, Z0);                            // dintel
+    // pared interior entre la sala y el dormitorio/baño (con paso)
+    wall(cx + 1.5, Z0 + 4.2, cx + 1.5, Z1);
+    const roof = box(HW * 2 + 1, .25, HD * 2 + 1, roofM, cx, fy + H + .12, cz, { cast: false }); blockers.push(roof);
+    for (const sz of [-1, 1]) { const rf = box(HW * 2 + 1.2, .18, HD + .9, roofM, cx, fy + H + .9, cz + sz * (HD / 2 + .2), { cast: true }); rf.rotation.x = sz * .42; }
+    const lampM = new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 2 });
+    for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) box(.6, .05, .6, lampM, lx, fy + H - .05, lz, { cast: false });
+    sign('Casa de ' + (playerName || 'mi personaje'), '🏠 Tu casa', cx, fy + H - .25, Z0 - .14, Math.PI);
+    // ventanas
+    const glass = new THREE.MeshStandardMaterial({ color: 0x9fd0e8, metalness: .1, roughness: .05, transparent: true, opacity: .45 });
+    for (const wx of [cx - 4.2, cx + 4.2]) box(1.6, 1.1, .06, glass, wx, fy + 1.6, Z0 - .12, { cast: false });
+    // --- Sala y cocina (lado izquierdo) ---
+    const sofaM = mat(0x2a4a7a, { roughness: .9 });
+    box(2.4, .45, .9, sofaM, cx - 4, fy + .23, Z1 - .8); box(2.4, .7, .25, sofaM, cx - 4, fy + .6, Z1 - .35); solid(cx - 5.2, cx - 2.8, Z1 - 1.3, Z1 - .2, fy + .45);
+    box(1.2, .06, .7, trimM, cx - 4, fy + .45, Z1 - 2.1); for (const [a, b] of [[-.5, -.28], [.5, -.28], [-.5, .28], [.5, .28]]) box(.06, .42, .06, trimM, cx - 4 + a, fy + .21, Z1 - 2.1 + b);
+    // tele
+    box(1.6, .9, .08, mat(0x101216, { roughness: .3 }), cx - 4, fy + 1.5, Z0 + .2);
+    // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
+    const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
+    box(.7, .9, 3.2, cabM, X0 + .45, fy + .45, cz + 1.2); box(.75, .05, 3.25, counterM, X0 + .45, fy + .92, cz + 1.2); solid(X0, X0 + .85, cz - .4, cz + 2.8, fy + .95);
+    box(.5, .1, .6, mat(0x9aa4ae, { metalness: .8, roughness: .2 }), X0 + .45, fy + .93, cz + 2.2);          // fregadero
+    cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
+    box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
+    const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false;
+    box(1.4, .06, .9, trimM, cx - 1.8, fy + .76, cz - 1.6); for (const [a, b] of [[-.6, -.35], [.6, -.35], [-.6, .35], [.6, .35]]) box(.06, .74, .06, trimM, cx - 1.8 + a, fy + .37, cz - 1.6 + b); solid(cx - 2.5, cx - 1.1, cz - 2.05, cz - 1.15, fy + .78);
+    for (const [fx, fz, c] of [[-.3, -.1, 0xd23a2a], [0, .1, 0xf0c040], [.3, -.05, 0x6ab04a]]) { const fr = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), mat(c)); fr.position.set(cx - 1.8 + fx, fy + .85, cz - 1.6 + fz); group.add(fr); }
+    // --- Dormitorio y baño (lado derecho) ---
+    const bedX = cx + 4.6, bedZ = Z1 - 1.4;
+    box(1.8, .4, 2.2, trimM, bedX, fy + .2, bedZ); box(1.7, .22, 2.05, mat(0xf4f2ec, { roughness: .9 }), bedX, fy + .5, bedZ); box(1.72, .1, 1.3, mat(0x7a3b6e, { roughness: .9 }), bedX, fy + .62, bedZ - .3);
+    box(1.2, .14, .4, mat(0xffffff, { roughness: .9 }), bedX, fy + .66, bedZ + .75); box(1.8, .9, .1, trimM, bedX, fy + .65, bedZ + 1.1); solid(bedX - .95, bedX + .95, bedZ - 1.1, bedZ + 1.15, fy + .62);
+    const shX = X1 - .75, shZ = cz - 2.6;
+    box(1.3, .08, 1.3, mat(0xe8eef2, { roughness: .2 }), shX, fy + .04, shZ, { cast: false });
+    for (const [a, b, w, d] of [[-.65, 0, .04, 1.3], [0, .65, 1.3, .04]]) box(w, 2.1, d, glass, shX + a, fy + 1.05, shZ + b, { cast: false });
+    cyl(.12, .12, .03, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), shX + .3, fy + 2.2, shZ - .3, 16);
+    box(.5, .45, .6, mat(0xffffff, { roughness: .2 }), X1 - .45, fy + .23, cz - .6);                       // inodoro
+    box(.6, .2, .45, mat(0xffffff, { roughness: .2 }), X1 - .35, fy + .85, cz + .5);                        // lavamanos
+    // acciones
+    act(bedX - 1.3, bedZ, fy, '😴 Dormir', () => life.fx('sleep'));
+    act(shX - .1, shZ, fy, '🚿 Bañarse', () => life.fx('shower'), 1.3);
+    act(X0 + 1.3, cz + 2.2, fy, '💧 Tomar agua', () => life.fx('water'));
+    act(X0 + 1.3, cz + .4, fy, '☕ Tomar café', () => life.fx('coffee'));
+    act(cx - 1.8, cz - 2.6, fy, '🍽 Comer', () => life.fx('eat'));
+    act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
+    W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
+    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, bañarte, comer, tomar agua o café y descansar en el sofá. «Mas yo y mi casa serviremos al SEÑOR.»', ref: 'Josué 24:15' });
+  }
+
+  /* ---------- Edificio de oficinas (3 pisos, escaleras, cafetería y trabajadores) ---------- */
+  const of = blocks.find(b => b[2] === 'oficinas');
+  if (of) {
+    const [x0, z0] = of, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
+    const HW = 11, HD = 8, FH = 3.5, FLOORS = 3, T = .25, base = CURB;
+    const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD;
+    const glass = new THREE.MeshStandardMaterial({ color: 0x7fb4d0, metalness: .35, roughness: .06, transparent: true, opacity: .32, depthWrite: false });
+    const frameM = mat(0x2a2e35, { metalness: .7, roughness: .35 }), slabM = mat(0xcfcac0, { roughness: .6 }), floorM = mat(0x8a96a4, { roughness: .35 });
+    const fy = i => base + i * FH;
+    // escaleras: rampa 1→2 a la derecha, 2→3 a la izquierda (a lo largo de z)
+    const SZ0 = Z0 + 2.2, SZ1 = Z0 + 11.2, SW = 2.2;
+    const stairs = [[X1 - .3 - SW, X1 - .3], [X0 + .3, X0 + .3 + SW]];
+    for (let i = 0; i < FLOORS; i++) {
+      const y = fy(i);
+      // losa con hueco sobre la escalera que llega a este piso
+      const hole = i > 0 ? stairs[(i - 1) % 2] : null;
+      const pieces = hole ? [[X0, hole[0], Z0, Z1], [hole[1], X1, Z0, Z1], [hole[0], hole[1], Z0, SZ0], [hole[0], hole[1], SZ1, Z1]] : [[X0, X1, Z0, Z1]];
+      for (const [a, b, c, d] of pieces) { if (b - a < .05 || d - c < .05) continue; const s = box(b - a, .3, d - c, i ? slabM : floorM, (a + b) / 2, y - .15 + (i ? 0 : .1), (c + d) / 2, { cast: false }); if (i) { blockers.push(s); solid(a, b, c, d, y, y - .3); } else solid(a, b, c, d, y + .05, 0); }
+      // techo de cada piso con luces
+      const lampM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 1.6 });
+      for (let k = -2; k <= 2; k++) box(1.6, .04, .3, lampM, cx + k * 4, y + FH - .32, cz, { cast: false });
+      // escritorios, computadoras, sillas y trabajadores
+      const deskM = mat(0xe6e2da, { roughness: .4 }), pcM = mat(0x15171c, { roughness: .3 }), screenM = new THREE.MeshStandardMaterial({ color: 0x3a7ad8, emissive: 0x2a6ad0, emissiveIntensity: .9 });
+      const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
+      desks.forEach(([dx, dz], k) => {
+        box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
+        box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenM, dx, y + 1.0, dz + .175, { cast: false });
+        if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
+      });
+      // dispensador de agua en cada piso
+      const wx = X1 - 1, wz = Z1 - 1;
+      box(.4, 1.0, .4, mat(0xf2f2f0, { roughness: .3 }), wx, y + .5, wz); cyl(.16, .16, .45, new THREE.MeshStandardMaterial({ color: 0x7fc4ff, transparent: true, opacity: .6, roughness: .05 }), wx, y + 1.23, wz);
+      solid(wx - .25, wx + .25, wz - .25, wz + .25, y + 1.5, y);
+      act(wx - .9, wz, y, '💧 Tomar agua', () => life.fx('water'));
+      // rampa / escalera hacia el piso de arriba
+      if (i < FLOORS - 1) {
+        const [sa, sb] = stairs[i % 2], st = 14;
+        for (let k = 0; k < st; k++) { const zz = SZ0 + (k + .5) * (SZ1 - SZ0) / st; box(sb - sa, .12, (SZ1 - SZ0) / st + .02, frameM, (sa + sb) / 2, y + (k + 1) / st * FH - .06, zz); }
+        addRamp(sa, sb, SZ0, SZ1, y, y + FH);
+        box(.05, 1, SZ1 - SZ0, frameM, i % 2 ? sb : sa, y + FH * .5 + .5, (SZ0 + SZ1) / 2);
+      }
+      // trabajadores de pie conversando
+      if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * 6) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
+      if (i > 0) staticHuman({ gender: 'f', skin: SKINS[(r() * 6) | 0], top: 0xc0392b, topStyle: 'chaqueta', pants: 0x22243a, legwear: 'pantalon', hair: 'long' }, cx + 6, y, cz + 1.5, 1.6);
+    }
+    // planta baja: cafetería con barista
+    const y0 = fy(0);
+    box(4, 1.05, .8, mat(0x6a4a2a), cx - 4, y0 + .52, Z1 - 2); box(4.1, .06, .9, mat(0x2a2420, { roughness: .3 }), cx - 4, y0 + 1.07, Z1 - 2); solid(cx - 6, cx - 2, Z1 - 2.45, Z1 - 1.55, y0 + 1.1, y0);
+    box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2);
+    staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
+    act(cx - 4, Z1 - 3.1, y0, '☕ Comprar un café', () => life.fx('coffee'));
+    act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
+    for (const [tx, tz] of [[cx - 4, cz], [cx, cz + 1]]) { box(.9, .05, .9, mat(0xf2efe8), tx, y0 + .75, tz); cyl(.05, .05, .72, frameM, tx, y0 + .38, tz, 8); solid(tx - .45, tx + .45, tz - .45, tz + .45, y0 + .78, y0); }
+    staticHuman({ gender: 'm', skin: SKINS[1], top: 0x2a4a9a, topStyle: 'camisa', pants: 0x22243a, hair: 'short' }, cx - 4, y0, cz - .75, 0, 'sit');
+    // fachada de vidrio con marcos y puerta de entrada al frente
+    const Htot = FLOORS * FH;
+    const gwall = (ax, az, bx, bz, y = base, h = Htot) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const g = box(w, h, d, glass, (ax + bx) / 2, y + h / 2, (az + bz) / 2, { cast: false, recv: false }); g.renderOrder = 1; solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, 999); };
+    const DW = 2.4;
+    gwall(X0, Z1, X1, Z1); gwall(X0, Z0, X0, Z1); gwall(X1, Z0, X1, Z1); gwall(X0, Z0, cx - DW / 2, Z0); gwall(cx + DW / 2, Z0, X1, Z0);
+    const g2 = box(DW, Htot - 3, T, glass, cx, base + 3 + (Htot - 3) / 2, Z0, { cast: false, recv: false });
+    for (let i = 0; i <= FLOORS; i++) box(HW * 2 + .3, .18, HD * 2 + .3, frameM, cx, base + i * FH - .09, cz, { cast: false }).scale.set(1, 1, 1);
+    for (const [px, pz] of [[X0, Z0], [X1, Z0], [X0, Z1], [X1, Z1], [cx - DW / 2, Z0], [cx + DW / 2, Z0]]) box(.25, Htot, .25, frameM, px, base + Htot / 2, pz);
+    const roof = box(HW * 2 + .4, .3, HD * 2 + .4, mat(0x4a4f57), cx, base + Htot + .15, cz, { cast: true }); blockers.push(roof); solid(X0, X1, Z0, Z1, base + Htot + .3, base + Htot);
+    sign('OFICINAS LUZ', '🏢 3 pisos · Cafetería', cx, base + 3.2, Z0 - .2, Math.PI);
+    W.zones.push({ id: 'oficinas', name: 'Edificio de oficinas', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Sube por las escaleras a los diferentes pisos. Hay oficinas con personas trabajando, agua en cada piso y una cafetería en la planta baja. «Todo lo que hagáis, hacedlo de corazón, como para el Señor.»', ref: 'Colosenses 3:23' });
+  }
+
+  /* ---------- Comerciantes en las plazas ---------- */
+  const stalls = [
+    { name: 'Frutas', emoji: '🍎', col: 0xc0392b, item: 'eat', goods: [0xd23a2a, 0xf0c040, 0x6ab04a, 0xf08a20] },
+    { name: 'Panadería', emoji: '🥖', col: 0xe0a31a, item: 'eat', goods: [0xc98a3e, 0xd9a35b, 0xb8742e] },
+    { name: 'Café', emoji: '☕', col: 0x5a3a1e, item: 'coffee', goods: [0x3a2414, 0xf2efe6] },
+    { name: 'Agua y jugos', emoji: '🥤', col: 0x1a9ab0, item: 'water', goods: [0x7fc4ff, 0xf08a20, 0xd23a2a] },
+  ];
+  let si = 0;
+  for (const [x0, z0, type] of blocks) {
+    if (type !== 'plaza') continue;
+    const cx = x0 + BLOCK / 2;
+    for (const [sz, ry] of [[z0 + 2.4, 0], [z0 + BLOCK - 2.4, Math.PI]]) {
+      const S = stalls[si++ % stalls.length], g = new THREE.Group(); g.position.set(cx, CURB, sz); g.rotation.y = ry; group.add(g);
+      const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
+      const wood = mat(0x7a5232);
+      add(new THREE.BoxGeometry(2.6, .08, 1.1), wood, 0, .9, 0); add(new THREE.BoxGeometry(2.5, .85, .05), wood, 0, .45, .5);
+      for (const [a, b] of [[-1.25, -.5], [1.25, -.5], [-1.25, .5], [1.25, .5]]) add(new THREE.CylinderGeometry(.04, .04, 2.3, 8), wood, a, 1.15, b);
+      // toldo a rayas
+      const c = document.createElement('canvas'); c.width = 128; c.height = 16; const gg = c.getContext('2d'); for (let k = 0; k < 8; k++) { gg.fillStyle = k % 2 ? '#f4efe6' : '#' + new THREE.Color(S.col).getHexString(); gg.fillRect(k * 16, 0, 16, 16); }
+      const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
+      const aw = add(new THREE.BoxGeometry(2.9, .05, 1.5), new THREE.MeshStandardMaterial({ map: tx, roughness: .8 }), 0, 2.3, 0); aw.rotation.x = -.18;
+      // mercancía
+      for (let k = 0; k < 14; k++) add(new THREE.SphereGeometry(S.item === 'coffee' ? .06 : .09, 10, 8), mat(S.goods[k % S.goods.length]), -1.05 + (k % 7) * .35, .99 + (k > 6 ? .06 : 0), -.25 + (k > 6 ? .25 : 0));
+      // letrero
+      const lc = document.createElement('canvas'); lc.width = 256; lc.height = 64; const lg = lc.getContext('2d'); lg.fillStyle = '#1a1206'; lg.fillRect(0, 0, 256, 64); lg.fillStyle = '#ffd34d'; lg.font = '800 30px system-ui, sans-serif'; lg.textAlign = 'center'; lg.fillText(S.emoji + ' ' + S.name, 128, 43);
+      const lt = new THREE.CanvasTexture(lc); lt.colorSpace = THREE.SRGBColorSpace;
+      add(new THREE.PlaneGeometry(1.6, .4), new THREE.MeshStandardMaterial({ map: lt, emissive: 0xffffff, emissiveMap: lt, emissiveIntensity: .3 }), 0, 2.0, -.62).rotation.y = Math.PI;
+      // comerciante detrás del puesto
+      const v = createHuman({ detail: .5, gender: si % 2 ? 'm' : 'f', skin: SKINS[(r() * 6) | 0], top: S.col, topStyle: 'camiseta', pants: 0x3a3d45, legwear: 'pantalon', hair: si % 2 ? 'short' : 'long' });
+      for (const a of v.arms) { a.shoulder.rotation.x = -.5; a.elbow.rotation.x = -.8; }
+      const vb = bakeStatic(v.root); vb.position.set(0, 0, .95); vb.rotation.y = Math.PI; g.add(vb);
+      const wx = cx, wz = sz + (ry ? 1.6 : -1.6);
+      addBox(cx - 1.4, cx + 1.4, sz - .6, sz + .6, CURB + 1.0);
+      act(wx, wz, CURB, `${S.emoji} Comprar en el puesto de ${S.name.toLowerCase()}`, () => life.fx(S.item, S.name), 1.8);
+      // los personajes bíblicos no se paran delante del puesto
+      for (let k = npcSpots.length - 1; k >= 0; k--) if (Math.hypot(npcSpots[k][0] - cx, npcSpots[k][1] - sz) < 4.5) npcSpots.splice(k, 1);
+    }
+  }
+
+  /* ---------- Peatones en las aceras y niños jugando en las plazas ---------- */
+  const nCity = Math.min(26, 6 + blocks.length * 2);
+  for (let k = 0; k < nCity; k++) {
+    const b = blocks[k % blocks.length], [x0, z0, type] = b;
+    if (type === 'casa') continue;
+    const ins = 1.5 + r() * .6, L = BLOCK - ins * 2, per = L * 4;
+    const h = person(r, { kid: r() < .18 }); group.add(h.root);
+    walkers.push({ h, x0: x0 + ins, z0: z0 + ins, L, per, s: r() * per, sp: (r() < .5 ? -1 : 1) * (1.1 + r() * .6), y: CURB, kind: 'loop' });
+  }
+  for (const [x0, z0, type] of blocks) {
+    if (type !== 'plaza') continue;
+    const cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
+    for (let k = 0; k < 3; k++) { const h = person(r, { kid: true }); group.add(h.root); walkers.push({ h, cx, cz, rad: 5.3, a: k * 2.1, sp: (k % 2 ? -1 : 1) * (.55 + k * .08), y: CURB, kind: 'ring', jump: k === 1 }); }
+  }
+
+  const tmp = new THREE.Vector3();
+  const life = {
+    acts, walkers,
+    fx: () => {},                 // lo conecta el juego (efectos al comer, dormir, etc.)
+    update(dt, t, cam, player) {
+      for (const w of walkers) {
+        const px = w.kind === 'loop' ? w.x0 + w.L / 2 : w.cx, pz = w.kind === 'loop' ? w.z0 + w.L / 2 : w.cz;
+        const near = Math.hypot(px - cam.x, pz - cam.z) < 95; w.h.root.visible = near; if (!near) continue;
+        let x, z, hd;
+        if (w.kind === 'loop') {
+          // si el jugador está muy cerca, el peatón se detiene un momento
+          const stop = Math.hypot(w.h.root.position.x - player.x, w.h.root.position.z - player.z) < 1.1;
+          if (!stop) w.s = (w.s + w.sp * dt + w.per) % w.per;
+          const s = w.s, L = w.L, side = Math.floor(s / L), u = s - side * L;
+          if (side === 0) { x = w.x0 + u; z = w.z0; } else if (side === 1) { x = w.x0 + L; z = w.z0 + u; } else if (side === 2) { x = w.x0 + L - u; z = w.z0 + L; } else { x = w.x0; z = w.z0 + L - u; }
+          const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]][side]; hd = Math.atan2(dirs[0] * Math.sign(w.sp), dirs[1] * Math.sign(w.sp));
+          w.h.root.position.set(x, w.y, z); w.h.root.rotation.y = hd;
+          animateHuman(w.h, dt, { speed: stop ? 0 : Math.abs(w.sp) * 1.15, onGround: true, vy: 0, land: 0, t });
+        } else {
+          w.a += dt * w.sp; x = w.cx + Math.cos(w.a) * w.rad; z = w.cz + Math.sin(w.a) * w.rad;
+          w.h.root.position.set(x, w.y + (w.jump ? Math.max(0, Math.sin(t * 3 + w.a * 4)) * .25 : 0), z); w.h.root.rotation.y = Math.atan2(-Math.sin(w.a) * w.sp, Math.cos(w.a) * w.sp);
+          animateHuman(w.h, dt, { speed: 4, onGround: true, vy: 0, land: 0, t });
+        }
+      }
+    },
+  };
+  return life;
+}

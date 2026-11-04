@@ -83,6 +83,8 @@
   <div class="panel timer"><div class="big" id="hTime">0:00</div><div class="bar"><i id="hBar"></i></div></div>
   <div class="topright">
     <button class="ib" id="btnPause" aria-label="Pausa">❚❚</button>
+    <button class="ib" id="btnZoomIn" aria-label="Acercar cámara" title="Acercar (tecla +)">＋</button>
+    <button class="ib" id="btnZoomOut" aria-label="Alejar cámara" title="Alejar (tecla −)">－</button>
     <button class="ib" id="btnCam" aria-label="Cambiar vista de cámara" title="Vista: cerca, normal, lejos o primera persona (tecla V)">🎥</button>
     <button class="ib" id="btnMap" aria-label="Mapa" title="Mapa completo (tecla M)">🗺</button>
     <button class="ib" id="btnFull" aria-label="Pantalla completa" title="Pantalla completa (tecla F)">⛶</button>
@@ -96,6 +98,7 @@
   <div id="info" class="glass"><button id="iClose" aria-label="Cerrar">✕</button><div class="tag">LUGAR ESPECIAL</div><h3 id="iName"></h3><p id="iText"></p><small id="iRef"></small></div>
 </div>
 
+<div id="lifefx" class="lifefx" aria-hidden="true"></div>
 <!-- Controles táctiles -->
 <div id="touch" class="hidden">
   <div id="joy" aria-label="Joystick para caminar"><div id="joyRing"></div><div id="joyKnob"></div></div>

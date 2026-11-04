@@ -172,6 +172,16 @@ export class Sound {
       o.connect(lp).connect(g).connect(bus); o.start(t + w); o.stop(t + w + d + .05);
     }
   }
+  // Sonidos de la vida diaria
+  life(kind) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const t = a.currentTime;
+    const nz = (when, dur, f, q, gain, type = 'bandpass') => { const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; const bp = a.createBiquadFilter(); bp.type = type; bp.frequency.value = f; bp.Q.value = q; const g = a.createGain(); g.gain.setValueAtTime(.0001, t + when); g.gain.exponentialRampToValueAtTime(gain, t + when + .02); g.gain.exponentialRampToValueAtTime(.0001, t + when + dur); src.connect(bp).connect(g).connect(this.sfx); src.start(t + when); src.stop(t + when + dur + .05); };
+    if (kind === 'eat') for (let i = 0; i < 5; i++) nz(i * .22, .12, 1800 + Math.random() * 800, 1.5, .5);
+    else if (kind === 'water' || kind === 'coffee') for (let i = 0; i < 3; i++) { this.note(320 - i * 30, .16, { type: 'sine', vol: .14, when: i * .3, slide: 180 }); nz(i * .3, .1, 600, 3, .2); }
+    else if (kind === 'shower') { nz(0, 1.4, 5000, .4, .25, 'highpass'); nz(0, 1.4, 1800, .7, .12); }
+    else if (kind === 'sleep' || kind === 'rest') [523, 440, 349, 262].forEach((f, i) => this.note(f, .9, { type: 'sine', vol: .07, when: i * .35 }));
+  }
   coin() { this.note(1318, .12, { type: 'triangle', vol: .14 }); this.note(1976, .5, { type: 'triangle', vol: .12, when: .07 }); this.note(2637, .6, { type: 'sine', vol: .05, when: .12 }); }
   talk() { this.note(587, .4, { type: 'sine', vol: .07 }); this.note(880, .6, { type: 'sine', vol: .05, when: .1 }); }
   // Efecto al recibir un regalo: campanitas que suben + destello

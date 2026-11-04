@@ -13,6 +13,7 @@ import { buildArk, buildValley } from './scenes.js';
 import { buildPlaces } from './places.js';
 import { CHARACTERS, TREASURES, forLevel, createCharacter, nameSprite, giftBox } from './characters.js';
 import { Sound } from './audio.js';
+import { buildLife } from './life.js';
 
 /* =========================================================
    CONFIGURACIÓN DE NIVELES
@@ -461,6 +462,9 @@ function buildWorld(cfg) {
   for (let i = 0; i < N * N; i++) types.push(r() < .42 ? 'plaza' : 'tower');
   if (!types.includes('plaza')) types[(r() * types.length) | 0] = 'plaza';
   if (types.filter(t => t === 'tower').length < Math.ceil(N * N / 3)) types[0] = 'tower';
+  // la casa del jugador (junto al inicio) y el edificio de oficinas
+  types[0] = 'casa'; types[1] = 'oficinas';
+  if (!types.includes('plaza')) types[types.length - 1] = 'plaza';
 
   for (let bi = 0; bi < N; bi++) for (let bj = 0; bj < N; bj++) {
     const x0 = O + bi * PITCH + STREET, z0 = O + bj * PITCH + STREET, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
@@ -494,7 +498,7 @@ function buildWorld(cfg) {
       }
       // Árboles en acera
       for (let k = 0; k < 4; k++) { const t = (k + .5) / 4; trees.push([x0 + BLOCK * t + 3, z0 + 2.2, .8], [x0 + BLOCK * t - 3, z0 + BLOCK - 2.2, .8]); }
-    } else {
+    } else if (type === 'plaza') {
       // Plaza / parque moderno
       // Jardines
       for (const [gx, gz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
@@ -747,6 +751,9 @@ function buildWorld(cfg) {
     plantBiblicalTrees(O + 4, O + T + DES - 4, O - NZ + 6, O - NZ + 14, 18, [], ['cedro', 'olivo', 'palmera']);
   }
 
+  // Vida en la ciudad: peatones, niños, comerciantes, casa del jugador y oficinas
+  W.life = buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks: W.blocks, playerName: (save.player && save.player.name) || '', npcSpots });
+
   // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
   {
     const pts = [], free = (x, z) => !colliders.some(c => c.top > .3 && x > c.minX - 1.2 && x < c.maxX + 1.2 && z > c.minZ - 1.2 && z < c.maxZ + 1.2);
@@ -915,6 +922,7 @@ function buildWorld(cfg) {
   W.dyn = [];
   if (W.ark) for (const a of W.ark.lodItems) if (a.userData && a.userData.kind) W.dyn.push({ obj: a, r: BODY_R[a.userData.kind] || .6 });
   if (W.kids) for (const kd of W.kids) W.dyn.push({ obj: kd.h.root, r: .28 });
+  if (W.life) for (const w of W.life.walkers) W.dyn.push({ obj: w.h.root, r: .3 });
   // Lista de objetos que se ocultan cuando quedan lejos de la cámara
   W.lod = [];
   for (const n of W.npcs) W.lod.push({ obj: n.g, range: 130 });
@@ -1174,7 +1182,7 @@ function climbStep(dt) {
 function blocked(x, z, y) {
   for (const c of world.colliders) {
     if (c.tag === 'ship' && world.boat && world.boat.away) continue;
-    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.top > y + STEP) return true; }
+    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) return true; }
   }
   return false;
 }
@@ -1182,9 +1190,9 @@ function blocked(x, z, y) {
 /* =========================================================
    CÁMARA Y ENTRADA
    ========================================================= */
-const cam = { yaw: 0, pitch: .3, dist: 5.6, cur: new THREE.Vector3(), look: new THREE.Vector3() };
+const cam = { yaw: 0, pitch: .3, dist: 6.4, cur: new THREE.Vector3(), look: new THREE.Vector3() };
 /* ---------- Vistas de cámara: cerca, normal, lejos y primera persona (solo se ven las manos) ---------- */
-const CAM_MODES = [{ id: 'normal', name: '🎥 Vista normal', dist: 5.6 }, { id: 'cerca', name: '🔎 Vista de cerca', dist: 3.2 }, { id: 'lejos', name: '🔭 Vista de lejos', dist: 10 }, { id: 'fp', name: '👀 Primera persona', dist: 0 }];
+const CAM_MODES = [{ id: 'normal', name: '🎥 Vista normal', dist: 6.4 }, { id: 'cerca', name: '🔎 Vista de cerca', dist: 3.2 }, { id: 'lejos', name: '🔭 Vista de lejos', dist: 10 }, { id: 'fp', name: '👀 Primera persona', dist: 0 }];
 let camMode = 0;
 try { camMode = Math.max(0, CAM_MODES.findIndex(m => m.id === localStorage.getItem('biblixia_cam'))); } catch (e) {}
 const fpArms = new THREE.Group(); camera.add(fpArms); scene.add(camera); fpArms.visible = false;
@@ -1228,6 +1236,8 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR' && !keys.KeyR && state === 'play') toggleTurbo();
   if (e.code === 'KeyC' && !keys.KeyC && state === 'play') toggleRun();
   if (e.code === 'KeyV' && !keys.KeyV && (state === 'play' || state === 'pause')) setCamMode(camMode + 1);
+  if ((e.code === 'Equal' || e.code === 'NumpadAdd') && state === 'play') zoomCam(-1.2);
+  if ((e.code === 'Minus' || e.code === 'NumpadSubtract') && state === 'play') zoomCam(1.2);
   if (e.code === 'KeyQ' && !keys.KeyQ && state === 'play') swapPair();
   if (e.code === 'KeyM' && !keys.KeyM) { if (state === 'play') openMap(); else if (state === 'map') closeMap(); }
   keys[e.code] = true;
@@ -1241,10 +1251,10 @@ canvas.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY 
 addEventListener('mouseup', () => drag = null);
 addEventListener('mousemove', e => {
   if (!drag || state !== 'play') return;
-  cam.yaw -= (e.clientX - drag.x) * .005; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * .004, -.12, 1.1);
+  cam.yaw -= (e.clientX - drag.x) * .005; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * .004, -.2, 1.1);
   drag = { x: e.clientX, y: e.clientY };
 });
-canvas.addEventListener('wheel', e => { cam.dist = THREE.MathUtils.clamp(cam.dist + e.deltaY * .005, 3, 11); }, { passive: true });
+canvas.addEventListener('wheel', e => { cam.dist = THREE.MathUtils.clamp(cam.dist + e.deltaY * .005, 2.6, 13); }, { passive: true });
 
 // Táctil: botones de dirección, saltar, tomar y correr; arrastrar en la pantalla para mirar
 // Joystick de bola: arrastra en cualquier dirección (al borde = correr)
@@ -1279,7 +1289,7 @@ addEventListener('touchstart', e => {
 }, { passive: true });
 addEventListener('touchmove', e => {
   for (const t of e.changedTouches) if (t.identifier === look.id) {
-    cam.yaw -= (t.clientX - look.x) * .008; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (t.clientY - look.y) * .005, -.12, 1.1);
+    cam.yaw -= (t.clientX - look.x) * .008; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (t.clientY - look.y) * .005, -.2, 1.1);
     look.x = t.clientX; look.y = t.clientY;
   }
 }, { passive: true });
@@ -1308,7 +1318,7 @@ async function startLevelNow(i) {
   world = buildWorld(L);
   goal = L.goal; collected = 0; timeLeft = L.time;
   P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null;
-  setCamMode(camMode, false);
+  setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
   const nuevos = VERSES.map((_, k) => k).filter(k => !save.verses.includes(k)).sort(() => Math.random() - .5);
@@ -1409,7 +1419,7 @@ function stopDriving() {
   const b = world.boat; P.driving = false; b.away = false; b.speed = 0;
   world.ship.position.set(b.home.x, 0, b.home.z); world.ship.rotation.y = 0; b.heading = 0;
   P.pos.set(b.home.x - 4, b.deckY, b.home.z + 1.5); P.vy = 0; P.onGround = true; P.speed = 0;
-  cam.dist = cam.distSave || 5.6; toast('⚓ El barco volvió al muelle', '#ffd34d'); sound.click();
+  cam.dist = cam.distSave || 6.4; toast('⚓ El barco volvió al muelle', '#ffd34d'); sound.click();
 }
 function driveBoat(dt) {
   const b = world.boat, sh = world.ship;
@@ -1442,6 +1452,17 @@ function driveBoat(dt) {
   updateHUD();
 }
 
+/* ---------- Vida diaria: efectos al comer, beber, dormir, bañarse ---------- */
+const lifeUsed = new Set();
+function lifeFx(kind, extra) {
+  const ov = $('lifefx'); const bonus = { sleep: 8, shower: 5, eat: 4, water: 3, coffee: 3, rest: 3 }[kind] || 0;
+  const first = !lifeUsed.has(kind); lifeUsed.add(kind);
+  const msg = { sleep: '😴 Dormiste un rato… ¡recuperaste fuerzas!', shower: '🚿 ¡Qué baño tan fresco!', eat: extra ? `😋 ¡Qué rico! Compraste en el puesto de ${extra.toLowerCase()}` : '🍽 ¡Buen provecho!', water: '💧 ¡Agua fresca! Te hidrataste', coffee: '☕ ¡Un cafecito calientito!', rest: '🛋 Descansaste en el sofá' }[kind] || '✨';
+  ov.className = 'lifefx ' + kind; void ov.offsetWidth; ov.classList.add('on');
+  sound.life(kind);
+  setTimeout(() => ov.classList.remove('on'), kind === 'sleep' ? 2200 : 1300);
+  setTimeout(() => { toast(msg + (first && bonus ? `  +${bonus} s` : ''), '#7ef0a4'); if (first && bonus) { timeLeft += bonus; updateHUD(); } }, kind === 'sleep' ? 1400 : 400);
+}
 /* ---------- Turbo (correr ultra rápido) ---------- */
 function toggleTurbo() {
   if (lvlIdx < 1) { P.turbo = false; toast('🔒 El turbo se desbloquea en el nivel Intermedio', '#ffd34d'); sound.hurt(); return; }
@@ -1481,10 +1502,12 @@ function drawBigMap() {
   W2.places.forEach((p, i) => { const sz = Math.max(9, Math.min(13, (p.x1 - p.x0) * k / 9)); label((p.locked ? '🔒 ' : '') + p.name.replace('La torre de ', 'Torre de '), p.x, W2.north.zN + NZ * (i % 2 ? .62 : .38), sz, p.locked ? '#ddd' : '#3a2a10'); });
   // monedas, personajes y regalos
   for (const c of W2.coins) if (!c.taken) { g.fillStyle = '#ffd34d'; g.beginPath(); g.arc(X(c.x), Z(c.z), 3.5, 0, 7); g.fill(); }
+  if (W2.clocks) for (const c of W2.clocks) if (!c.taken) drawClockIcon(g, X(c.x), Z(c.z), 6);
+  if (W2.house) { g.font = '16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); }
   for (const n of W2.npcs) { g.fillStyle = n.given ? 'rgba(160,200,255,.5)' : n.treasure ? '#ff7ab6' : '#6fd0ff'; g.beginPath(); g.arc(X(n.x), Z(n.z), 4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); }
   // jugador
   g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading + Math.PI); g.fillStyle = '#ff4040'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 9); g.lineTo(0, 4); g.lineTo(-8, 9); g.closePath(); g.fill(); g.stroke(); g.restore();
-  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>🔒 Lugar bloqueado</span>`;
+  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Tu casa</span><span>🔒 Lugar bloqueado</span>`;
 }
 
 /* ---------- Personajes: hablar y recibir regalos ---------- */
@@ -1660,6 +1683,16 @@ function update(dt) {
     if (z0 !== curZone) { curZone = z0; if (z0) showInfo(z0); }
     updateHUD(); return;
   }
+  // Acciones de la vida diaria (comer, beber, dormir, bañarse, comprar)
+  if (world.life && !near) {
+    let ba = null, bd = 9;
+    for (const a of world.life.acts) { const d = Math.hypot(P.pos.x - a.x, P.pos.z - a.z); if (d < a.r && Math.abs(P.pos.y - a.y) < 1.3 && d < bd) { bd = d; ba = a; } }
+    if (ba) {
+      pr.innerHTML = `${isTouch ? 'Toca <b>TOMAR</b>:' : '<kbd>T</kbd>'} ${ba.label}`; pr.classList.add('show'); $('tTake').classList.add('ready');
+      if (takePressed) { takePressed = false; ba.fn(); }
+      takePressed = false; updateHUD(); return;
+    }
+  }
   if (near) {
     pr.innerHTML = near.given ? `<kbd>T</kbd> Hablar con <b>${near.def.name}</b>` : `<kbd>T</kbd> Tomar el regalo de <b>${near.def.name}</b>`;
     pr.classList.add('show'); $('tTake').classList.add('ready');
@@ -1734,6 +1767,12 @@ function updateHUD() {
 
 // Minimapa + flecha
 const mm = $('minimap'), mg = mm.getContext('2d');
+// relojito para los mapas: esfera blanca, borde azul y manecillas
+function drawClockIcon(g, x, y, r) {
+  g.save(); g.fillStyle = '#ffffff'; g.strokeStyle = '#1a8fd8'; g.lineWidth = r * .32; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke();
+  g.fillStyle = '#1a8fd8'; for (const sx of [-1, 1]) { g.beginPath(); g.arc(x + sx * r * .75, y - r * 1.02, r * .32, 0, 7); g.fill(); }
+  g.strokeStyle = '#123'; g.lineWidth = r * .18; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - r * .65); g.moveTo(x, y); g.lineTo(x + r * .5, y + r * .15); g.stroke(); g.restore();
+}
 function drawMinimap() {
   const S = mm.width, R = S / 2, scale = S / 140;
   mg.clearRect(0, 0, S, S);
@@ -1757,7 +1796,7 @@ function drawMinimap() {
   mg.fillStyle = '#ff5a5a';
   for (const c of world.cars) mg.fillRect(c.obj.position.x - 2, c.obj.position.z - 1, 4, 2);
   for (const c of world.coins) if (!c.taken) { mg.fillStyle = '#ffd34d'; mg.beginPath(); mg.arc(c.x, c.z, 2.2, 0, 7); mg.fill(); }
-  if (world.clocks) for (const c of world.clocks) if (!c.taken) { mg.fillStyle = '#4fc3ff'; mg.beginPath(); mg.arc(c.x, c.z, 2.6, 0, 7); mg.fill(); mg.strokeStyle = '#fff'; mg.lineWidth = .9; mg.stroke(); }
+  if (world.clocks) for (const c of world.clocks) if (!c.taken) drawClockIcon(mg, c.x, c.z, 3.4);
   mg.restore();
   // jugador
   mg.save(); mg.translate(R, R); mg.rotate(-(P.heading - cam.yaw));
@@ -1803,6 +1842,7 @@ function loop() {
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
     if (world.ark) world.ark.update(t, dt);
+    if (world.life) world.life.update(dt, t, camera.position, P.pos);
     if (world.kids) for (const kd of world.kids) {
       const near = Math.hypot(kd.cx - camera.position.x, kd.cz - camera.position.z) < 120; kd.h.root.visible = near; if (!near) continue;
       kd.a += dt * kd.sp; const x2 = kd.cx + Math.cos(kd.a) * kd.r, z2 = kd.cz + Math.sin(kd.a) * kd.r;
@@ -2014,6 +2054,12 @@ $('btnHome').onclick = goHome; $('btnPauseHome').onclick = goHome;
 $('btnExit').onclick = exitGame; $('btnPauseExit').onclick = exitGame;
 $('btnPause').onclick = () => { sound.click(); pauseGame(); };
 $('btnCam').onclick = () => setCamMode(camMode + 1);
+function zoomCam(d) {
+  if (CAM_MODES[camMode].id === 'fp') { if (d > 0) { setCamMode(1, false); cam.dist = 2.6; } return; }
+  if (d < 0 && cam.dist <= 2.6) { setCamMode(3); return; }   // acercando más: primera persona
+  cam.dist = THREE.MathUtils.clamp(cam.dist + d, 2.6, 13); sound.click();
+}
+$('btnZoomIn').onclick = () => zoomCam(-1.2); $('btnZoomOut').onclick = () => zoomCam(1.2);
 $('btnMap').onclick = () => { sound.click(); openMap(); }; $('minimap').addEventListener('click', () => openMap());
 $('bigmapClose').onclick = () => { sound.click(); closeMap(); };
 addEventListener('resize', () => { if (state === 'map') drawBigMap(); });

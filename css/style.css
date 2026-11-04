@@ -561,3 +561,11 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 @keyframes lionWalk{0%{left:-2%}42%{left:calc(100% - var(--LW))}50%{left:calc(100% - var(--LW))}92%{left:-2%}100%{left:-2%}}
 /* rendimiento: sin animar filtros pesados */
 #splash h1.biblixia span{animation:letterIn .9s cubic-bezier(.2,1.5,.35,1) calc(.75s + var(--i) * .09s) both,letterFloat 4s ease-in-out calc(2.2s + var(--i) * .2s) infinite!important}
+/* efectos de la vida diaria */
+.lifefx{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:0;transition:opacity .5s}
+.lifefx.on{opacity:1}
+.lifefx.sleep{background:#000;transition:opacity .7s}
+.lifefx.sleep.on::after{content:"Z z z…";position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);color:#cfd8ff;font:700 42px Georgia,serif;letter-spacing:8px;animation:fadeUp 1.2s ease both}
+.lifefx.shower{background:linear-gradient(180deg,rgba(160,210,255,.55),rgba(220,240,255,.25)),repeating-linear-gradient(100deg,rgba(255,255,255,.35) 0 2px,transparent 2px 14px);animation:rain .4s linear infinite}
+@keyframes rain{to{background-position:0 0,-14px 40px}}
+.lifefx.eat,.lifefx.water,.lifefx.coffee,.lifefx.rest{background:radial-gradient(circle at 50% 60%,rgba(255,230,160,.0) 40%,rgba(255,210,120,.28))}
