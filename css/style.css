@@ -512,3 +512,24 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 .cine::after{content:"";position:absolute;left:50%;top:32%;width:min(900px,120vw);height:420px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);z-index:-1}
 #splash .tagline,#splash .kicker{text-shadow:0 2px 10px #000,0 0 18px rgba(0,0,0,.8)}
 @media (min-width:900px) and (max-height:800px){#splash .logo-aura{--s:92px;margin:2px auto 6px}#splash h1.biblixia{font-size:clamp(54px,9vw,104px)!important}}
+/* Título BIBLIXIA más visible: oro brillante con contorno oscuro y halo */
+#splash h1.biblixia span{
+  background:linear-gradient(180deg,#fffbe6 0%,#ffe9a0 28%,#ffd23f 50%,#f0a81c 72%,#ffe38a 100%)!important;background-size:100% 100%!important;
+  -webkit-text-stroke:2px #5a3500;
+  filter:drop-shadow(0 0 1px #2a1600) drop-shadow(0 3px 0 #7a4a00) drop-shadow(0 6px 10px rgba(0,0,0,.85)) drop-shadow(0 0 26px rgba(255,200,60,.75))!important;
+  animation:letterIn .9s cubic-bezier(.2,1.5,.35,1) calc(.75s + var(--i) * .09s) both,letterFloat 4s ease-in-out calc(2.2s + var(--i) * .2s) infinite,letterGlow 3s ease-in-out calc(2s + var(--i) * .15s) infinite!important}
+@keyframes letterGlow{50%{filter:drop-shadow(0 0 1px #2a1600) drop-shadow(0 3px 0 #7a4a00) drop-shadow(0 6px 10px rgba(0,0,0,.85)) drop-shadow(0 0 40px rgba(255,220,90,1))}}
+#splash h1.biblixia{font-family:"Arial Black","Segoe UI Black",Impact,system-ui,sans-serif!important;font-weight:900!important;letter-spacing:.02em!important}
+.cine::after{height:520px;background:radial-gradient(ellipse,rgba(0,0,0,.7),rgba(0,0,0,.35) 45%,transparent 72%)}
+#splash h1.biblixia span{-webkit-background-clip:text!important;background-clip:text!important;color:transparent!important}
+/* "JUEGO BÍBLICO EN 3D": oro + turquesa con relieve 3D */
+#splash .kicker{font-family:"Arial Black","Segoe UI Black",system-ui,sans-serif;font-weight:900;font-size:clamp(13px,3.2vw,18px)!important;letter-spacing:5px!important;
+  background:linear-gradient(90deg,#ffe38a,#f5c542 30%,#2fe0d0 55%,#1ab8c8 75%,#ffe38a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;
+  text-shadow:none!important;filter:drop-shadow(0 1px 0 #0a4a50) drop-shadow(0 2px 0 #7a4a00) drop-shadow(0 3px 4px rgba(0,0,0,.9));
+  animation:fadeUp .8s ease 1.5s both,kickShine 5s linear 2.3s infinite!important}
+@keyframes kickShine{to{background-position:-200% 0}}
+/* botón Desafío Bíblico RD: oro + turquesa en 3D */
+#splash .game-link{background:linear-gradient(180deg,#3ff0de 0%,#13b3c2 48%,#0a7f8f 100%)!important;color:#fff!important;font-weight:900;letter-spacing:1px;
+  border:2px solid #f5c542!important;text-shadow:0 1px 0 #064a54,0 2px 0 #7a4a00,0 3px 6px rgba(0,0,0,.6);
+  box-shadow:0 4px 0 #7a5a10,0 0 0 1px rgba(255,236,170,.5) inset,0 10px 22px rgba(19,179,194,.45)!important}
+#splash .game-link:active{transform:translateY(3px);box-shadow:0 1px 0 #7a5a10,0 6px 14px rgba(19,179,194,.4)!important}
