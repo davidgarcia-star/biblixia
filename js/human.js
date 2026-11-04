@@ -221,7 +221,7 @@ export function createHuman(opt = {}) {
 
   const root = new THREE.Group();
   const hips = grp(root, 0, .93, 0);
-  const skirtOn = F && !robe;
+  const skirtOn = F && !robe && o.legwear !== 'pantalon';
   const skirtM = new THREE.MeshStandardMaterial({ map: clothTexture(o.skirt ?? 0x2d3a6a, 'pleat'), roughness: .8, side: THREE.DoubleSide });
   const legM = robe ? robeM : skirtOn ? skin : pantsM;
   const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.1 : 1.02, .55, F ? .76 : .72);

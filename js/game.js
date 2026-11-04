@@ -855,7 +855,7 @@ export const OUTFITS = [
   { id: 'aaron', name: '👑 Sumo sacerdote Aarón', req: 3, lockText: 'Se desbloquea al completar el nivel Intermedio' },
 ];
 if (!save.player) save.player = { gender: 'm', name: '', skin: 2, top: 0 };
-save.player = Object.assign({ bottom: 0, outfit: 'moderno', hairTone: 0 }, save.player);
+save.player = Object.assign({ bottom: 0, outfit: 'moderno', hairTone: 0, legwear: 'falda' }, save.player);
 const outfitOK = id => { const o = OUTFITS.find(x => x.id === id); return !!o && !(o.req && save.unlocked < o.req); };
 function playerOpts(pl = save.player) {
   const f = pl.gender === 'f', top = TOPS[pl.top] ?? TOPS[0], bot = BOTTOMS[pl.bottom] ?? BOTTOMS[0];
@@ -865,7 +865,7 @@ function playerOpts(pl = save.player) {
   if (out === 'pastor') return { ...base, outfit: 'robe', robe: 0xb8a074, mantle: bot, sash: 0x5a3a1e, hair: 'cloth', cloth: f ? bot : 0xe8dcc0 };
   if (out === 'levita') return { ...base, outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: top, hair: f ? 'cloth' : 'turban', cloth: 0xf4f0e6 };
   if (out === 'aaron') return { ...base, gender: 'm', outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: 0x5b2a7a, hair: 'turban', priest: true, beard: { color: 0x5a4a3a, len: .13 }, hairColor: 0x4a3a2a };
-  return { ...base, top, pants: bot, skirt: bot, hair: f ? 'long' : 'short', shoes: 0xf2f2f0 };
+  return { ...base, top, pants: bot, skirt: bot, legwear: pl.legwear, hair: f ? 'long' : 'short', shoes: 0xf2f2f0 };
 }
 let human = createHuman(playerOpts());
 scene.add(human.root);
@@ -1487,7 +1487,9 @@ function refreshCreator() {
   BOTTOMS.forEach((c, i) => { const b = document.createElement('button'); b.className = 'swatch' + (draft.bottom === i ? ' sel' : ''); b.style.background = '#' + new THREE.Color(c).getHexString(); b.setAttribute('aria-label', 'Color ' + (i + 1)); b.onclick = () => { draft.bottom = i; apply(); }; bt.appendChild(b); });
   const robeOut = draft.outfit !== 'moderno';
   $('lblTop').textContent = robeOut ? (draft.outfit === 'levita' ? 'Color del cinto' : 'Color de la túnica') : 'Color de la ropa';
-  $('lblBottom').textContent = robeOut ? 'Color del manto' : draft.gender === 'f' ? 'Color de la falda' : 'Color del pantalón';
+  const showLeg = draft.gender === 'f' && !robeOut; $('legRow').classList.toggle('hidden', !showLeg); $('lblLeg').classList.toggle('hidden', !showLeg);
+  document.querySelectorAll('[data-leg]').forEach(b => b.classList.toggle('sel', b.dataset.leg === (draft.legwear || 'falda')));
+  $('lblBottom').textContent = robeOut ? 'Color del manto' : (draft.gender === 'f' && draft.legwear !== 'pantalon') ? 'Color de la falda' : 'Color del pantalón';
   const ol = $('outfits'); ol.innerHTML = '';
   OUTFITS.forEach(o => {
     const locked = o.req && save.unlocked < o.req, b = document.createElement('button');
@@ -1502,6 +1504,7 @@ function refreshCreator() {
   $('pHint').classList.toggle('ok', ok);
 }
 function apply() { save.player = Object.assign({}, draft); rebuildPlayer(); refreshCreator(); }
+document.querySelectorAll('[data-leg]').forEach(b => b.onclick = () => { sound.click(); draft.legwear = b.dataset.leg; apply(); });
 document.querySelectorAll('[data-gender]').forEach(b => b.onclick = () => { sound.click(); draft.gender = b.dataset.gender; if (draft.gender === 'f' && draft.outfit === 'aaron') draft.outfit = 'tunica'; apply(); });
 $('pName').addEventListener('input', e => {
   const c = cleanName(e.target.value);
