@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1b2a4a">
+<title>Monedas de Fe</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;background:#0f1a30;overflow:hidden;font-family:"Trebuchet MS",Verdana,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+  #game{display:block;width:100vw;height:100vh}
+  .screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center;background:radial-gradient(circle at 50% 30%,#2c4a7c,#0f1a30 75%);z-index:10}
+  .hidden{display:none!important}
+  h1{font-size:clamp(34px,8vw,64px);color:#ffd447;text-shadow:0 4px 0 #b8860b,0 8px 20px rgba(0,0,0,.5);letter-spacing:1px}
+  h2{font-size:clamp(22px,5vw,34px);color:#ffd447}
+  .sub{opacity:.85;font-size:clamp(14px,3.5vw,18px);max-width:560px;line-height:1.4}
+  .btn{background:#ffd447;color:#3a2a00;border:none;border-radius:14px;padding:14px 28px;font-size:clamp(16px,4vw,20px);font-weight:bold;cursor:pointer;box-shadow:0 5px 0 #b8860b;min-width:220px;font-family:inherit}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b8860b}
+  .btn.sec{background:#3d5e96;color:#fff;box-shadow:0 5px 0 #233a63}
+  .btn.sec:active{box-shadow:0 2px 0 #233a63}
+  .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;width:min(820px,100%)}
+  .lvl{background:#203862;border:3px solid #3d5e96;border-radius:14px;padding:14px 10px;cursor:pointer;color:#fff;font-family:inherit}
+  .lvl b{display:block;font-size:20px;color:#ffd447;margin-bottom:4px}
+  .lvl small{opacity:.85;line-height:1.5;display:block}
+  .lvl.locked{opacity:.45;cursor:not-allowed}
+  .lvl .stars{color:#ffd447;font-size:18px;margin-top:4px}
+  .credit{position:absolute;bottom:12px;font-size:12px;opacity:.7;padding:0 10px}
+  .coinlogo{width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3a8,#ffd447 45%,#d4a017);border:6px solid #b8860b;display:flex;align-items:center;justify-content:center;font-size:44px;color:#8a5a00;font-weight:bold;animation:spin 2.4s linear infinite}
+  @keyframes spin{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.15)}}
+  #verse{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,10,25,.6);z-index:20;padding:20px}
+  .card{background:linear-gradient(#fffaf0,#f6e7c1);color:#3b2a10;border-radius:18px;padding:26px 24px 20px;max-width:560px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.5);border:4px solid #d4a017;text-align:center;animation:pop .25s ease-out}
+  @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  .card .t{font-size:clamp(18px,4.4vw,24px);line-height:1.45;font-style:italic;margin:10px 0 12px}
+  .card .r{font-weight:bold;color:#9a6a00;font-size:18px;margin-bottom:16px}
+  .card .h{font-size:14px;letter-spacing:2px;color:#b8860b;font-weight:bold}
+  #collection{justify-content:flex-start;overflow-y:auto;padding-top:30px}
+  .vlist{width:min(680px,100%);display:flex;flex-direction:column;gap:10px;text-align:left}
+  .vitem{background:#203862;border-left:5px solid #ffd447;border-radius:10px;padding:12px 14px;line-height:1.4}
+  .vitem b{color:#ffd447}
+  .vitem.lock{opacity:.4}
+  #touch{position:fixed;inset:auto 0 0 0;display:none;justify-content:space-between;padding:0 18px 18px;z-index:5;pointer-events:none}
+  #touch .grp{display:flex;gap:14px}
+  .tb{pointer-events:auto;width:78px;height:78px;border-radius:50%;background:rgba(255,255,255,.22);border:3px solid rgba(255,255,255,.5);color:#fff;font-size:32px;display:flex;align-items:center;justify-content:center}
+  .tb.on{background:rgba(255,212,71,.55)}
+  #topbtns{position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:6}
+  .ib{width:46px;height:46px;border-radius:12px;border:2px solid rgba(255,255,255,.5);background:rgba(15,26,48,.6);color:#fff;font-size:22px;cursor:pointer}
+  .bigstars{font-size:46px;color:#ffd447;letter-spacing:6px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .help{background:rgba(255,255,255,.08);border-radius:12px;padding:14px 18px;max-width:560px;text-align:left;line-height:1.6;font-size:15px}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="topbtns" class="hidden">
+  <button class="ib" id="btnPause" aria-label="Pausa">⏸</button>
+  <button class="ib" id="btnMute" aria-label="Sonido">🔊</button>
+</div>
+
+<div id="touch">
+  <div class="grp">
+    <div class="tb" id="tLeft">◀</div>
+    <div class="tb" id="tRight">▶</div>
+  </div>
+  <div class="grp">
+    <div class="tb" id="tJump">⤒</div>
+  </div>
+</div>
+
+<!-- Bienvenida -->
+<div class="screen" id="splash">
+  <div class="coinlogo">✝</div>
+  <h1>Monedas de Fe</h1>
+  <p class="sub">Camina, salta y recoge monedas. ¡Cada moneda guarda un versículo de la Palabra de Dios!</p>
+  <button class="btn" id="btnPlay">▶ Jugar</button>
+  <div class="row">
+    <button class="btn sec" id="btnCollection">📖 Mis versículos</button>
+    <button class="btn sec" id="btnHelp">❓ Cómo jugar</button>
+  </div>
+  <p class="credit">Creado por Luis David Esteban García · MIPROAA Ministerio Profético Ardiendo Por El Avivamiento<br>Versículos: La Biblia de las Américas (LBLA) © The Lockman Foundation</p>
+</div>
+
+<!-- Ayuda -->
+<div class="screen hidden" id="help">
+  <h2>Cómo jugar</h2>
+  <div class="help">
+    🚶 Muévete con <b>← →</b> (o <b>A / D</b>) y salta con <b>Espacio</b> o <b>↑</b>.<br>
+    📱 En el teléfono usa los botones de la pantalla.<br>
+    🪙 Cada moneda muestra un versículo bíblico. El reloj se detiene mientras lo lees.<br>
+    ⏱ Recoge las monedas que pide el nivel <b>antes de que se acabe el tiempo</b>.<br>
+    🕳 Si caes a un hoyo o tocas las espinas, vuelves atrás y pierdes 5 segundos.<br>
+    ⭐ Mientras más tiempo te sobre, más estrellas ganas.
+  </div>
+  <button class="btn" data-go="splash">Volver</button>
+</div>
+
+<!-- Niveles -->
+<div class="screen hidden" id="levelsel">
+  <h2>Elige un nivel</h2>
+  <div class="levels" id="levelGrid"></div>
+  <button class="btn sec" data-go="splash">Volver</button>
+</div>
+
+<!-- Colección -->
+<div class="screen hidden" id="collection">
+  <h2>Mis versículos</h2>
+  <p class="sub" id="colCount"></p>
+  <div class="vlist" id="vlist"></div>
+  <button class="btn sec" data-go="splash" style="margin:10px 0 30px">Volver</button>
+</div>
+
+<!-- Pausa -->
+<div class="screen hidden" id="pause" style="background:rgba(10,18,36,.85)">
+  <h2>Pausa</h2>
+  <button class="btn" id="btnResume">Continuar</button>
+  <button class="btn sec" id="btnRestart">Reiniciar nivel</button>
+  <button class="btn sec" id="btnQuit">Salir al menú</button>
+</div>
+
+<!-- Resultado -->
+<div class="screen hidden" id="result">
+  <h2 id="resTitle"></h2>
+  <div class="bigstars" id="resStars"></div>
+  <p class="sub" id="resText"></p>
+  <p class="sub" id="resVerse" style="font-style:italic;color:#ffe9a8"></p>
+  <button class="btn" id="btnNext"></button>
+  <button class="btn sec" id="btnRetry">Repetir nivel</button>
+  <button class="btn sec" id="btnMenu">Menú de niveles</button>
+</div>
+
+<!-- Versículo -->
+<div id="verse" class="hidden">
+  <div class="card">
+    <div class="h">🪙 MONEDA DE FE</div>
+    <div class="t" id="vText"></div>
+    <div class="r" id="vRef"></div>
+    <button class="btn" id="btnVerseOk">¡Amén! Continuar</button>
+  </div>
+</div>
+
+<script>
+/* ===================== VERSÍCULOS (LBLA) ===================== */
+const VERSES = [
+  ["Porque de tal manera amó Dios al mundo, que dio a su Hijo unigénito, para que todo aquel que cree en Él, no se pierda, mas tenga vida eterna.","Juan 3:16"],
+  ["El SEÑOR es mi pastor, nada me faltará.","Salmos 23:1"],
+  ["Todo lo puedo en Cristo que me fortalece.","Filipenses 4:13"],
+  ["Confía en el SEÑOR con todo tu corazón, y no te apoyes en tu propio entendimiento.","Proverbios 3:5"],
+  ["Lámpara es a mis pies tu palabra, y luz para mi camino.","Salmos 119:105"],
+  ["¡Sé fuerte y valiente! No temas ni te acobardes, porque el SEÑOR tu Dios estará contigo dondequiera que vayas.","Josué 1:9"],
+  ["Y sabemos que para los que aman a Dios, todas las cosas cooperan para bien, esto es, para los que son llamados conforme a su propósito.","Romanos 8:28"],
+  ["No temas, porque yo estoy contigo; no te desalientes, porque yo soy tu Dios. Te fortaleceré, ciertamente te ayudaré.","Isaías 41:10"],
+  ["Pero buscad primero su reino y su justicia, y todas estas cosas os serán añadidas.","Mateo 6:33"],
+  ["Dios es nuestro refugio y fortaleza, nuestro pronto auxilio en las tribulaciones.","Salmos 46:1"],
+  ["Venid a mí, todos los que estáis cansados y cargados, y yo os haré descansar.","Mateo 11:28"],
+  ["Yo soy el camino, y la verdad, y la vida; nadie viene al Padre sino por mí.","Juan 14:6"],
+  ["Porque la paga del pecado es muerte, pero la dádiva de Dios es vida eterna en Cristo Jesús Señor nuestro.","Romanos 6:23"],
+  ["Porque por gracia habéis sido salvados por medio de la fe, y esto no de vosotros, sino que es don de Dios.","Efesios 2:8"],
+  ["Pon tu delicia en el SEÑOR, y Él te dará las peticiones de tu corazón.","Salmos 37:4"],
+  ["El que no ama no conoce a Dios, porque Dios es amor.","1 Juan 4:8"],
+  ["Ahora bien, la fe es la certeza de lo que se espera, la convicción de lo que no se ve.","Hebreos 11:1"],
+  ["Este es el día que el SEÑOR ha hecho; regocijémonos y alegrémonos en él.","Salmos 118:24"],
+  ["Pero los que esperan en el SEÑOR renovarán sus fuerzas; se remontarán con alas como las águilas, correrán y no se cansarán, caminarán y no se fatigarán.","Isaías 40:31"],
+  ["Vosotros sois la luz del mundo. Una ciudad situada sobre un monte no se puede ocultar.","Mateo 5:14"],
+  ["El nombre del SEÑOR es torre fuerte, a ella corre el justo y está a salvo.","Proverbios 18:10"],
+  ["El SEÑOR es mi luz y mi salvación; ¿a quién temeré? El SEÑOR es la fortaleza de mi vida; ¿de quién tendré temor?","Salmos 27:1"],
+  ["Porque no nos ha dado Dios espíritu de timidez, sino de poder, de amor y de dominio propio.","2 Timoteo 1:7"],
+  ["Bueno es el SEÑOR, una fortaleza en el día de la angustia, y conoce a los que en Él se refugian.","Nahúm 1:7"],
+  ["Acercaos a Dios, y Él se acercará a vosotros.","Santiago 4:8"],
+  ["Echando toda vuestra ansiedad sobre Él, porque Él tiene cuidado de vosotros.","1 Pedro 5:7"],
+  ["Mi socorro viene del SEÑOR, que hizo los cielos y la tierra.","Salmos 121:2"],
+  ["Y conoceréis la verdad, y la verdad os hará libres.","Juan 8:32"],
+  ["Que las misericordias del SEÑOR jamás terminan, pues nunca fallan sus bondades; son nuevas cada mañana; ¡grande es tu fidelidad!","Lamentaciones 3:22-23"],
+  ["En el principio creó Dios los cielos y la tierra.","Génesis 1:1"]
+];
+
+/* ===================== NIVELES ===================== */
+const LEVELS = [
+  {name:"Básico",     len:3000, time:90,  ratio:.50, gaps:0,  spikes:0,  tiers:1, seed:11},
+  {name:"Intermedio", len:4200, time:100, ratio:.60, gaps:.35,spikes:0,  tiers:1, seed:23},
+  {name:"Avanzado",   len:5400, time:110, ratio:.70, gaps:.5, spikes:.25,tiers:2, seed:37},
+  {name:"Experto",    len:6600, time:115, ratio:.78, gaps:.6, spikes:.4, tiers:2, seed:41},
+  {name:"Master",     len:8000, time:120, ratio:.88, gaps:.7, spikes:.55,tiers:2, seed:59}
+];
+
+/* ===================== GUARDADO ===================== */
+const SAVE_KEY="monedasDeFe_v1";
+let save={unlocked:1,stars:[0,0,0,0,0],verses:[]};
+try{const s=JSON.parse(localStorage.getItem(SAVE_KEY));if(s)save=Object.assign(save,s);}catch(e){}
+function persist(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));}catch(e){}}
+
+/* ===================== AUDIO ===================== */
+let actx=null,muted=false,musicTimer=null,musicStep=0;
+try{muted=localStorage.getItem(SAVE_KEY+"_mute")==="1";}catch(e){}
+function ac(){if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(actx&&actx.state==="suspended")actx.resume();return actx;}
+function tone(freq,dur,type="square",vol=.12,when=0,slide=0){
+  if(muted)return;const a=ac();if(!a)return;
+  const t=a.currentTime+when,o=a.createOscillator(),g=a.createGain();
+  o.type=type;o.frequency.setValueAtTime(freq,t);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t+dur);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur+.02);
+}
+const sfx={
+  coin(){tone(988,.08,"square",.1);tone(1319,.25,"square",.1,.08);},
+  jump(){tone(300,.15,"square",.07,0,620);},
+  hurt(){tone(400,.35,"sawtooth",.1,0,90);},
+  win(){[523,659,784,1047].forEach((f,i)=>tone(f,.25,"triangle",.15,i*.13));},
+  lose(){[392,330,262,196].forEach((f,i)=>tone(f,.3,"triangle",.14,i*.18));},
+  click(){tone(660,.05,"square",.06);}
+};
+// Melodía instrumental sencilla en bucle
+const MELODY=[[392,1],[440,1],[494,1],[523,2],[494,1],[440,1],[392,2],[330,1],[392,1],[440,2],[392,2],[0,1],
+              [523,1],[587,1],[659,2],[587,1],[523,1],[494,2],[440,1],[494,1],[523,3],[0,1]];
+const BASS=[196,196,165,165,175,175,196,196];
+function startMusic(){
+  stopMusic();musicStep=0;let beat=0;const bpmMs=200;
+  let mi=0,left=0;
+  musicTimer=setInterval(()=>{
+    if(muted||state!=="play")return;
+    if(left<=0){const [f,d]=MELODY[mi%MELODY.length];if(f)tone(f,d*.19,"triangle",.05);left=d;mi++;}
+    left--;
+    if(beat%4===0)tone(BASS[(beat/4|0)%BASS.length],.35,"sine",.06);
+    beat++;
+  },bpmMs);
+}
+function stopMusic(){if(musicTimer)clearInterval(musicTimer);musicTimer=null;}
+
+/* ===================== UTILIDADES ===================== */
+function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+const $=id=>document.getElementById(id);
+function show(id){["splash","help","levelsel","collection","pause","result"].forEach(s=>$(s).classList.toggle("hidden",s!==id));}
+function hideAll(){["splash","help","levelsel","collection","pause","result"].forEach(s=>$(s).classList.add("hidden"));}
+
+/* ===================== CANVAS ===================== */
+const cv=$("game"),cx=cv.getContext("2d");
+const VH=450;let VW=800,scale=1;
+function resize(){
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;
+  scale=cv.height/VH;VW=cv.width/scale;
+  cx.setTransform(scale,0,0,scale,0,0);
+}
+addEventListener("resize",resize);resize();
+const isTouch=("ontouchstart" in window)||navigator.maxTouchPoints>0;
+
+/* ===================== MUNDO ===================== */
+const GROUND=380,G=0.6,JUMP=-12.4,SPEED=4.4;
+let state="menu",lvlIdx=0,L=null,world=null,player=null,camX=0,timeLeft=0,collected=0,goal=0,lastT=0,anim=0,floaters=[],particles=[],pendingVerse=null,verseOrder=[],verseCursor=0;
+
+function buildLevel(cfg){
+  const r=rng(cfg.seed);
+  const ground=[],plats=[],coins=[],spikes=[];
+  let x=0;
+  // primer tramo seguro
+  ground.push({x:-200,w:600});x=400;
+  while(x<cfg.len){
+    if(r()<cfg.gaps){x+=70+r()*70;}
+    const w=260+r()*420;
+    const seg={x,w:Math.min(w,cfg.len+600-x)};ground.push(seg);
+    // monedas en el suelo
+    const nc=1+(r()*2|0);
+    for(let i=0;i<nc;i++)coins.push({x:seg.x+40+(seg.w-80)*((i+1)/(nc+1)),y:GROUND-30});
+    // espinas
+    if(r()<cfg.spikes&&seg.w>320){spikes.push({x:seg.x+seg.w*(.35+r()*.3),w:40});}
+    // plataformas
+    if(r()<.65&&seg.w>280){
+      const pw=110+r()*90,px=seg.x+30+r()*(seg.w-pw-60),py=GROUND-95-r()*20;
+      plats.push({x:px,y:py,w:pw});
+      coins.push({x:px+pw/2,y:py-28});
+      if(cfg.tiers>1&&r()<.55){
+        const p2w=90+r()*60,p2x=px+pw*.4+r()*80,p2y=py-90;
+        plats.push({x:p2x,y:p2y,w:p2w});
+        coins.push({x:p2x+p2w/2,y:p2y-28},{x:p2x+p2w/2+(r()<.5?-30:30),y:p2y-28});
+      }
+    }
+    // monedas en el aire sobre un hoyo
+    x+=seg.w;
+  }
+  const endX=ground[ground.length-1].x+ground[ground.length-1].w;
+  // quitar monedas encima de espinas
+  const fc=coins.filter(c=>!spikes.some(s=>c.y>GROUND-60&&c.x>s.x-30&&c.x<s.x+s.w+30));
+  fc.forEach((c,i)=>{c.taken=false;c.phase=i*.7;});
+  return {ground,plats,coins:fc,spikes,endX};
+}
+
+function startLevel(i){
+  lvlIdx=i;L=LEVELS[i];world=buildLevel(L);
+  goal=Math.ceil(world.coins.length*L.ratio);
+  player={x:80,y:GROUND-48,vx:0,vy:0,w:28,h:48,onGround:false,face:1,walk:0,safeX:80,inv:0};
+  camX=0;timeLeft=L.time;collected=0;floaters=[];particles=[];pendingVerse=null;
+  // orden barajado de versículos, primero los no descubiertos
+  const r=Math.random;const idx=VERSES.map((_,k)=>k);
+  const nuevos=idx.filter(k=>!save.verses.includes(k)).sort(()=>r()-.5);
+  const viejos=idx.filter(k=>save.verses.includes(k)).sort(()=>r()-.5);
+  verseOrder=nuevos.concat(viejos);verseCursor=0;
+  hideAll();$("verse").classList.add("hidden");
+  $("topbtns").classList.remove("hidden");
+  $("touch").style.display=isTouch?"flex":"none";
+  state="play";lastT=performance.now();startMusic();
+}
+
+/* ===================== ENTRADA ===================== */
+const keys={left:false,right:false,jump:false};let jumpQueued=false;
+const KMAP={ArrowLeft:"left",KeyA:"left",ArrowRight:"right",KeyD:"right",ArrowUp:"jump",KeyW:"jump",Space:"jump"};
+addEventListener("keydown",e=>{
+  if(state==="verse"&&(e.code==="Enter"||e.code==="Space")){e.preventDefault();closeVerse();return;}
+  if(e.code==="Escape"||e.code==="KeyP"){if(state==="play")pauseGame();else if(state==="pause")resumeGame();return;}
+  const k=KMAP[e.code];if(!k)return;e.preventDefault();
+  if(k==="jump"&&!keys.jump)jumpQueued=true;keys[k]=true;
+});
+addEventListener("keyup",e=>{const k=KMAP[e.code];if(k)keys[k]=false;});
+function bindTouch(id,k){
+  const el=$(id);
+  const on=e=>{e.preventDefault();ac();if(k==="jump"&&!keys.jump)jumpQueued=true;keys[k]=true;el.classList.add("on");};
+  const off=e=>{e.preventDefault();keys[k]=false;el.classList.remove("on");};
+  el.addEventListener("touchstart",on,{passive:false});el.addEventListener("touchend",off,{passive:false});el.addEventListener("touchcancel",off,{passive:false});
+  el.addEventListener("mousedown",on);el.addEventListener("mouseup",off);el.addEventListener("mouseleave",off);
+}
+bindTouch("tLeft","left");bindTouch("tRight","right");bindTouch("tJump","jump");
+
+/* ===================== LÓGICA ===================== */
+function solidsAt(){return world.ground.map(g=>({x:g.x,y:GROUND,w:g.w,h:200,ground:true})).concat(world.plats.map(p=>({x:p.x,y:p.y,w:p.w,h:14,oneWay:true})));}
+
+function update(dt){
+  const p=player;const f=dt/16.67;
+  timeLeft-=dt/1000;
+  if(timeLeft<=0){timeLeft=0;endLevel(false);return;}
+  // movimiento horizontal
+  const dir=(keys.right?1:0)-(keys.left?1:0);
+  p.vx+=(dir*SPEED-p.vx)*Math.min(1,(p.onGround?.35:.18)*f);
+  if(dir)p.face=dir;
+  if(jumpQueued&&p.onGround){p.vy=JUMP;p.onGround=false;sfx.jump();}
+  jumpQueued=false;
+  if(!keys.jump&&p.vy<-4)p.vy+=G*f; // salto variable
+  p.vy=Math.min(p.vy+G*f,14);
+  // colisiones
+  const solids=solidsAt();
+  p.x+=p.vx*f;
+  if(p.x<0)p.x=0;if(p.x>world.endX-p.w)p.x=world.endX-p.w;
+  for(const s of solids){if(s.oneWay)continue;
+    if(p.x+p.w>s.x&&p.x<s.x+s.w&&p.y+p.h>s.y+2&&p.y<s.y+s.h){
+      if(p.vx>0)p.x=s.x-p.w;else if(p.vx<0)p.x=s.x+s.w;p.vx=0;}
+  }
+  const prevBottom=p.y+p.h;
+  p.y+=p.vy*f;p.onGround=false;
+  for(const s of solids){
+    if(p.x+p.w>s.x+2&&p.x<s.x+s.w-2){
+      if(p.vy>=0&&prevBottom<=s.y+1&&p.y+p.h>=s.y){p.y=s.y-p.h;p.vy=0;p.onGround=true;if(s.ground)p.safeX=Math.max(s.x+20,Math.min(p.x,s.x+s.w-p.w-20));}
+    }
+  }
+  if(p.onGround&&Math.abs(p.vx)>.3)p.walk+=Math.abs(p.vx)*f*.09;else p.walk=0;
+  if(p.inv>0)p.inv-=dt;
+  // espinas
+  if(p.inv<=0)for(const s of world.spikes){if(p.x+p.w>s.x+6&&p.x<s.x+s.w-6&&p.y+p.h>GROUND-16){hurt();break;}}
+  // caída
+  if(p.y>VH+60)hurt();
+  // monedas
+  for(const c of world.coins){
+    if(c.taken)continue;
+    if(Math.abs(p.x+p.w/2-c.x)<24&&Math.abs(p.y+p.h/2-c.y)<34){
+      c.taken=true;collected++;sfx.coin();
+      for(let i=0;i<12;i++)particles.push({x:c.x,y:c.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.9)*6,life:600});
+      floaters.push({x:c.x,y:c.y-10,t:900,txt:"+1"});
+      openVerse();return;
+    }
+  }
+  // cámara
+  const target=p.x-VW*.38;camX+=(target-camX)*Math.min(1,.12*f);
+  camX=Math.max(-50,Math.min(camX,world.endX-VW+50));
+}
+
+function hurt(){
+  const p=player;sfx.hurt();timeLeft=Math.max(0,timeLeft-5);
+  floaters.push({x:p.x,y:p.y-10,t:1100,txt:"-5 s"});
+  // retroceder a un lugar seguro lejos de espinas
+  let sx=p.safeX;
+  for(const s of world.spikes)if(sx+p.w>s.x-20&&sx<s.x+s.w+20)sx=s.x-60;
+  p.x=sx;p.y=GROUND-p.h-40;p.vx=0;p.vy=0;p.inv=1200;
+}
+
+function openVerse(){
+  const k=verseOrder[verseCursor%verseOrder.length];verseCursor++;
+  if(!save.verses.includes(k)){save.verses.push(k);persist();}
+  $("vText").textContent="«"+VERSES[k][0]+"»";$("vRef").textContent=VERSES[k][1]+" (LBLA)";
+  pendingVerse=k;state="verse";keys.left=keys.right=keys.jump=false;
+  document.querySelectorAll(".tb").forEach(b=>b.classList.remove("on"));
+  $("verse").classList.remove("hidden");
+}
+function closeVerse(){
+  sfx.click();$("verse").classList.add("hidden");
+  if(collected>=goal){endLevel(true);return;}
+  state="play";lastT=performance.now();
+}
+
+function endLevel(won){
+  state="result";stopMusic();$("topbtns").classList.add("hidden");$("touch").style.display="none";
+  let stars=0;
+  if(won){
+    sfx.win();const frac=timeLeft/L.time;stars=frac>.45?3:frac>.2?2:1;
+    save.stars[lvlIdx]=Math.max(save.stars[lvlIdx],stars);
+    if(lvlIdx+1<LEVELS.length)save.unlocked=Math.max(save.unlocked,lvlIdx+2);
+    persist();
+    $("resTitle").textContent="¡Nivel "+L.name+" completado!";
+    $("resText").textContent=`Recogiste ${collected} monedas y te sobraron ${Math.ceil(timeLeft)} segundos.`;
+    $("resVerse").textContent=lvlIdx+1<LEVELS.length?"«Todo lo puedo en Cristo que me fortalece.» — Filipenses 4:13":"¡Completaste todos los niveles! «Pelea la buena batalla de la fe.» — 1 Timoteo 6:12";
+    $("btnNext").textContent=lvlIdx+1<LEVELS.length?"Siguiente nivel ▶":"Ver mis versículos 📖";
+    $("btnNext").classList.remove("hidden");
+  }else{
+    sfx.lose();
+    $("resTitle").textContent="¡Se acabó el tiempo!";
+    $("resText").textContent=`Recogiste ${collected} de ${goal} monedas. ¡No te rindas, inténtalo otra vez!`;
+    $("resVerse").textContent="«Sé fuerte y valiente.» — Josué 1:9";
+    $("btnNext").classList.add("hidden");
+  }
+  $("resStars").textContent=won?"★".repeat(stars)+"☆".repeat(3-stars):"";
+  show("result");
+}
+
+function pauseGame(){if(state!=="play")return;state="pause";show("pause");}
+function resumeGame(){hideAll();state="play";lastT=performance.now();}
+
+/* ===================== DIBUJO ===================== */
+const bgRand=rng(7);const clouds=[...Array(14)].map(()=>({x:bgRand()*3000,y:30+bgRand()*130,s:.6+bgRand()*.8}));
+const hills=[...Array(20)].map((_,i)=>({x:i*260+bgRand()*80,h:60+bgRand()*90,w:200+bgRand()*160}));
+
+function drawBG(){
+  const g=cx.createLinearGradient(0,0,0,VH);g.addColorStop(0,"#5ab0f0");g.addColorStop(1,"#cdeeff");
+  cx.fillStyle=g;cx.fillRect(0,0,VW,VH);
+  // sol
+  cx.fillStyle="rgba(255,240,150,.9)";cx.beginPath();cx.arc(VW-110,80,38,0,7);cx.fill();
+  // nubes
+  cx.fillStyle="rgba(255,255,255,.9)";
+  for(const c of clouds){const x=((c.x-camX*.2)%3200+3200)%3200-200;cloud(x,c.y,c.s);}
+  // colinas
+  cx.fillStyle="#7cc47a";
+  for(const h of hills){const x=((h.x-camX*.45)%5200+5200)%5200-300;cx.beginPath();cx.ellipse(x,GROUND+10,h.w/2,h.h,0,Math.PI,0);cx.fill();}
+}
+function cloud(x,y,s){cx.beginPath();cx.arc(x,y,22*s,0,7);cx.arc(x+24*s,y-10*s,26*s,0,7);cx.arc(x+52*s,y,22*s,0,7);cx.fill();}
+
+function drawWorld(){
+  cx.save();cx.translate(-camX,0);
+  // suelo
+  for(const g of world.ground){
+    if(g.x+g.w<camX-10||g.x>camX+VW+10)continue;
+    cx.fillStyle="#8b5a2b";cx.fillRect(g.x,GROUND,g.w,VH-GROUND);
+    cx.fillStyle="#a8703a";for(let i=g.x+10;i<g.x+g.w-10;i+=36)cx.fillRect(i,GROUND+28+((i/36|0)%2)*20,14,8);
+    cx.fillStyle="#4caf50";cx.fillRect(g.x,GROUND,g.w,12);
+    cx.fillStyle="#3d8f40";cx.fillRect(g.x,GROUND+12,g.w,4);
+  }
+  // plataformas
+  for(const p of world.plats){
+    if(p.x+p.w<camX-10||p.x>camX+VW+10)continue;
+    cx.fillStyle="#c58a4a";roundRect(p.x,p.y,p.w,16,6);cx.fill();
+    cx.fillStyle="#4caf50";roundRect(p.x,p.y,p.w,6,4);cx.fill();
+  }
+  // espinas
+  cx.fillStyle="#7a7f8c";
+  for(const s of world.spikes){for(let i=0;i<s.w;i+=10){cx.beginPath();cx.moveTo(s.x+i,GROUND);cx.lineTo(s.x+i+5,GROUND-16);cx.lineTo(s.x+i+10,GROUND);cx.fill();}}
+  // bandera final
+  const fx=world.endX-60;cx.fillStyle="#eee";cx.fillRect(fx,GROUND-120,5,120);
+  cx.fillStyle="#ffd447";cx.beginPath();cx.moveTo(fx+5,GROUND-120);cx.lineTo(fx+50,GROUND-105);cx.lineTo(fx+5,GROUND-90);cx.fill();
+  // monedas
+  for(const c of world.coins){
+    if(c.taken||c.x<camX-30||c.x>camX+VW+30)continue;
+    drawCoin(c.x,c.y+Math.sin(anim/300+c.phase)*4,Math.abs(Math.cos(anim/400+c.phase)));
+  }
+  // partículas
+  for(const p of particles){cx.globalAlpha=Math.max(0,p.life/600);cx.fillStyle="#ffd447";cx.fillRect(p.x,p.y,4,4);}cx.globalAlpha=1;
+  drawPlayer();
+  // textos flotantes
+  cx.font="bold 20px Trebuchet MS";cx.textAlign="center";
+  for(const f of floaters){cx.globalAlpha=Math.min(1,f.t/400);cx.fillStyle=f.txt.startsWith("-")?"#ff5252":"#ffd447";cx.strokeStyle="#000";cx.lineWidth=3;cx.strokeText(f.txt,f.x,f.y);cx.fillText(f.txt,f.x,f.y);}
+  cx.globalAlpha=1;cx.restore();
+}
+function roundRect(x,y,w,h,r){cx.beginPath();cx.moveTo(x+r,y);cx.arcTo(x+w,y,x+w,y+h,r);cx.arcTo(x+w,y+h,x,y+h,r);cx.arcTo(x,y+h,x,y,r);cx.arcTo(x,y,x+w,y,r);cx.closePath();}
+function drawCoin(x,y,sx){
+  const w=Math.max(.15,sx)*14;
+  cx.fillStyle="#b8860b";cx.beginPath();cx.ellipse(x,y,w+3,17,0,0,7);cx.fill();
+  cx.fillStyle="#ffd447";cx.beginPath();cx.ellipse(x,y,w,14,0,0,7);cx.fill();
+  if(sx>.45){cx.fillStyle="#b8860b";cx.fillRect(x-1.5*sx,y-8,3*sx,16);cx.fillRect(x-5*sx,y-4,10*sx,3);}
+}
+function drawPlayer(){
+  const p=player;if(p.inv>0&&((anim/90|0)%2))return;
+  const cxp=p.x+p.w/2,base=p.y+p.h;const sw=Math.sin(p.walk*2.2);
+  cx.save();cx.translate(cxp,0);cx.scale(p.face,1);
+  cx.lineCap="round";
+  // piernas
+  cx.strokeStyle="#2a3f6b";cx.lineWidth=7;
+  const air=!p.onGround;
+  const l1=air?-.5:sw*.6,l2=air?.4:-sw*.6;
+  leg(-4,base-18,l1);leg(4,base-18,l2);
+  // cuerpo
+  cx.fillStyle="#e53935";roundRect(-12,base-38,24,22,6);cx.fill();
+  // brazos
+  cx.strokeStyle="#f2c08a";cx.lineWidth=6;
+  arm(-10,base-34,air?-2.2:-sw*.7);arm(10,base-34,air?-2.4:sw*.7);
+  // cabeza
+  cx.fillStyle="#f2c08a";cx.beginPath();cx.arc(0,base-48,11,0,7);cx.fill();
+  cx.fillStyle="#3b2a1a";cx.beginPath();cx.arc(0,base-51,11,Math.PI*1.05,Math.PI*1.95);cx.fill();
+  cx.fillStyle="#222";cx.beginPath();cx.arc(5,base-49,1.8,0,7);cx.fill();
+  cx.strokeStyle="#7a3b1a";cx.lineWidth=1.6;cx.beginPath();cx.arc(4,base-45,3,.2,Math.PI*.8);cx.stroke();
+  cx.restore();
+  function leg(x,y,a){cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+Math.sin(a)*14,y+Math.cos(a)*17);cx.stroke();}
+  function arm(x,y,a){cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+Math.sin(a)*12,y+Math.cos(a)*13);cx.stroke();}
+}
+function drawHUD(){
+  cx.fillStyle="rgba(15,26,48,.7)";roundRect(10,10,210,46,12);cx.fill();roundRect(VW/2-70,10,140,46,12);cx.fill();
+  drawCoin(36,33,1);
+  cx.font="bold 22px Trebuchet MS";cx.textAlign="left";cx.fillStyle=collected>=goal?"#7CFC7C":"#fff";
+  cx.fillText(`${collected} / ${goal}`,58,41);
+  cx.font="13px Trebuchet MS";cx.fillStyle="#ffd447";cx.fillText(L.name,150,40);
+  const t=Math.ceil(timeLeft);cx.textAlign="center";cx.font="bold 24px Trebuchet MS";
+  cx.fillStyle=t<=10&&(anim/250|0)%2?"#ff5252":"#fff";
+  cx.fillText(`⏱ ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`,VW/2,42);
+  // barra de progreso del recorrido
+  const px=player.x/world.endX;cx.fillStyle="rgba(255,255,255,.25)";cx.fillRect(VW/2-60,62,120,5);cx.fillStyle="#ffd447";cx.fillRect(VW/2-60,62,120*px,5);
+}
+
+function loop(now){
+  const dt=Math.min(40,now-lastT);lastT=now;anim=now;
+  if(state==="play")update(dt);
+  for(const f of floaters){f.t-=dt;f.y-=dt*.04;}floaters=floaters.filter(f=>f.t>0);
+  for(const p of particles){p.x+=p.vx;p.y+=p.vy;p.vy+=.25;p.life-=dt;}particles=particles.filter(p=>p.life>0);
+  if(world){drawBG();drawWorld();if(state!=="result")drawHUD();}
+  else{drawBG();}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===================== MENÚS ===================== */
+function renderLevels(){
+  const grid=$("levelGrid");grid.innerHTML="";
+  LEVELS.forEach((lv,i)=>{
+    const locked=i+1>save.unlocked;const b=document.createElement("button");b.className="lvl"+(locked?" locked":"");
+    b.innerHTML=`<b>${locked?"🔒 ":""}${i+1}. ${lv.name}</b><small>⏱ ${lv.time} s · meta ${Math.round(lv.ratio*100)}% de las monedas</small><div class="stars">${"★".repeat(save.stars[i])}${"☆".repeat(3-save.stars[i])}</div>`;
+    b.onclick=()=>{if(locked){sfx.hurt();return;}sfx.click();startLevel(i);};
+    grid.appendChild(b);
+  });
+}
+function renderCollection(){
+  $("colCount").textContent=`Has descubierto ${save.verses.length} de ${VERSES.length} versículos`;
+  const list=$("vlist");list.innerHTML="";
+  VERSES.forEach((v,i)=>{const d=document.createElement("div");const has=save.verses.includes(i);
+    d.className="vitem"+(has?"":" lock");
+    d.innerHTML=has?`«${v[0]}»<br><b>${v[1]}</b>`:"🔒 Recoge más monedas para descubrir este versículo";
+    list.appendChild(d);});
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{sfx.click();show(b.dataset.go);});
+$("btnPlay").onclick=()=>{ac();sfx.click();renderLevels();show("levelsel");};
+$("btnHelp").onclick=()=>{ac();sfx.click();show("help");};
+$("btnCollection").onclick=()=>{ac();sfx.click();renderCollection();show("collection");};
+$("btnVerseOk").onclick=closeVerse;
+$("btnPause").onclick=()=>{sfx.click();pauseGame();};
+$("btnResume").onclick=()=>{sfx.click();resumeGame();};
+$("btnRestart").onclick=()=>{sfx.click();startLevel(lvlIdx);};
+$("btnQuit").onclick=()=>{sfx.click();stopMusic();quitToMenu();};
+$("btnRetry").onclick=()=>{sfx.click();startLevel(lvlIdx);};
+$("btnMenu").onclick=()=>{sfx.click();quitToMenu();};
+$("btnNext").onclick=()=>{sfx.click();if(lvlIdx+1<LEVELS.length)startLevel(lvlIdx+1);else{renderCollection();world=null;show("collection");}};
+function quitToMenu(){state="menu";world=null;$("topbtns").classList.add("hidden");$("touch").style.display="none";renderLevels();show("levelsel");}
+function updMute(){$("btnMute").textContent=muted?"🔇":"🔊";}
+$("btnMute").onclick=()=>{muted=!muted;try{localStorage.setItem(SAVE_KEY+"_mute",muted?"1":"0");}catch(e){}updMute();};
+updMute();
+</script>
+</body>
+</html>
