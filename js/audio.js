@@ -180,7 +180,16 @@ export class Sound {
     if (kind === 'eat') for (let i = 0; i < 5; i++) nz(i * .22, .12, 1800 + Math.random() * 800, 1.5, .5);
     else if (kind === 'water' || kind === 'coffee') for (let i = 0; i < 3; i++) { this.note(320 - i * 30, .16, { type: 'sine', vol: .14, when: i * .3, slide: 180 }); nz(i * .3, .1, 600, 3, .2); }
     else if (kind === 'shower') { nz(0, 1.4, 5000, .4, .25, 'highpass'); nz(0, 1.4, 1800, .7, .12); }
+    else if (kind === 'worship') [[262, 330, 392], [349, 440, 523], [392, 494, 587]].forEach((ch, i) => ch.forEach(f => this.note(f, 1.2, { type: 'triangle', vol: .05, when: i * .5 })));
     else if (kind === 'sleep' || kind === 'rest') [523, 440, 349, 262].forEach((f, i) => this.note(f, .9, { type: 'sine', vol: .07, when: i * .35 }));
+  }
+  // Ritmo de alabanza (batería, palmas y acordes) mientras estás en la iglesia
+  worshipBeat(step) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const t = a.currentTime, b = step % 8;
+    const kick = a.createOscillator(), kg = a.createGain(); kick.frequency.setValueAtTime(130, t); kick.frequency.exponentialRampToValueAtTime(45, t + .18); kg.gain.setValueAtTime(.35, t); kg.gain.exponentialRampToValueAtTime(.001, t + .25); kick.connect(kg).connect(this.sfx); kick.start(t); kick.stop(t + .3);
+    if (b % 2 === 1) { const src = a.createBufferSource(); src.buffer = this.noise; const hp = a.createBiquadFilter(); hp.type = 'bandpass'; hp.frequency.value = 1800; hp.Q.value = .8; const g = a.createGain(); g.gain.setValueAtTime(.4, t); g.gain.exponentialRampToValueAtTime(.001, t + .15); src.connect(hp).connect(g).connect(this.sfx); src.start(t); src.stop(t + .2); }
+    if (b === 0 || b === 4) { const chords = [[262, 330, 392], [220, 262, 330], [349, 440, 523], [392, 494, 587]]; const ch = chords[(step >> 2) % 4]; ch.forEach(f => this.note(f, 1.9, { type: 'triangle', vol: .045, attack: .08 })); this.note(ch[0] / 2, 1.9, { type: 'sine', vol: .08 }); }
   }
   coin() { this.note(1318, .12, { type: 'triangle', vol: .14 }); this.note(1976, .5, { type: 'triangle', vol: .12, when: .07 }); this.note(2637, .6, { type: 'sine', vol: .05, when: .12 }); }
   talk() { this.note(587, .4, { type: 'sine', vol: .07 }); this.note(880, .6, { type: 'sine', vol: .05, when: .1 }); }

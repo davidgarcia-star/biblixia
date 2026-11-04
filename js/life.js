@@ -53,8 +53,8 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     const wallM = mat(0xefe4cf, { roughness: .9 }), trimM = mat(0x8a5a36), roofM = mat(0x8a3a24, { roughness: .8 }), floorM = mat(0xb98a5a, { roughness: .6 });
     // jardín y camino
     box(BLOCK - 2, .04, BLOCK - 2, mat(0x5f8f3e, { roughness: 1 }), cx, fy + .02, cz, { cast: false });
-    box(1.8, .05, BLOCK / 2 - HD - 1, mat(0xc9b89a), cx, fy + .03, z0 + (BLOCK / 2 - HD - 1) / 2 + 1, { cast: false });
-    box(HW * 2, .06, HD * 2, floorM, cx, fy + .03, cz, { cast: false });
+    box(1.8, .1, BLOCK / 2 - HD - 1, mat(0xc9b89a), cx, fy + .05, z0 + (BLOCK / 2 - HD - 1) / 2 + 1, { cast: false });
+    box(HW * 2, .14, HD * 2, floorM, cx, fy + .07, cz, { cast: false });
     const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD, DW = 1.4;
     const wall = (ax, az, bx, bz) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const m = box(w, H, d, wallM, (ax + bx) / 2, fy + H / 2, (az + bz) / 2); blockers.push(m); solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H); };
     wall(X0, Z1, X1, Z1); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1);
@@ -132,7 +132,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
       const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
       desks.forEach(([dx, dz], k) => {
         box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
-        box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenM, dx, y + 1.0, dz + .175, { cast: false });
+        box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenM, dx, y + 1.0, dz + .165, { cast: false });
         if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
       });
       // dispensador de agua en cada piso
@@ -166,7 +166,8 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     const DW = 2.4;
     gwall(X0, Z1, X1, Z1); gwall(X0, Z0, X0, Z1); gwall(X1, Z0, X1, Z1); gwall(X0, Z0, cx - DW / 2, Z0); gwall(cx + DW / 2, Z0, X1, Z0);
     const g2 = box(DW, Htot - 3, T, glass, cx, base + 3 + (Htot - 3) / 2, Z0, { cast: false, recv: false });
-    for (let i = 0; i <= FLOORS; i++) box(HW * 2 + .3, .18, HD * 2 + .3, frameM, cx, base + i * FH - .09, cz, { cast: false }).scale.set(1, 1, 1);
+    // marcos de cada piso solo en el borde de la fachada (no tapan el piso: sin parpadeo)
+    for (let i = 1; i <= FLOORS; i++) { const yy = base + i * FH - .12; box(HW * 2 + .3, .18, .3, frameM, cx, yy, Z0, { cast: false }); box(HW * 2 + .3, .18, .3, frameM, cx, yy, Z1, { cast: false }); box(.3, .18, HD * 2, frameM, X0, yy, cz, { cast: false }); box(.3, .18, HD * 2, frameM, X1, yy, cz, { cast: false }); }
     for (const [px, pz] of [[X0, Z0], [X1, Z0], [X0, Z1], [X1, Z1], [cx - DW / 2, Z0], [cx + DW / 2, Z0]]) box(.25, Htot, .25, frameM, px, base + Htot / 2, pz);
     const roof = box(HW * 2 + .4, .3, HD * 2 + .4, mat(0x4a4f57), cx, base + Htot + .15, cz, { cast: true }); blockers.push(roof); solid(X0, X1, Z0, Z1, base + Htot + .3, base + Htot);
     sign('OFICINAS LUZ', '🏢 3 pisos · Cafetería', cx, base + 3.2, Z0 - .2, Math.PI);

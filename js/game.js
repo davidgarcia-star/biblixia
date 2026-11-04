@@ -15,6 +15,7 @@ import { CHARACTERS, TREASURES, forLevel, createCharacter, nameSprite, giftBox }
 import { Sound } from './audio.js';
 import { buildLife } from './life.js';
 import { buildPriests } from './priests.js';
+import { buildChurch } from './church.js';
 
 /* =========================================================
    CONFIGURACIÓN DE NIVELES
@@ -464,7 +465,7 @@ function buildWorld(cfg) {
   if (!types.includes('plaza')) types[(r() * types.length) | 0] = 'plaza';
   if (types.filter(t => t === 'tower').length < Math.ceil(N * N / 3)) types[0] = 'tower';
   // la casa del jugador (junto al inicio) y el edificio de oficinas
-  types[0] = 'casa'; types[1] = 'oficinas';
+  types[0] = 'casa'; types[1] = 'oficinas'; types[2] = 'iglesia';
   if (!types.includes('plaza')) types[types.length - 1] = 'plaza';
 
   for (let bi = 0; bi < N; bi++) for (let bj = 0; bj < N; bj++) {
@@ -695,6 +696,8 @@ function buildWorld(cfg) {
     W.south = { Z0, Wt, arkX: O + Wt / 2, arkZ: Z0 + SZ - 40 };
     plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52]], ['olivo', 'cedro', 'higuera', 'olivo']);
     W.noahSpot = ark.noahSpot; W.davidSpot = valley.davidSpot; W.davidNPC = valley.davidNPC;
+    // levitas y sacerdotes llevan el arca del pacto caminando por la grama (fuera del tabernáculo)
+    if (W.priests) W.priests.setProcessionPath({ x0: O + Wt / 2 - 34, x1: O + Wt / 2 + 6, z0: Z0 + 40, z1: Z0 + 60 });
     coinSpots.push([O + Wt / 2 - 40, Z0 + 30, 0], [O + Wt / 2 + 20, Z0 + 30, 0], [O + Wt / 2 - 10, Z0 + 12, 0], [O + Wt - 38 - 14, Z0 + 10, 0], [O + Wt - 38 - 14, Z0 + 38, 0], [O + 20, Z0 + 20, 0], [O + Wt / 2 + 60, Z0 + 40, 0]);
     npcSpots.push([O + 30, Z0 + 14], [O + Wt / 2 + 30, Z0 + 20]);
   }
@@ -756,6 +759,7 @@ function buildWorld(cfg) {
 
   // Vida en la ciudad: peatones, niños, comerciantes, casa del jugador y oficinas
   W.life = buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks: W.blocks, playerName: (save.player && save.player.name) || '', npcSpots });
+  { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); } }
 
   // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
   {
@@ -1458,9 +1462,10 @@ function driveBoat(dt) {
 /* ---------- Vida diaria: efectos al comer, beber, dormir, bañarse ---------- */
 const lifeUsed = new Set();
 function lifeFx(kind, extra) {
-  const ov = $('lifefx'); const bonus = { sleep: 8, shower: 5, eat: 4, water: 3, coffee: 3, rest: 3 }[kind] || 0;
+  const ov = $('lifefx'); const bonus = { sleep: 8, shower: 5, eat: 4, water: 3, coffee: 3, rest: 3, worship: 6 }[kind] || 0;
   const first = !lifeUsed.has(kind); lifeUsed.add(kind);
-  const msg = { sleep: '😴 Dormiste un rato… ¡recuperaste fuerzas!', shower: '🚿 ¡Qué baño tan fresco!', eat: extra ? `😋 ¡Qué rico! Compraste en el puesto de ${extra.toLowerCase()}` : '🍽 ¡Buen provecho!', water: '💧 ¡Agua fresca! Te hidrataste', coffee: '☕ ¡Un cafecito calientito!', rest: '🛋 Descansaste en el sofá' }[kind] || '✨';
+  const msg = { sleep: '😴 Dormiste un rato… ¡recuperaste fuerzas!', shower: '🚿 ¡Qué baño tan fresco!', eat: extra ? `😋 ¡Qué rico! Compraste en el puesto de ${extra.toLowerCase()}` : '🍽 ¡Buen provecho!', water: '💧 ¡Agua fresca! Te hidrataste', coffee: '☕ ¡Un cafecito calientito!', rest: '🛋 Descansaste en el sofá', worship: '🙌 ¡Gloria a Dios! Adoraste con todo tu corazón' }[kind] || '✨';
+  if (kind === 'worship') setTimeout(() => sound.say('¡Aleluya! ¡Gloria a Dios!', { male: save.player.gender !== 'f', rate: .9 }), 600);
   ov.className = 'lifefx ' + kind; void ov.offsetWidth; ov.classList.add('on');
   sound.life(kind);
   setTimeout(() => ov.classList.remove('on'), kind === 'sleep' ? 2200 : 1300);
@@ -1506,11 +1511,13 @@ function drawBigMap() {
   // monedas, personajes y regalos
   for (const c of W2.coins) if (!c.taken) { g.fillStyle = '#ffd34d'; g.beginPath(); g.arc(X(c.x), Z(c.z), 3.5, 0, 7); g.fill(); }
   if (W2.clocks) for (const c of W2.clocks) if (!c.taken) drawClockIcon(g, X(c.x), Z(c.z), 6);
-  if (W2.house) { g.font = '16px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); }
+  g.font = '18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (W2.house) { g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('Tu casa', X(W2.house.cx), Z(W2.house.cz) + 16); g.font = '18px system-ui'; }
+  if (W2.church) { g.fillText('⛪', X(W2.church.cx), Z(W2.church.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('MIPROAA', X(W2.church.cx), Z(W2.church.cz) + 16); }
   for (const n of W2.npcs) { g.fillStyle = n.given ? 'rgba(160,200,255,.5)' : n.treasure ? '#ff7ab6' : '#6fd0ff'; g.beginPath(); g.arc(X(n.x), Z(n.z), 4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); }
   // jugador
   g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading + Math.PI); g.fillStyle = '#ff4040'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 9); g.lineTo(0, 4); g.lineTo(-8, 9); g.closePath(); g.fill(); g.stroke(); g.restore();
-  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Tu casa</span><span>🔒 Lugar bloqueado</span>`;
+  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Tu casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>`;
 }
 
 /* ---------- Personajes: hablar y recibir regalos ---------- */
@@ -1800,6 +1807,8 @@ function drawMinimap() {
   for (const c of world.cars) mg.fillRect(c.obj.position.x - 2, c.obj.position.z - 1, 4, 2);
   for (const c of world.coins) if (!c.taken) { mg.fillStyle = '#ffd34d'; mg.beginPath(); mg.arc(c.x, c.z, 2.2, 0, 7); mg.fill(); }
   if (world.clocks) for (const c of world.clocks) if (!c.taken) drawClockIcon(mg, c.x, c.z, 3.4);
+  if (world.house) { mg.save(); mg.translate(world.house.cx, world.house.cz); mg.rotate(-(cam.yaw + Math.PI)); mg.font = '9px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText('🏠', 0, 0); mg.restore(); }
+  if (world.church) { const c = world.church; mg.save(); mg.translate(c.cx, c.cz); mg.rotate(-(cam.yaw + Math.PI)); mg.font = '9px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText('⛪', 0, 0); mg.restore(); }
   mg.restore();
   // jugador
   mg.save(); mg.translate(R, R); mg.rotate(-(P.heading - cam.yaw));
@@ -1821,7 +1830,7 @@ function drawMinimap() {
    BUCLE PRINCIPAL
    ========================================================= */
 let lastNow = performance.now(), elapsed = 0; const perf = { acc: 0, n: 0 };
-let mmTimer = 0, lodTimer = 0;
+let mmTimer = 0, lodTimer = 0, worshipT = 0, worshipStep = 0;
 function loop() {
   requestAnimationFrame(loop);
   const now = performance.now(), raw = (now - lastNow) / 1000, dt = Math.min(raw, .05); lastNow = now; elapsed += dt; const t = elapsed;
@@ -1845,6 +1854,11 @@ function loop() {
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
     if (world.priests) world.priests.update(dt, t, camera.position);
+    if (world.church) {
+      world.church.update(dt, t, camera.position);
+      // música de alabanza mientras estás dentro de la iglesia
+      if (state === 'play' && world.church.inside(P.pos)) { worshipT += dt; if (worshipT > .5) { worshipT = 0; sound.worshipBeat(worshipStep++); } }
+    }
     if (world.ark) world.ark.update(t, dt);
     if (world.life) world.life.update(dt, t, camera.position, P.pos);
     if (world.kids) for (const kd of world.kids) {
@@ -2063,7 +2077,7 @@ function zoomCam(d) {
   if (d < 0 && cam.dist <= 2.6) { setCamMode(3); return; }   // acercando más: primera persona
   cam.dist = THREE.MathUtils.clamp(cam.dist + d, 2.6, 13); sound.click();
 }
-$('btnZoomIn').onclick = () => zoomCam(-1.2); $('btnZoomOut').onclick = () => zoomCam(1.2);
+
 $('btnMap').onclick = () => { sound.click(); openMap(); }; $('minimap').addEventListener('click', () => openMap());
 $('bigmapClose').onclick = () => { sound.click(); closeMap(); };
 addEventListener('resize', () => { if (state === 'map') drawBigMap(); });

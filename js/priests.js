@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createHuman, animateHuman, bakeStatic } from './human.js';
 import { makeAnimal } from './scenes.js';
+import { arkContents, arkGlassGold } from './arkcontents.js';
 
 /* =========================================================
    SERVICIO DEL TABERNÁCULO (en todos los niveles)
@@ -22,7 +23,7 @@ function arkOfCovenant() {
   const gold = new THREE.MeshStandardMaterial({ color: 0xffc93c, metalness: 1, roughness: .22, emissive: 0x5a3800, emissiveIntensity: .35 });
   const wood = new THREE.MeshStandardMaterial({ color: 0xc89a3a, metalness: .8, roughness: .3 });
   const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
-  add(new THREE.BoxGeometry(1.1, .62, .68), gold, 0, 0, 0);
+  const body = add(new THREE.BoxGeometry(1.1, .62, .68), arkGlassGold(), 0, 0, 0); body.renderOrder = 2; g.add(arkContents(1.1, .62));
   add(new THREE.BoxGeometry(1.16, .06, .74), gold, 0, .34, 0);
   add(new THREE.BoxGeometry(1.16, .05, .74), gold, 0, -.3, 0);
   for (const sx of [-1, 1]) {
@@ -68,8 +69,8 @@ export function buildPriests({ group, tab, r, addBox }) {
   const ark = arkOfCovenant(); group.add(ark);
   const carriers = [];
   for (let k = 0; k < 4; k++) { const h = place(leviteLook(r, k), 0, 0, 0); carriers.push(h); }
-  const pad = 5.5, path = { x0: b.x0 - pad, x1: b.x1 + pad, z0: b.z0 - pad, z1: b.z1 + pad };
-  const per = 2 * (path.x1 - path.x0) + 2 * (path.z1 - path.z0);
+  const pad = 5.5; let path = { x0: b.x0 - pad, x1: b.x1 + pad, z0: b.z0 - pad, z1: b.z1 + pad };
+  let per = 2 * (path.x1 - path.x0) + 2 * (path.z1 - path.z0);
   const at = s => { s = ((s % per) + per) % per; const W = path.x1 - path.x0, H = path.z1 - path.z0;
     if (s < W) return [path.x0 + s, path.z0, 1, 0]; s -= W; if (s < H) return [path.x1, path.z0 + s, 0, 1]; s -= H; if (s < W) return [path.x1 - s, path.z1, -1, 0]; s -= W; return [path.x0, path.z1 - s, 0, -1]; };
   const proc = { s: 0, sp: .9 };
@@ -78,12 +79,15 @@ export function buildPriests({ group, tab, r, addBox }) {
 
   const tmp = new THREE.Vector3();
   return {
+    // la procesión camina por la grama, fuera del tabernáculo
+    setProcessionPath(p) { path = p; per = 2 * (path.x1 - path.x0) + 2 * (path.z1 - path.z0); },
     update(dt, t, camPos) {
       const near = Math.hypot((b.x0 + b.x1) / 2 - camPos.x, (b.z0 + b.z1) / 2 - camPos.z) < 160;
       for (const l of live) { const o = l.h ? l.h.root : l.o; o.visible = near; }
-      ark.visible = near; for (const c of carriers) c.root.visible = near; leader.root.visible = near;
-      if (!near) return;
-      for (const l of live) {
+      const pn = Math.hypot((path.x0 + path.x1) / 2 - camPos.x, (path.z0 + path.z1) / 2 - camPos.z) < 140;
+      ark.visible = pn; for (const c of carriers) c.root.visible = pn; leader.root.visible = pn;
+      if (!near && !pn) return;
+      if (near) for (const l of live) {
         if (l.kind === 'wash') {
           animateHuman(l.h, dt, { speed: 0, onGround: true, vy: 0, land: 0, t });
           const w = Math.sin(t * 5 + l.ph) * .25;
@@ -92,6 +96,7 @@ export function buildPriests({ group, tab, r, addBox }) {
         } else if (l.kind === 'idle') animateHuman(l.h, dt, { speed: 0, onGround: true, vy: 0, land: 0, t });
         else if (l.kind === 'lamb') { l.o.rotation.z = Math.sin(t * 1.3 + l.ph) * .02; l.o.position.y = Math.abs(Math.sin(t * .8 + l.ph)) * .01; }
       }
+      if (!pn) return;
       proc.s += proc.sp * dt;
       const [x, z, dx, dz] = at(proc.s), hd = Math.atan2(dx, dz);
       ark.position.set(x, 1.48, z); ark.rotation.y = hd + Math.PI / 2;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { arkContents, arkGlassGold } from './arkcontents.js';
 import { bakeStatic, createHuman } from './human.js';
 import { makeAnimal } from './scenes.js';
 
@@ -195,7 +196,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const hhX = tx0 + 5 * C;
   // Arca del pacto: 2½ × 1½ × 1½ codos, acacia cubierta de oro
   const aL = 2.5 * C, aW = 1.5 * C, aH = 1.5 * C;
-  box(aL, aH, aW, M.gold, hhX, aH / 2, cz);
+  { const ab = new THREE.Mesh(new THREE.BoxGeometry(aL, aH, aW), arkGlassGold()); ab.position.set(hhX, aH / 2, cz); ab.renderOrder = 2; T.add(ab); const ac = arkContents(aL, aH); ac.position.set(hhX, aH / 2, cz); T.add(ac); }
   box(aL + .04, .04, aW + .04, M.gold, hhX, aH - .05, cz);                 // moldura de oro
   box(aL + .02, .05, aW + .02, M.gold, hhX, aH + .025, cz);               // propiciatorio
   for (const sz of [-1, 1]) { const pole = add(new THREE.CylinderGeometry(.03, .03, aL + 1.6, 10), M.gold, hhX + .4, .18, cz + sz * (aW / 2 + .05)); pole.rotation.z = Math.PI / 2; }
