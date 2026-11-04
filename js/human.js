@@ -285,18 +285,18 @@ export function createHuman(opt = {}) {
   if (!robe && !F) mesh(new THREE.CylinderGeometry(.166, .166, .035, 32), soleM, hips, 0, .07, 0).scale.set(1, 1, .74);
   if (!robe && !skirtOn) {
     // Pantalón: cadera lisa y natural (sin bulto adelante) que une la cintura con los muslos
-    pel.scale.set(1.0, .5, .6); pel.position.z = -.02;
+    if (F) { pel.scale.set(1.0, .5, .6); pel.position.z = -.02; } else { pel.scale.set(.94, .42, .56); pel.position.set(0, .0, -.008); }
     // mujer: cintura fina y caderas más anchas; hombre: cadera recta y normal
     const sg = latheUp(F ? [[.15, -.36], [.165, -.3], [.186, -.2], [.198, -.11], [.192, -.04], [.165, .03], [.138, .08], [.13, .09]]
-                         : [[.13, -.2], [.158, -.16], [.172, -.1], [.176, -.04], [.17, .03], [.162, .08], [.158, .09]], 48);
+                         : [[.15, -.12], [.164, -.09], [.17, -.05], [.171, -.02], [.167, .03], [.16, .08], [.156, .09]], 48);
     const sp = sg.attributes.position;
     for (let i = 0; i < sp.count; i++) {
       const x = sp.getX(i), y = sp.getY(i), z = sp.getZ(i), r0 = Math.hypot(x, z) || 1;
-      if (z < 0) { const back = -z / r0, bump = Math.exp(-(((y + .13) / .12) ** 2)); sp.setZ(i, z * (1 + (F ? .3 : .14) * bump * back ** 1.5)); }
+      if (z < 0) { const back = -z / r0, bump = Math.exp(-(((y + .13) / .12) ** 2)); sp.setZ(i, z * (1 + (F ? .3 : 0) * bump * back ** 1.5)); }
       else sp.setZ(i, z * (F ? .9 : .86));
     }
     sg.computeVertexNormals();
-    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, F ? .66 : .62);
+    const seat = mesh(sg, pantsM, hips, 0, 0, -.004); seat.scale.set(1, 1, F ? .66 : .6);
   }
   let skirt = null;
   if (skirtOn) {
@@ -310,7 +310,7 @@ export function createHuman(opt = {}) {
   for (const s of [-1, 1]) {
     const thigh = grp(hips, s * (F ? .088 : .09), -.02, 0);
     const wide = F && !robe && !skirtOn; // pantalón ancho y holgado para la jugadora
-    mesh(wide ? limbGeo(.1, .092, .42, .006) : limbGeo(F ? .082 : .085, F ? .052 : .058, .42, .012), legM, thigh);
+    mesh(wide ? limbGeo(.1, .092, .42, .006) : limbGeo(F ? .082 : robe ? .085 : .1, F ? .052 : .06, .42, .012), legM, thigh);
     const knee = grp(thigh, 0, -.42, 0);
     mesh(SG(wide ? .09 : F ? .05 : .056, 14, 10), legM, knee);
     mesh(wide ? limbGeo(.09, .105, .41, 0) : limbGeo(F ? .052 : .058, F ? .036 : .042, .42, F ? .014 : .012), robe || skirtOn ? skin : pantsM, knee);
