@@ -29,5 +29,8 @@ export const VERSES = [
   ["Mi socorro viene del SEÑOR, que hizo los cielos y la tierra.","Salmos 121:2"],
   ["Y conoceréis la verdad, y la verdad os hará libres.","Juan 8:32"],
   ["Que las misericordias del SEÑOR jamás terminan, pues nunca fallan sus bondades; son nuevas cada mañana; ¡grande es tu fidelidad!","Lamentaciones 3:22-23"],
-  ["En el principio creó Dios los cielos y la tierra.","Génesis 1:1"]
+  ["En el principio creó Dios los cielos y la tierra.","Génesis 1:1"],
+  ["En el principio existía el Verbo, y el Verbo estaba con Dios, y el Verbo era Dios.","Juan 1:1"],
+  ["El que habita al amparo del Altísimo morará a la sombra del Omnipotente.","Salmos 91:1"],
+  ["Y no os adaptéis a este mundo, sino transformaos mediante la renovación de vuestra mente, para que verifiquéis cuál es la voluntad de Dios: lo que es bueno, aceptable y perfecto.","Romanos 12:2"]
 ];
