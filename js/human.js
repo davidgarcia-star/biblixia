@@ -8,6 +8,14 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
    ========================================================= */
 
 const lerp = THREE.MathUtils.lerp;
+// En celulares se usa el material estándar (sin brillo de terciopelo ni barniz): compila más rápido y no congela la carga
+export const LITE = typeof matchMedia !== 'undefined' && (matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0);
+const PHYS_ONLY = ['sheen', 'sheenColor', 'sheenRoughness', 'clearcoat', 'clearcoatRoughness', 'transmission', 'thickness', 'ior', 'iridescence', 'specularIntensity', 'specularColor', 'reflectivity', 'attenuationColor', 'attenuationDistance'];
+export function physM(o = {}) {
+  if (!LITE) return new THREE.MeshPhysicalMaterial(o);
+  const p = { ...o }; for (const k of PHYS_ONLY) delete p[k];
+  return new THREE.MeshStandardMaterial(p);
+}
 let Q = 1; // nivel de detalle (1 = jugador, menos para personajes lejanos)
 const SG = (r, w = 32, h = 16, ...rest) => new THREE.SphereGeometry(r, Math.max(6, Math.round(w * Q)), Math.max(4, Math.round(h * Q)), ...rest);
 const segs = n => Math.max(6, Math.round(n * Q));
@@ -256,11 +264,11 @@ export function createHuman(opt = {}) {
   o.lip = F ? shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb04a5a), .55).getHex(), .9) : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0x8a4a40), .2).getHex(), .86); o.brow = shade(o.hairColor, .9);
   if (o.beard && !o.beard.color) o.beard.color = o.hairColor;
 
-  const skin = new THREE.MeshPhysicalMaterial({ color: o.skin, roughness: .5, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
-  const faceM = new THREE.MeshPhysicalMaterial({ map: faceTexture(o), roughness: .48, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
+  const skin = physM({ color: o.skin, roughness: .5, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
+  const faceM = physM({ map: faceTexture(o), roughness: .48, sheen: .4, sheenColor: 0xffc0a0, sheenRoughness: .5 });
   const ht = hairTexture(o.hairColor);
   const hairM = new THREE.MeshStandardMaterial({ map: ht, bumpMap: ht, bumpScale: 1.5, roughness: .55, metalness: .05, side: THREE.DoubleSide });
-  const eyeM = new THREE.MeshPhysicalMaterial({ map: eyeTexture(o.eye), roughness: .05, clearcoat: 1, clearcoatRoughness: .02 });
+  const eyeM = physM({ map: eyeTexture(o.eye), roughness: .05, clearcoat: 1, clearcoatRoughness: .02 });
   const topM = new THREE.MeshStandardMaterial({ map: clothTexture(o.top), roughness: .85 });
   const top2 = new THREE.MeshStandardMaterial({ map: clothTexture(new THREE.Color(o.top).multiplyScalar(.75).getHex()), roughness: .9 });
   const pantsM = new THREE.MeshStandardMaterial({ map: clothTexture(o.pants, 'denim'), roughness: .9 });
@@ -502,10 +510,10 @@ export function createHuman(opt = {}) {
     const efTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d'); const cs = ['#d4a72c', '#20408f', '#5b2a7a', '#b3122e', '#efe8d8']; for (let i = 0; i < 16; i++) { g.fillStyle = cs[i % 5]; g.fillRect(i * 8, 0, 8, 64); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
     const efod = mesh(new THREE.CylinderGeometry(.228, .222, .42, 28, 1, true), new THREE.MeshStandardMaterial({ map: efTex, roughness: .6, metalness: .3, side: THREE.DoubleSide }), root, 0, 1.12, 0); efod.scale.z = .8;
     const band = mesh(new THREE.TorusGeometry(.225, .02, 8, 36), new THREE.MeshStandardMaterial({ map: efTex, metalness: .3, roughness: .5 }), root, 0, .93, 0); band.rotation.x = Math.PI / 2; band.scale.set(1, .8, 1);
-    for (const s2 of [-1, 1]) { const ony = mesh(SG(.028, 12, 10), new THREE.MeshPhysicalMaterial({ color: 0x1a1a1a, roughness: .1, clearcoat: 1 }), root, s2 * .13, 1.44, .02); const st = mesh(new THREE.BoxGeometry(.05, .16, .03), new THREE.MeshStandardMaterial({ map: efTex }), root, s2 * .12, 1.36, .14); st.rotation.x = -.3; }
+    for (const s2 of [-1, 1]) { const ony = mesh(SG(.028, 12, 10), physM({ color: 0x1a1a1a, roughness: .1, clearcoat: 1 }), root, s2 * .13, 1.44, .02); const st = mesh(new THREE.BoxGeometry(.05, .16, .03), new THREE.MeshStandardMaterial({ map: efTex }), root, s2 * .12, 1.36, .14); st.rotation.x = -.3; }
     const plate = mesh(new THREE.BoxGeometry(.17, .2, .02), gold, root, 0, 1.26, .175); plate.rotation.x = -.08;
     const gems = [0xc0392b, 0xf1c40f, 0x27ae60, 0x16a085, 0x2c3e8f, 0xecf0f1, 0xe67e22, 0x8e44ad, 0x9b59b6, 0x3498db, 0x34495e, 0x1abc9c];
-    gems.forEach((c, i) => { const col = i % 3, row = Math.floor(i / 3); mesh(new THREE.BoxGeometry(.034, .034, .02), new THREE.MeshPhysicalMaterial({ color: c, roughness: .05, clearcoat: 1, metalness: .1 }), root, (col - 1) * .048, 1.335 - row * .045, .19).rotation.x = -.08; });
+    gems.forEach((c, i) => { const col = i % 3, row = Math.floor(i / 3); mesh(new THREE.BoxGeometry(.034, .034, .02), physM({ color: c, roughness: .05, clearcoat: 1, metalness: .1 }), root, (col - 1) * .048, 1.335 - row * .045, .19).rotation.x = -.08; });
   }
 
   // Brazos

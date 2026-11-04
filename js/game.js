@@ -7,7 +7,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VERSES } from './verses.js';
-import { createHuman, animateHuman, bakeStatic } from './human.js';
+import { createHuman, animateHuman, bakeStatic, physM } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
 import { buildArk, buildValley } from './scenes.js';
 import { buildPlaces } from './places.js';
@@ -90,7 +90,7 @@ scene.fog = new THREE.Fog(0xd8b9a0, 110, 760);
 const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x4b3a2c, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffcf9e, 3.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1536 : 4096, isTouch ? 1536 : 4096); sun.shadow.radius = 1.4;
+sun.shadow.mapSize.set(isTouch ? 1024 : 4096, isTouch ? 1024 : 4096); sun.shadow.radius = 1.4;
 const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
@@ -995,9 +995,43 @@ function buildWorld(cfg) {
   if (W.ark) for (const a of W.ark.lodItems) W.lod.push({ obj: a, range: 110, animal: true });
   if (W.ark) for (const a of W.ark.insideItems) W.lod.push({ obj: a, range: 70 });
   for (const c of W.cars) W.lod.push({ obj: c.obj, range: 170 });
+  W.cull = buildCull(group);
   W.start = new THREE.Vector3(startX, 0, startZ);
   W.startYaw = Math.atan2(-startX, -startZ);
   return W;
+}
+
+/* Ocultado por distancia (carga y fluidez en celulares):
+   cada objeto pequeño o mediano del mundo deja de dibujarse (y de proyectar sombra) cuando queda lejos de la cámara.
+   Lo grande (suelo, mar, montañas, edificios) se ve siempre. Se usa la capa 1 de three.js para no tocar "visible". */
+const CULL_K = isTouch ? 1 : 1.8;
+const _cb = new THREE.Box3(), _cs = new THREE.Sphere(), _ci = new THREE.Matrix4(), _cv = new THREE.Vector3();
+function buildCull(root) {
+  root.updateMatrixWorld(true);
+  const units = [];
+  const visit = o => {
+    if (o.isLight || o.isCamera) return;
+    _cb.makeEmpty().expandByObject(o);
+    if (_cb.isEmpty()) return;
+    _cb.getBoundingSphere(_cs);
+    const rad = _cs.radius;
+    if (rad > 34) { for (const ch of o.children) visit(ch); return; }
+    const items = [];
+    o.traverse(m => { if (m.isMesh || m.isSprite || m.isPoints || m.isLine) items.push(m); });
+    if (!items.length) return;
+    const range = (rad < 2 ? 85 : rad < 6 ? 125 : rad < 15 ? 190 : 300) * CULL_K + rad;
+    units.push({ o, items, c: _cs.center.clone().applyMatrix4(_ci.copy(o.matrixWorld).invert()), range, hidden: false });
+  };
+  for (const ch of root.children) visit(ch);
+  return units;
+}
+function updateCull(cp) {
+  if (!world || !world.cull) return;
+  for (const u of world.cull) {
+    _cv.copy(u.c).applyMatrix4(u.o.matrixWorld);
+    const hide = Math.hypot(_cv.x - cp.x, _cv.z - cp.z) > u.range;
+    if (hide !== u.hidden) { u.hidden = hide; for (const m of u.items) m.layers.set(hide ? 1 : 0); }
+  }
 }
 
 function mountainGeo(rad, h, r, rough = .12) {
@@ -1082,8 +1116,8 @@ function buildShip(k = 1) {
 }
 function makeCar(color) {
   const g = new THREE.Group();
-  const paint = new THREE.MeshPhysicalMaterial({ color, metalness: .6, roughness: .25, clearcoat: 1, clearcoatRoughness: .08 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x0c1218, metalness: .9, roughness: .05 });
+  const paint = physM({ color, metalness: .6, roughness: .25, clearcoat: 1, clearcoatRoughness: .08 });
+  const glass = physM({ color: 0x0c1218, metalness: .9, roughness: .05 });
   const tire = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: .8 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, .7, 4.4), paint); body.position.y = .65;
   const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, .62, 2.3), glass); cab.position.set(0, 1.28, -.2);
@@ -1376,6 +1410,7 @@ let musicStarted = false;
 const ensureMusic = () => { sound.unlock(); if (!musicStarted) { musicStarted = true; sound.startMusic(); } };
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, ensureMusic, { once: false, passive: true }));
 
+const worldKey = i => [i, save.unlocked, (save.player && save.player.name) || '', save.player && save.player.gender].join('|');
 let building = false;
 async function startLevel(i) {
   if (building) return; building = true;
@@ -1385,7 +1420,10 @@ async function startLevel(i) {
 }
 async function startLevelNow(i) {
   lvlIdx = i; L = LEVELS[i];
-  world = buildWorld(L);
+  // Si el mundo de la portada ya es este nivel (Básico), se reutiliza: no se construye dos veces
+  const wkey = worldKey(i);
+  if (!(world && world.key === wkey && !world.used)) { world = buildWorld(L); world.key = wkey; }
+  world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
   P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false;
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
@@ -1409,6 +1447,7 @@ async function startLevelNow(i) {
   hudCache = {}; updateHUD();
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
+  camera.updateMatrixWorld(); updateCull(camera.position);
   try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch (e) {}
   lastNow = performance.now();
   state = 'play'; ensureMusic();
@@ -2037,6 +2076,7 @@ function loop() {
       const p = it.center || it.obj.position, far = Math.hypot(p.x - cp.x, p.z - cp.z) > it.range;
       if (it.animal) { it.obj.userData.far = far; if (far) it.obj.visible = false; } else it.obj.visible = !far;
     }
+    updateCull(cp);
   }
   if (gradePass) gradePass.uniforms.time.value = (t * 60) % 1000;
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
@@ -2213,11 +2253,15 @@ renderTimeButtons();
 // Carga rápida: la portada aparece al instante y el mundo 3D de fondo se construye justo después
 $('loading').classList.add('hidden');
 const buildMenuWorld = () => {
-  world = buildWorld(LEVELS[0]);
+  world = buildWorld(LEVELS[0]); world.key = worldKey(0);
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
   P.pos.set(world.desert.tcx + 34, 0, world.desert.tcz - 2);
   P.pos.y = 0; P.heading = -1.2;
-  loop();
+  lodTimer = 1;
+  // Compilar los sombreadores en segundo plano antes del primer cuadro (así la portada no se congela en el celular)
+  camera.position.set(P.pos.x + 20, 15, P.pos.z + 20); camera.lookAt(P.pos.x, 2, P.pos.z); camera.updateMatrixWorld(); updateCull(camera.position);
+  let go = false; const start = () => { if (!go) { go = true; loop(); } };
+  try { const pr = renderer.compileAsync ? renderer.compileAsync(scene, camera) : null; if (pr) { pr.then(start, start); setTimeout(start, 6000); } else start(); } catch (e) { start(); }
 };
 requestAnimationFrame(() => setTimeout(() => { applyTime(save.time || 'dia'); buildMenuWorld(); }, 30));
 
