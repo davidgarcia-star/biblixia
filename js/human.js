@@ -224,7 +224,7 @@ export function createHuman(opt = {}) {
   const skirtOn = F && !robe && o.legwear !== 'pantalon';
   const skirtM = new THREE.MeshStandardMaterial({ map: clothTexture(o.skirt ?? 0x2d3a6a, 'pleat'), roughness: .8, side: THREE.DoubleSide });
   const legM = robe ? robeM : skirtOn ? skin : pantsM;
-  const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.1 : 1.02, .55, F ? .76 : .72);
+  const pel = mesh(SG(.17, 28, 18), robe ? robeM : skirtOn ? skirtM : pantsM, hips, 0, -.02, 0); pel.scale.set(F ? 1.12 : 1.02, .58, F ? .8 : .72);
   if (!robe && !F) mesh(new THREE.CylinderGeometry(.162, .162, .035, 32), soleM, hips, 0, .06, 0).scale.set(1, 1, .8);
   let skirt = null;
   if (skirtOn) {
@@ -237,10 +237,11 @@ export function createHuman(opt = {}) {
   const legs = [];
   for (const s of [-1, 1]) {
     const thigh = grp(hips, s * (F ? .088 : .09), -.02, 0);
-    mesh(limbGeo(F ? .082 : .085, F ? .052 : .058, .42, .012), legM, thigh);
+    const wide = F && !robe && !skirtOn; // pantalón ancho y holgado para la jugadora
+    mesh(wide ? limbGeo(.1, .092, .42, .006) : limbGeo(F ? .082 : .085, F ? .052 : .058, .42, .012), legM, thigh);
     const knee = grp(thigh, 0, -.42, 0);
-    mesh(SG(F ? .05 : .056, 14, 10), legM, knee);
-    mesh(limbGeo(F ? .052 : .058, F ? .036 : .042, .42, F ? .014 : .012), robe || skirtOn ? skin : pantsM, knee);
+    mesh(SG(wide ? .09 : F ? .05 : .056, 14, 10), legM, knee);
+    mesh(wide ? limbGeo(.09, .105, .41, 0) : limbGeo(F ? .052 : .058, F ? .036 : .042, .42, F ? .014 : .012), robe || skirtOn ? skin : pantsM, knee);
     const ankle = grp(knee, 0, -.43, 0);
     const up = mesh(new THREE.CapsuleGeometry(.05, .15, 6, 14), shoeM, ankle, 0, -.035, .05); up.rotation.x = Math.PI / 2; up.scale.set(F ? 1 : 1.1, 1, .9);
     mesh(new THREE.BoxGeometry(.105, .025, .26), soleM, ankle, 0, -.075, .05);
@@ -398,7 +399,7 @@ export function createHuman(opt = {}) {
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -429,6 +430,8 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t }) {
     P.headX = -P.spineX * .6;
   }
   if (land > 0) P.hipY -= land * .5;
+  // gesto de mal olor: se tapa la nariz y mueve la cabeza
+  if (gesture > 0) { P.s1x = -2.45; P.s1z = .55; P.e1 = -2.1; P.headX = .15; }
   const k = Math.min(1, dt * 16);
   const S = (obj, prop, v) => { obj[prop] = lerp(obj[prop], v, k); };
   S(h.legs[0].thigh.rotation, 'x', P.t0); S(h.legs[1].thigh.rotation, 'x', P.t1);
@@ -441,7 +444,7 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t }) {
   S(h.hips.rotation, 'y', -P.spineY * .6);
   S(h.hips.position, 'y', P.hipY);
   S(h.head.rotation, 'x', P.headX);
-  h.head.rotation.y = -h.spine.rotation.y * .8;
+  h.head.rotation.y = -h.spine.rotation.y * .8 + (gesture > 0 ? Math.sin(t * 9) * .35 : 0);
   if (h.skirt) { const sw = Math.max(Math.abs(h.legs[0].thigh.rotation.x), Math.abs(h.legs[1].thigh.rotation.x)); h.skirt.scale.z = .86 + sw * .75; h.skirt.scale.x = 1 + sw * .1; }
   const blink = (t % 3.7) < .12;
   for (const e of h.eyes) e.scale.y = blink ? .15 : 1;

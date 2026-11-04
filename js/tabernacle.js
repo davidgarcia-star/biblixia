@@ -284,7 +284,7 @@ export function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }) {
     const m = new THREE.Mesh(g, tentM); m.castShadow = m.receiveShadow = true; t.add(m);
     const op = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), dark); op.position.set(0, .7, 1.71); t.add(op);
     for (const sx of [-2.4, 0, 2.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.2, 5), new THREE.MeshStandardMaterial({ color: 0x5a3a1e })); p.position.set(sx, 1.1, 2.1); t.add(p); }
-    const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .03, 2.6); t.add(r2);
+    const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .1, 2.6); t.add(r2);
     S.add(t);
     addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
   }

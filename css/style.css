@@ -427,3 +427,5 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #levelsel,#help,#collection{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;padding-top:84px;padding-bottom:40px}
 @media (max-width:760px){.levels{grid-template-columns:1fr 1fr;gap:10px}.lvl{padding:12px}.lvl .t{font-size:17px}.lvl small{font-size:12px}#levelsel h2{font-size:24px}}
 @media (max-width:380px){.levels{grid-template-columns:1fr}}
+
+#tTurbo.locked{opacity:.55}

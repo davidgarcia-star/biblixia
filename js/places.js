@@ -29,8 +29,8 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
   const n = PLACES.length, w = (x1 - x0) / n, cz = (zN + zS) / 2;
   const add = (geo, mat, x, y, z, live) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; (live ? P : S).add(m); return m; };
   const box = (sx, sy, sz, mat, x, y, z) => add(new THREE.BoxGeometry(sx, sy, sz), mat, x, y, z);
-  const ground = std({ map: tex(256, 256, g => { g.fillStyle = '#c9b48a'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 9000; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,240,200,.12)' : 'rgba(110,80,40,.12)'; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); } }, [12, 6]), roughness: 1 });
-  const gp = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0 + 4, zS - zN + 4), ground); gp.rotation.x = -Math.PI / 2; gp.position.set((x0 + x1) / 2, .025, cz); gp.receiveShadow = true; P.add(gp);
+  const ground = std({ polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2, map: tex(256, 256, g => { g.fillStyle = '#c9b48a'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 9000; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,240,200,.12)' : 'rgba(110,80,40,.12)'; g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); } }, [12, 6]), roughness: 1 });
+  const gp = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0 + 4, zS - zN + 4), ground); gp.rotation.x = -Math.PI / 2; gp.position.set((x0 + x1) / 2, .07, cz); gp.receiveShadow = true; P.add(gp);
   // separadores entre lugares (piedras bajas)
   const stone = std({ map: brickTex('#a89a82', 'rgba(70,60,45,.5)', [4, 1]), roughness: .95 });
   for (let i = 1; i < n; i++) { const sx = x0 + i * w; box(.8, .7, zS - zN - 30, stone, sx, .35, cz + 6); addBox(sx - .4, sx + .4, zN + 15, zS - 3, .7); }
@@ -68,7 +68,7 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
     jos.arms[1].shoulder.rotation.set(-.3, 0, .25); jos.arms[1].elbow.rotation.x = -.5;
     const j1 = bakeStatic(jos.root); j1.position.set(px + 1.5, 0, pz - .4); j1.rotation.y = -1.1; S.add(j1);
     addBox(px - 1.8, px - 1, pz - 1, pz - .2, 1.8); addBox(px + 1.1, px + 1.9, pz - .8, pz, 1.8);
-    for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); sh.position.set(px - 6 + k * 3.5, 0, pz + 6 + (k % 2) * 2); sh.rotation.y = k; P.add(sh); }
+    for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); const sx3 = px - 6 + k * 3.5, sz3 = pz + 6 + (k % 2) * 2; sh.position.set(sx3, 0, sz3); sh.rotation.y = k; P.add(sh); addBox(sx3 - .6, sx3 + .6, sz3 - .6, sz3 + .6, 1); }
     // estrella
     const starSh = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + Math.PI / 2, r2 = k % 2 ? .45 : 1.2; k ? starSh.lineTo(Math.cos(a) * r2, Math.sin(a) * r2) : starSh.moveTo(Math.cos(a) * r2, Math.sin(a) * r2); }
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
@@ -142,7 +142,7 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
       addBox(px + (sx < 0 ? -ww / 2 : gap / 2), px + (sx < 0 ? -gap / 2 : ww / 2), pz + 2 - L2 / 2, pz + 2 + L2 / 2, 999);
     }
     const sea = std({ color: 0xd8c49a, roughness: 1 });
-    const path = new THREE.Mesh(new THREE.PlaneGeometry(gap, L2), sea); path.rotation.x = -Math.PI / 2; path.position.set(px, .04, pz + 2); P.add(path);
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(gap, L2), sea); path.rotation.x = -Math.PI / 2; path.position.set(px, .12, pz + 2); P.add(path);
     for (let k = 0; k < 18; k++) { const st = add(new THREE.SphereGeometry(.2 + rnd() * .2, 8, 6), std({ color: 0x8a7a68 }), px + (rnd() - .5) * gap, .05, pz + 2 + (rnd() - .5) * L2); st.scale.y = .4; }
     // Moisés con la vara extendida
     const mo = createHuman({ detail: .6, outfit: 'robe', robe: 0xd8c9a8, mantle: 0x6a3d24, beard: { color: 0xe8e4dc, len: .16 }, hairColor: 0xe0dcd2, hair: 'long', age: 1, skin: 0xa8714f });

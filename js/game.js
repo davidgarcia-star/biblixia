@@ -41,7 +41,7 @@ const rng = seed => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013
    RENDER
    ========================================================= */
 const canvas = $('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
 const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.35 : 1.75);
 renderer.setPixelRatio(MAX_PR);
@@ -53,7 +53,7 @@ renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 2500);
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.15, 2500);
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -292,14 +292,14 @@ const M = {
   gold: new THREE.MeshStandardMaterial({ color: 0xffc93c, metalness: 1, roughness: .22, emissive: 0x6b4300, emissiveIntensity: .6 }),
   beam: new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }),
   glow: new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-  sand: new THREE.MeshStandardMaterial({ map: sandTex, roughness: 1 }),
-  beach: new THREE.MeshStandardMaterial({ map: beachTex, roughness: 1 }),
+  sand: new THREE.MeshStandardMaterial({ map: sandTex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+  beach: new THREE.MeshStandardMaterial({ map: beachTex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
   sea: new THREE.MeshStandardMaterial({ color: 0x1c5f86, roughness: .12, metalness: .35, normalMap: seaNormal, normalScale: new THREE.Vector2(.28, .28) }),
   foam: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .5, depthWrite: false }),
   wood: new THREE.MeshStandardMaterial({ color: 0x8a5e36, roughness: .8 }),
   woodDark: new THREE.MeshStandardMaterial({ color: 0x4a3018, roughness: .8 }),
   island: new THREE.MeshStandardMaterial({ color: 0x5f7a44, roughness: 1 }),
-  valley: new THREE.MeshStandardMaterial({ map: valleyTex, roughness: 1 }),
+  valley: new THREE.MeshStandardMaterial({ map: valleyTex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
   hill: new THREE.MeshStandardMaterial({ color: 0x6f8a46, roughness: 1 }),
   sandDune: new THREE.MeshStandardMaterial({ color: 0xd2b080, roughness: 1 }),
   rock: new THREE.MeshStandardMaterial({ map: rockTex, roughness: 1 }),
@@ -310,7 +310,8 @@ M.sea.onBeforeCompile = sh => {
   sh.uniforms.uTime = { value: 0 };
   sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
     float wv = sin(position.x * .06 + uTime * 1.1) * .45 + sin(position.y * .09 + uTime * .8) * .3 + sin((position.x + position.y) * .15 + uTime * 1.7) * .12;
-    transformed.z += wv;`);
+    float shore = clamp((700.0 - position.x) / 60.0, 0.0, 1.0);
+    transformed.z += wv * shore - (1.0 - shore) * .1;`);
   M.sea.userData.shader = sh;
 };
 
@@ -538,7 +539,7 @@ function buildWorld(cfg) {
   // ===== Desierto con el tabernáculo y el campamento de Israel =====
   {
     const X0 = O + T, tcx = X0 + DES / 2, tcz = 0;
-    const sand = new THREE.Mesh(new THREE.PlaneGeometry(DES + 4, T + 4), M.sand); sand.rotation.x = -Math.PI / 2; sand.position.set(tcx, .02, 0); sand.receiveShadow = true; group.add(sand);
+    const sand = new THREE.Mesh(new THREE.PlaneGeometry(DES, T), M.sand); sand.rotation.x = -Math.PI / 2; sand.position.set(tcx, .06, O + T / 2); sand.receiveShadow = true; group.add(sand);
     // dunas y montes alrededor
     for (let i = 0; i < 14; i++) {
       const d = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.sandDune);
@@ -581,7 +582,7 @@ function buildWorld(cfg) {
   // ===== Al sur: el arca de Noé y el valle de Ela =====
   {
     const Z0 = O + T, Wt = T + DES;
-    const grass = new THREE.Mesh(new THREE.PlaneGeometry(Wt + 4, SZ + 4), M.valley); grass.rotation.x = -Math.PI / 2; grass.position.set(O + Wt / 2, .02, Z0 + SZ / 2); grass.receiveShadow = true; group.add(grass);
+    const grass = new THREE.Mesh(new THREE.PlaneGeometry(Wt, SZ), M.valley); grass.rotation.x = -Math.PI / 2; grass.position.set(O + Wt / 2, .06, Z0 + SZ / 2); grass.receiveShadow = true; group.add(grass);
     for (let i = 0; i < 12; i++) { const hl = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.hill); hl.position.set(O + r() * Wt, 0, Z0 + SZ + 20 + r() * 40); hl.scale.set(20 + r() * 25, 6 + r() * 12, 14 + r() * 14); group.add(hl); }
     const ararat = new THREE.Mesh(mountainGeo(170, 210, r), M.rock); ararat.position.set(O + Wt * .3, 100, Z0 + SZ + 320); group.add(ararat);
     const snow = new THREE.Mesh(mountainGeo(54, 66, r, .04), new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: .6 })); snow.position.set(O + Wt * .3, 174, Z0 + SZ + 320); group.add(snow);
@@ -598,10 +599,10 @@ function buildWorld(cfg) {
   // ===== Al occidente: la playa, el mar, el muelle y el barco =====
   {
     const SX = O - BEACH, Zc = O + T / 2, Zlen = T + SZ + 120;
-    ground.position.set(SX + 800 - 1, 0, 0); // el asfalto termina en la playa
-    const beach = new THREE.Mesh(new THREE.PlaneGeometry(BEACH + 2, T + SZ + NZ + 4), M.beach); beach.rotation.x = -Math.PI / 2; beach.position.set(O - BEACH / 2, .03, O + (T + SZ - NZ) / 2); beach.receiveShadow = true; group.add(beach);
-    const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, Zlen + 800, 140, 160), M.sea); sea.rotation.x = -Math.PI / 2; sea.position.set(SX - 700, -.15, O + (T + SZ) / 2); sea.receiveShadow = true; sea.userData.live = true; group.add(sea);
-    const foam = new THREE.Mesh(new THREE.PlaneGeometry(2.2, T + SZ + NZ + 4), M.foam); foam.rotation.x = -Math.PI / 2; foam.position.set(SX + .6, .05, O + (T + SZ - NZ) / 2); foam.userData.live = true; group.add(foam); W.foam = foam;
+    ground.position.set(SX + 800, 0, 0); // el asfalto termina en la playa
+    const beach = new THREE.Mesh(new THREE.PlaneGeometry(BEACH, T + SZ + NZ), M.beach); beach.rotation.x = -Math.PI / 2; beach.position.set(O - BEACH / 2, .08, O + (T + SZ - NZ) / 2); beach.receiveShadow = true; group.add(beach);
+    const sea = new THREE.Mesh(new THREE.PlaneGeometry(1400, Zlen + 800, 140, 160), M.sea); sea.rotation.x = -Math.PI / 2; sea.position.set(SX - 700, -.25, O + (T + SZ) / 2); sea.receiveShadow = true; sea.userData.live = true; group.add(sea);
+    const foam = new THREE.Mesh(new THREE.PlaneGeometry(2.2, T + SZ + NZ + 4), M.foam); foam.rotation.x = -Math.PI / 2; foam.position.set(SX + .6, .12, O + (T + SZ - NZ) / 2); foam.userData.live = true; group.add(foam); W.foam = foam;
     // palmeras en la playa
     const palmT = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: .9 }), palmL = new THREE.MeshStandardMaterial({ color: 0x3f7a2a, roughness: .8, side: THREE.DoubleSide });
     for (let i = 0; i < 16; i++) {
@@ -732,6 +733,11 @@ function buildWorld(cfg) {
     const baked = bakeStatic(S); group.add(baked);
     W.staticMeshes = S.children.length;
   }
+  // cuerpos móviles con su tamaño
+  const BODY_R = { elefante: 1.5, jirafa: .9, camello: 1.1, caballo: .9, oso: .9, cebra: .8, leon: .8, leona: .75, ciervo: .65, oveja: .55, mono: .35, gallo: .25, gallina: .25 };
+  W.dyn = [];
+  if (W.ark) for (const a of W.ark.lodItems) if (a.userData && a.userData.kind) W.dyn.push({ obj: a, r: BODY_R[a.userData.kind] || .6 });
+  if (W.kids) for (const kd of W.kids) W.dyn.push({ obj: kd.h.root, r: .28 });
   // Lista de objetos que se ocultan cuando quedan lejos de la cámara
   W.lod = [];
   for (const n of W.npcs) W.lod.push({ obj: n.g, range: 130 });
@@ -998,6 +1004,7 @@ async function startLevelNow(i) {
   $('hud').classList.remove('hidden'); $('touch').classList.toggle('hidden', !isTouch);
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
+  P.turbo = false; $('tTurbo').classList.remove('active'); $('tTurbo').textContent = lvlIdx < 1 ? '🔒 TURBO' : '⚡ TURBO'; $('tTurbo').classList.toggle('locked', lvlIdx < 1);
   hudCache = {}; updateHUD();
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
@@ -1053,7 +1060,9 @@ function endLevel(won) {
 }
 
 /* ---------- Turbo (correr ultra rápido) ---------- */
-function toggleTurbo() { P.turbo = !P.turbo; $('tTurbo').classList.toggle('active', !!P.turbo); toast(P.turbo ? '⚡ ¡Turbo activado!' : 'Turbo desactivado', '#ffd34d'); sound.click(); }
+function toggleTurbo() {
+  if (lvlIdx < 1) { P.turbo = false; toast('🔒 El turbo se desbloquea en el nivel Intermedio', '#ffd34d'); sound.hurt(); return; }
+  P.turbo = !P.turbo; $('tTurbo').classList.toggle('active', !!P.turbo); toast(P.turbo ? '⚡ ¡Turbo activado!' : 'Turbo desactivado', '#ffd34d'); sound.click(); }
 
 /* ---------- Mapa completo ---------- */
 function openMap() { if (state !== 'play') return; state = 'map'; for (const c in keys) keys[c] = false; $('bigmap').classList.remove('hidden'); drawBigMap(); }
@@ -1196,6 +1205,22 @@ function update(dt) {
     }
   } else P.lastStep = Math.floor(human.phase / Math.PI);
 
+  // Cuerpos que se mueven (animales y niños): el jugador no los atraviesa
+  if (world.dyn) for (const b of world.dyn) {
+    if (!b.obj.visible) continue;
+    b.obj.getWorldPosition(tmpV);
+    if (Math.abs(tmpV.y - P.pos.y) > 1.6) continue;
+    const dx = P.pos.x - tmpV.x, dz = P.pos.z - tmpV.z, d = Math.hypot(dx, dz), min = b.r + RADIUS;
+    if (d < min && d > 1e-4) { const push = (min - d); const nx2 = P.pos.x + dx / d * push, nz2 = P.pos.z + dz / d * push; if (!blocked(nx2, nz2, P.pos.y)) { P.pos.x = nx2; P.pos.z = nz2; } P.speed *= .6; }
+  }
+  // Sonidos de los animales: fuertes de cerca, suaves de lejos
+  if (world.ark) for (const a of world.ark.lodItems.concat(world.ark.insideItems)) {
+    const kind = a.userData && a.userData.kind; if (!kind || !a.visible) continue;
+    a.getWorldPosition(tmpV); const dx = tmpV.x - P.pos.x, dz = tmpV.z - P.pos.z, dist = Math.hypot(dx, dz);
+    if (dist > 50) continue;
+    a.userData.callT = (a.userData.callT ?? 2 + Math.random() * 8) - dt;
+    if (a.userData.callT <= 0) { a.userData.callT = 6 + Math.random() * 9; const vol = Math.pow(1 - dist / 50, 2), pan = (dx * -Math.cos(cam.yaw) + dz * Math.sin(cam.yaw)) / Math.max(1, dist); sound.animal(kind, vol, pan); }
+  }
   // Autos
   if (P.inv > 0) P.inv -= dt;
   for (const c of world.cars) {
@@ -1235,7 +1260,7 @@ function update(dt) {
   // Lugares especiales del tabernáculo
   let z = null;
   for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
-  if (z !== curZone) { curZone = z; if (z) showInfo(z); }
+  if (z !== curZone) { curZone = z; if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
   updateHUD();
 }
@@ -1386,7 +1411,8 @@ function loop() {
   human.root.position.copy(P.pos);
   human.root.rotation.y = state === 'creator' ? t * .8 : P.heading;
   human.root.visible = !(P.inv > 0 && Math.floor(t * 12) % 2);
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround, vy: P.vy, land: P.land, t });
+  if (P.smell > 0) P.smell -= dt;
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {
