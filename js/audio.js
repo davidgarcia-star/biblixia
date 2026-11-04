@@ -1,3 +1,4 @@
+const THREE_clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 // Música instrumental, efectos, pasos y voces (sin archivos externos)
 export class Sound {
   constructor() {
@@ -113,20 +114,27 @@ export class Sound {
   // Rugido de león: gruñido grave que crece y se apaga, con respiración áspera
   roar(vol = 1) {
     const a = this.unlock(); if (!a || !this.sfxOn) return;
-    const t = a.currentTime + .02, out = a.createGain(); out.gain.value = .9 * vol; out.connect(this.sfx); if (this.rev) out.connect(this.rev);
-    const dist = a.createWaveShaper(), cur = new Float32Array(256); for (let i = 0; i < 256; i++) { const x = i / 128 - 1; cur[i] = Math.tanh(x * 3.2); } dist.curve = cur; dist.connect(out);
-    const env = (g, peak, at, hold, rel, t0) => { g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(peak, t0 + at); g.gain.setValueAtTime(peak, t0 + at + hold); g.gain.exponentialRampToValueAtTime(.0001, t0 + at + hold + rel); };
-    const growl = (f0, f1, t0, dur, gain) => {
-      const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
-      o.type = 'sawtooth'; o2.type = 'square'; o.frequency.setValueAtTime(f0, t0); o.frequency.linearRampToValueAtTime(f1, t0 + dur * .35); o.frequency.exponentialRampToValueAtTime(f0 * .55, t0 + dur);
-      o2.frequency.setValueAtTime(f0 * .5, t0); o2.frequency.exponentialRampToValueAtTime(f0 * .3, t0 + dur);
-      lfo.frequency.value = 28; lg.gain.value = f1 * .18; lfo.connect(lg).connect(o.frequency);
-      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t0); lp.frequency.linearRampToValueAtTime(1500, t0 + dur * .35); lp.frequency.exponentialRampToValueAtTime(300, t0 + dur); lp.Q.value = 4;
-      o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(dist); env(g, gain, dur * .25, dur * .25, dur * .5, t0);
-      [o, o2, lfo].forEach(n => { n.start(t0); n.stop(t0 + dur + .1); });
+    const t = a.currentTime + .03, out = a.createGain(); out.gain.value = .55 * vol; out.connect(this.sfx); if (this.rev) out.connect(this.rev);
+    // compresor para que se oiga fuerte también en el altavoz del celular
+    const comp = a.createDynamicsCompressor(); comp.threshold.value = -20; comp.ratio.value = 6; comp.attack.value = .003; comp.release.value = .2; comp.connect(out);
+    const dist = a.createWaveShaper(), cur = new Float32Array(512); for (let i = 0; i < 512; i++) { const x = i / 256 - 1; cur[i] = Math.tanh(x * 5); } dist.curve = cur;
+    // formantes de garganta (frecuencias medias que sí suenan en un teléfono)
+    const fm = a.createGain(); fm.connect(comp);
+    for (const [f, q, g] of [[420, 2.2, 2.2], [850, 2.6, 2.4], [1500, 3.5, 1.4], [2600, 5, .5]]) { const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q; const bg = a.createGain(); bg.gain.value = g; dist.connect(bp).connect(bg).connect(fm); }
+    const low = a.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 260; const lg0 = a.createGain(); lg0.gain.value = .12; dist.connect(low).connect(lg0).connect(comp);
+    const env = (g, peak, at, hold, rel, t0) => { g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + at); g.gain.setValueAtTime(peak, t0 + at + hold); g.gain.exponentialRampToValueAtTime(.0001, t0 + at + hold + rel); };
+    const growl = (f0, fp, t0, dur, gain) => {
+      const g = a.createGain(); g.connect(dist); env(g, gain, dur * .22, dur * .3, dur * .48, t0);
+      for (const [type, mul, det] of [['sawtooth', 1, 0], ['sawtooth', 1, 14], ['square', .5, -8]]) {
+        const o = a.createOscillator(); o.type = type; o.detune.value = det;
+        o.frequency.setValueAtTime(f0 * mul, t0); o.frequency.linearRampToValueAtTime(fp * mul, t0 + dur * .3); o.frequency.exponentialRampToValueAtTime(f0 * .6 * mul, t0 + dur);
+        const lfo = a.createOscillator(), lgn = a.createGain(); lfo.frequency.value = 24 + Math.random() * 8; lgn.gain.value = fp * .12 * mul; lfo.connect(lgn).connect(o.frequency);
+        o.connect(g); o.start(t0); o.stop(t0 + dur + .1); lfo.start(t0); lfo.stop(t0 + dur + .1);
+      }
+      // aspereza (ruido) que sigue al gruñido
+      const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; src.playbackRate.value = .7; const ng = a.createGain(); env(ng, gain * .55, dur * .2, dur * .3, dur * .5, t0); src.connect(ng).connect(dist); src.start(t0); src.stop(t0 + dur + .1);
     };
-    const breath = (t0, dur, gain) => { const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 600; bp.Q.value = .8; const g = a.createGain(); src.connect(bp).connect(g).connect(out); env(g, gain, dur * .3, dur * .2, dur * .5, t0); src.start(t0); src.stop(t0 + dur + .1); };
-    growl(95, 180, t, 2.1, .55); breath(t, 2.1, .35); growl(80, 140, t + 2.3, 1.0, .3); breath(t + 2.3, .9, .2);
+    growl(150, 260, t, 2.2, .9); growl(120, 200, t + 2.35, 1.1, .5);
   }
   // Grito de águila: chillidos agudos descendentes con trino
   eagle(vol = 1) {
@@ -161,13 +169,22 @@ export class Sound {
     if (!this.sfxOn || !('speechSynthesis' in window)) return;
     try {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text); u.lang = 'es-ES'; u.rate = rate; u.pitch = pitch ?? (male ? .8 : 1.25); u.volume = 1;
-      const vs = this.voices.length ? this.voices : speechSynthesis.getVoices().filter(v => /^es/i.test(v.lang));
-      const pick = vs.find(v => male ? /(male|hombre|jorge|diego|pablo|carlos|juan|enrique|alvaro|raul)/i.test(v.name) : /(female|mujer|monica|paulina|helena|laura|sabina|elvira|lucia|ximena)/i.test(v.name)) || vs[0];
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'es-ES'; u.rate = rate; u.volume = 1;
+      const all = speechSynthesis.getVoices(), es = all.filter(v => /^es/i.test(v.lang));
+      const nm = v => (v.name + ' ' + (v.voiceURI || '')).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const M = /(male|hombre|masculin|jorge|diego|pablo|carlos|juan|enrique|alvaro|raul|alonso|gonzalo|jose|tomas|andres|manuel|antonio|miguel|federico|alejandro|eduardo|dario|gerardo|lorenzo|esd|eef|eem|esa)/;
+      const F = /(female|mujer|femen|monica|paulina|helena|laura|sabina|elvira|lucia|ximena|marisol|angelica|francisca|dalia|soledad|isabela|isabel|elena|carmen|sofia|valentina|paloma|marta|teresa|esc|eea|eec)/;
+      const isF = v => F.test(nm(v)) || /google espa/.test(nm(v)), isM = v => M.test(nm(v)) && !F.test(nm(v));
+      let pick = male ? es.find(isM) : es.find(isF);
+      // si no hay una voz del género pedido, se usa otra y se ajusta el tono (más grave para hombres, más agudo para mujeres)
+      let adj = 0;
+      if (!pick) { pick = male ? (es.find(v => !isF(v)) || es[0]) : (es.find(v => !isM(v)) || es[0]); adj = male ? -.3 : .3; if (pick && male && isF(pick)) adj = -.55; if (pick && !male && isM(pick)) adj = .55; }
       if (pick) u.voice = pick;
+      u.pitch = THREE_clamp(pitch ?? ((male ? .82 : 1.12) + adj), .1, 2);
       speechSynthesis.speak(u);
     } catch (e) {}
   }
+
 
   // Música instrumental: acordes suaves (pad) + arpegio, progresión I–V–vi–IV en Re
   startMusic() {

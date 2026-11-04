@@ -4,7 +4,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VERSES } from './verses.js';
 import { createHuman, animateHuman, bakeStatic } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
@@ -47,7 +48,7 @@ const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -79,8 +80,8 @@ scene.fog = new THREE.Fog(0xd8b9a0, 110, 760);
 const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x4b3a2c, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffcf9e, 3.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048);
-const SC = 45; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
+sun.shadow.mapSize.set(isTouch ? 1536 : 4096, isTouch ? 1536 : 4096); sun.shadow.radius = 3;
+const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
 let nightT = 0;
@@ -150,7 +151,7 @@ const sunGlow = (() => {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.set(260, 260, 1); scene.add(sp); return sp;
 })();
 const TIMES = {
-  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff3e0, sunI: 2.4, hemiI: .5, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .55, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
+  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0x9ab8ff, sunI: .7, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
@@ -170,18 +171,39 @@ function applyTime(mode) {
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
   if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; }
-  if (bloomPass) bloomPass.strength = T2.bloom;
+  if (bloomPass) bloomPass.strength = T2.bloom * .55;
   try { persist(); } catch (e) {}
 }
 
 // Efectos modernos: resplandor (bloom) en computadoras
 let composer = null, bloomPass = null;
-if (false) { // resplandor desactivado: imagen natural
+// Acabado cinematográfico (computadoras): brillo suave en luces, corrección de color, viñeta y grano fino
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vig: { value: .32 }, sat: { value: 1.1 }, contrast: { value: 1.07 }, warm: { value: .035 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, vig, sat, contrast, warm; varying vec2 vUv;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      float l = dot(c, vec3(.2126, .7152, .0722));
+      c = mix(vec3(l), c, sat);                                   // color más vivo
+      c = (c - .5) * contrast + .5;                               // contraste de cine
+      c += vec3(warm, warm * .4, -warm) * smoothstep(.45, 1., l); // luces cálidas
+      c += vec3(-warm * .5, 0., warm * .6) * (1. - smoothstep(0., .35, l)); // sombras frías
+      vec2 q = vUv - .5; c *= 1. - vig * dot(q, q) * 1.6;          // viñeta
+      c += (h(vUv * 1000. + time) - .5) * .018;                    // grano de película
+      gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
+    }`
+};
+let gradePass = null;
+if (!isTouch) {
   try {
-    composer = new EffectComposer(renderer);
+    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+    composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .3, .45, 3.2);
-    composer.addPass(bloomPass); composer.addPass(new OutputPass());
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .14, .5, .92);
+    bloomPass.enabled = false; composer.addPass(bloomPass); composer.addPass(new OutputPass());
+    gradePass = new ShaderPass(GradeShader); composer.addPass(gradePass);
     addEventListener('resize', () => { composer.setSize(innerWidth, innerHeight); });
   } catch (e) { composer = null; }
 }
@@ -242,10 +264,15 @@ const facades = FACADE_STYLES.map(st => {
   return { map, emis, st };
 });
 const facadeMats = facades.map(f => new THREE.MeshStandardMaterial({ map: f.map, emissiveMap: f.emis, emissive: 0xffffff, emissiveIntensity: .55, metalness: f.st.metal, roughness: f.st.rough }));
-const asphaltTex = canvasTex(256, 256, g => {
-  g.fillStyle = '#3a3d42'; g.fillRect(0, 0, 256, 256); noise(g, 256, 256, 9000, .08);
+const asphaltTex = canvasTex(512, 512, g => {
+  // asfalto real: grava fina de varios tonos, manchas suaves y pequeñas grietas
+  g.fillStyle = '#3b3e43'; g.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 14; i++) { const x = Math.random() * 512, y = Math.random() * 512, r = 40 + Math.random() * 110, gr = g.createRadialGradient(x, y, 0, x, y, r); const d = Math.random() < .5; gr.addColorStop(0, d ? 'rgba(20,22,26,.18)' : 'rgba(90,92,96,.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  for (let i = 0; i < 26000; i++) { const v = Math.random(); g.fillStyle = v < .45 ? `rgba(20,20,22,${.25 + Math.random() * .3})` : v < .9 ? `rgba(110,112,116,${.15 + Math.random() * .25})` : `rgba(170,165,155,${.25 + Math.random() * .3})`; const sz = Math.random() < .85 ? 1 + Math.random() * 1.2 : 2 + Math.random() * 1.5; g.fillRect(Math.random() * 512, Math.random() * 512, sz, sz); }
+  g.strokeStyle = 'rgba(18,18,20,.45)'; g.lineWidth = 1.2;
+  for (let k = 0; k < 5; k++) { let x = Math.random() * 512, y = Math.random() * 512; g.beginPath(); g.moveTo(x, y); for (let j = 0; j < 9; j++) { x += (Math.random() - .5) * 34; y += (Math.random() - .5) * 34; g.lineTo(x, y); } g.stroke(); }
 });
-asphaltTex.repeat.set(420, 420);
+asphaltTex.repeat.set(260, 260);
 const sidewalkTex = canvasTex(256, 256, g => {
   g.fillStyle = '#b9b4ab'; g.fillRect(0, 0, 256, 256); noise(g, 256, 256, 5000, .06);
   g.strokeStyle = 'rgba(70,65,60,.35)'; g.lineWidth = 2;
@@ -310,10 +337,10 @@ const glowTex = canvasTex(64, 64, g => {
    MATERIALES COMPARTIDOS
    ========================================================= */
 const M = {
-  asphalt: new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: .92 }),
-  sidewalk: new THREE.MeshStandardMaterial({ map: sidewalkTex, roughness: .85 }),
-  plaza: new THREE.MeshStandardMaterial({ map: plazaTex, roughness: .7 }),
-  grass: new THREE.MeshStandardMaterial({ map: grassTex, roughness: 1 }),
+  asphalt: new THREE.MeshStandardMaterial({ map: asphaltTex, bumpMap: asphaltTex, bumpScale: 1.2, roughness: .92 }),
+  sidewalk: new THREE.MeshStandardMaterial({ map: sidewalkTex, bumpMap: sidewalkTex, bumpScale: 1.6, roughness: .85 }),
+  plaza: new THREE.MeshStandardMaterial({ map: plazaTex, bumpMap: plazaTex, bumpScale: 1.4, roughness: .7 }),
+  grass: new THREE.MeshStandardMaterial({ map: grassTex, bumpMap: grassTex, bumpScale: 2, roughness: 1 }),
   concrete: new THREE.MeshStandardMaterial({ color: 0xc8c3ba, roughness: .75 }),
   darkMetal: new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: .8, roughness: .35 }),
   steel: new THREE.MeshStandardMaterial({ color: 0xaab2bb, metalness: .9, roughness: .25 }),
@@ -339,7 +366,7 @@ const M = {
   valley: new THREE.MeshStandardMaterial({ map: valleyTex, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
   hill: new THREE.MeshStandardMaterial({ color: 0x6f8a46, roughness: 1 }),
   sandDune: new THREE.MeshStandardMaterial({ color: 0xd2b080, roughness: 1 }),
-  rock: new THREE.MeshStandardMaterial({ map: rockTex, roughness: 1 }),
+  rock: new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 3, roughness: 1 }),
 };
 
 // Luz de los faroles en el suelo (de noche)
@@ -573,16 +600,32 @@ function buildWorld(cfg) {
   // Instanciar árboles
   {
     const n = trees.length;
-    const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.12, .18, 2.6, 8), M.trunk, n);
-    const fol = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.6, 2), M.leaf, n * 2);
+    // tronco con ramas y copa de varios grupos de hojas (con luz y sombra pintadas: más natural)
+    const tg = [new THREE.CylinderGeometry(.12, .18, 2.6, 8)];
+    for (const [ry, rz, h] of [[0, .7, .9], [2.1, .65, .8], [4.2, .75, .85]]) { const bg = new THREE.CylinderGeometry(.04, .07, 1.3, 6); bg.translate(0, .65, 0); bg.rotateZ(rz); bg.rotateY(ry); bg.translate(0, h, 0); tg.push(bg); }
+    const trunk = new THREE.InstancedMesh(mergeGeometries(tg.map(g => { g.deleteAttribute('uv'); return g; })), M.trunk, n);
+    const crown = [];
+    const lumps = [[0, 3.0, 0, 1.25], [.85, 2.75, .3, .95], [-.8, 2.85, -.25, .95], [.2, 2.7, -.9, .9], [-.25, 2.8, .9, .9], [.15, 3.85, .1, 1.0], [.6, 3.55, -.5, .75], [-.55, 3.6, .45, .75]];
+    for (const [lx, ly, lz, lr] of lumps) {
+      const g0 = new THREE.IcosahedronGeometry(lr, 2); g0.deleteAttribute('uv'); g0.deleteAttribute('normal'); const g = mergeVertices(g0), p = g.attributes.position, c = new Float32Array(p.count * 3);
+      for (let k = 0; k < p.count; k++) {
+        const x = p.getX(k), y = p.getY(k), z = p.getZ(k), nn = 1 + .16 * Math.sin(x * 5.1 + z * 3.7) * Math.cos(y * 4.3 + x * 2.2);
+        p.setXYZ(k, x * nn + lx, y * nn + ly, z * nn + lz);
+        const yy = (y * nn + ly - 2.2) / 2.4, ao = THREE.MathUtils.clamp(.45 + yy * .7, .4, 1.15);
+        c[k * 3] = ao; c[k * 3 + 1] = ao; c[k * 3 + 2] = ao * .92;
+      }
+      g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.computeVertexNormals(); crown.push(g);
+    }
+    const crownGeo = mergeGeometries(crown);
+    const leafV = M.leaf.clone(); leafV.vertexColors = true; leafV.flatShading = false;
+    const fol = new THREE.InstancedMesh(crownGeo, leafV, n);
     const o = new THREE.Object3D(), col = new THREE.Color();
     trees.forEach(([x, z, base], i) => {
       const y0 = base > .7 ? CURB + .5 : CURB;
-      const s = .85 + r() * .5;
-      o.rotation.set(0, r() * 6, 0); o.scale.set(1, s, 1); o.position.set(x, y0 + 1.3 * s, z); o.updateMatrix(); trunk.setMatrixAt(i, o.matrix);
-      o.scale.set(s, s * 1.1, s); o.position.set(x, y0 + 3.1 * s, z); o.updateMatrix(); fol.setMatrixAt(i * 2, o.matrix);
-      o.scale.set(s * .7, s * .8, s * .7); o.position.set(x + .5, y0 + 4.2 * s, z - .3); o.updateMatrix(); fol.setMatrixAt(i * 2 + 1, o.matrix);
-      col.setHSL(.23 + r() * .08, .5 + r() * .2, .1 + r() * .07); fol.setColorAt(i * 2, col); fol.setColorAt(i * 2 + 1, col.offsetHSL(0, 0, .03));
+      const s = .85 + r() * .5, ry = r() * 6;
+      o.rotation.set(0, ry, 0); o.scale.set(s, s, s); o.position.set(x, y0 + 1.3 * s, z); o.updateMatrix(); trunk.setMatrixAt(i, o.matrix);
+      o.rotation.set(0, ry, 0); o.scale.set(s, s * (1 + r() * .15), s); o.position.set(x, y0, z); o.updateMatrix(); fol.setMatrixAt(i, o.matrix);
+      col.setHSL(.22 + r() * .08, .45 + r() * .2, .16 + r() * .08); fol.setColorAt(i, col);
       addBox(x - .2, x + .2, z - .2, z + .2, 6);
     });
     trunk.castShadow = fol.castShadow = true; fol.receiveShadow = true;
@@ -1739,6 +1782,7 @@ function loop() {
       if (it.animal) { it.obj.userData.far = far; if (far) it.obj.visible = false; } else it.obj.visible = !far;
     }
   }
+  if (gradePass) gradePass.uniforms.time.value = (t * 60) % 1000;
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
   skyClouds.grp.position.set(camera.position.x * .3, 0, camera.position.z * .3);
   stars.position.copy(camera.position); moon.position.copy(moonDir).multiplyScalar(1400).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500).add(camera.position);
@@ -1968,12 +2012,16 @@ window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { retur
 
 /* ---------- Portada: un rugido de león una sola vez al entrar (o al primer toque si el navegador bloquea el sonido) ---------- */
 (() => {
-  const sp = document.getElementById('splash'); if (!sp) return;
   let done = false;
   const go = () => {
-    if (done || sp.classList.contains('hidden')) return;
-    try { const a = sound.unlock(); if (!a) return; if (a.state !== 'running') { a.resume().then(() => { if (!done && a.state === 'running') { done = true; sound.roar(); } }).catch(() => {}); return; } done = true; sound.roar(); } catch (e) {}
+    if (done) return;
+    try {
+      const a = sound.unlock(); if (!a) return;
+      if (a.state === 'running') { done = true; sound.roar(); return; }
+      a.resume().then(() => { if (!done && a.state === 'running') { done = true; sound.roar(); } }).catch(() => {});
+    } catch (e) {}
   };
-  setTimeout(go, 1200);
-  ['pointerdown', 'touchstart', 'keydown'].forEach(ev => addEventListener(ev, () => setTimeout(go, 30), { passive: true }));
+  setTimeout(go, 900);
+  // dentro del mismo toque (requisito de los navegadores para permitir el sonido)
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => addEventListener(ev, go, { passive: true, capture: true }));
 })();
