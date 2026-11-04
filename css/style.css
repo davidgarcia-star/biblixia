@@ -370,3 +370,60 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 .ib.off,.chip.off{opacity:.55}
 .topbar{flex-wrap:wrap}
 @media (max-width:640px){.topbar .chip-lbl{display:none}}
+
+/* Mapa completo */
+#bigmap{position:fixed;inset:0;z-index:35;background:rgba(4,8,16,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#bigmap.hidden{display:none}
+.bm-head{display:flex;align-items:center;justify-content:space-between;gap:16px;width:min(1400px,100%);color:var(--gold);font-size:18px}
+.bm-head .btn{padding:10px 16px;font-size:14px}
+#bigmapCanvas{border-radius:14px;border:1px solid rgba(245,197,66,.5);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.bm-legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:13px;color:#dbe3ee}
+.bm-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+#minimap{cursor:pointer;pointer-events:auto}
+#tTurbo{grid-column:1;grid-row:1;height:40px;border-radius:12px;font-size:11px;letter-spacing:1px;padding:0 10px;margin-bottom:46px}
+#tTurbo.active{background:linear-gradient(180deg,#ffe38a,#f5a623);color:#241800}
+.actions{grid-template-rows:auto auto auto}
+
+.cpanel{max-height:calc(100vh - 80px);overflow-y:auto;touch-action:pan-y}
+.chips{flex-wrap:wrap;gap:8px}
+.swatch{width:32px;height:32px}
+.outfits{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt.small{font-size:13px;padding:9px 8px;text-align:center}
+.opt.locked{opacity:.55}
+.opt small{display:block;font-size:10.5px;font-weight:500;margin-top:2px;color:#f6e3a8}
+.outfits .opt:last-child{grid-column:1/3}
+@media (max-width:760px){.cpanel{max-height:58vh}.swatch{width:28px;height:28px}}
+
+.time-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%}
+#vignette{position:fixed;inset:0;pointer-events:none;z-index:1;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.38) 100%)}
+
+/* ===== Controles táctiles v2: joystick de bola y botones en arco ===== */
+.dpad{display:none!important}
+#joy{display:block!important;position:absolute;left:max(22px,env(safe-area-inset-left));bottom:max(22px,env(safe-area-inset-bottom));width:150px;height:150px;border-radius:50%;pointer-events:auto;touch-action:none;
+  background:radial-gradient(circle,rgba(255,255,255,.06) 0 55%,rgba(255,255,255,.14) 56% 100%);border:2px solid rgba(255,255,255,.35);box-shadow:0 8px 30px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#joyRing{position:absolute;inset:18px;border-radius:50%;border:1px dashed rgba(255,255,255,.25)}
+#joyKnob{display:block!important;position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px 0 0 -33px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff7d6,#f5c542 55%,#b8820f);box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 -4px 10px rgba(0,0,0,.25);transition:transform .05s}
+#joy.on #joyKnob{transition:none}
+.actions{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));width:230px;height:200px;display:block!important;pointer-events:none}
+.actions button{position:absolute!important;margin:0!important}
+#tJump{right:0;bottom:6px;width:96px;height:96px}
+#tTake{right:108px;bottom:0;width:76px;height:76px}
+#tRun{right:6px;bottom:116px;width:84px;height:40px;border-radius:20px}
+#tTurbo{right:100px;bottom:96px;width:92px;height:40px;border-radius:20px;grid-column:auto;grid-row:auto}
+/* HUD en celulares: botones en columna y minimapa ordenado */
+@media (pointer:coarse),(max-width:760px){
+  .topright{flex-direction:column;gap:8px;top:max(12px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right))}
+  .ib{width:42px;height:42px;font-size:16px;border-radius:12px}
+  #minimap{top:auto;bottom:auto;top:128px;left:max(12px,env(safe-area-inset-left));right:auto;width:104px;height:104px}
+  .coins{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));padding:7px 12px;gap:8px}
+  .coinico{width:26px;height:26px}
+  .hint{top:72px;left:max(12px,env(safe-area-inset-left));font-size:12px;padding:6px 10px}
+  .timer{top:max(12px,env(safe-area-inset-top));min-width:96px;padding:7px 12px}
+  #prompt{bottom:230px;font-size:14px;max-width:90vw;white-space:normal;text-align:center}
+  #info{top:auto;bottom:240px;left:12px;right:12px;width:auto;max-height:30vh;overflow:auto}
+}
+/* Pantallas con desplazamiento (que no se oculte el primer nivel) */
+#levelsel,#help,#collection{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;padding-top:84px;padding-bottom:40px}
+@media (max-width:760px){.levels{grid-template-columns:1fr 1fr;gap:10px}.lvl{padding:12px}.lvl .t{font-size:17px}.lvl small{font-size:12px}#levelsel h2{font-size:24px}}
+@media (max-width:380px){.levels{grid-template-columns:1fr}}

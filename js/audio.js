@@ -53,6 +53,35 @@ export class Sound {
     src.connect(f).connect(g).connect(this.sfx); src.start(t); src.stop(t + .25);
     if (surface === 'hard') this.note(110 + Math.random() * 20, .06, { type: 'sine', vol: run ? .09 : .06, wet: false });
   }
+  // Sonido con posición: volumen según la distancia y lado izquierdo/derecho
+  _bus(vol, pan) {
+    const a = this.ctx, g = a.createGain(); g.gain.value = vol;
+    let out = g;
+    if (a.createStereoPanner) { const p = a.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); p.connect(this.sfx); } else g.connect(this.sfx);
+    return out;
+  }
+  stepAt(vol, pan) {
+    const a = this.unlock(); if (!a || !this.sfxOn || vol < .01) return;
+    const t = a.currentTime, src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = 1.4 + Math.random() * .3;
+    const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+    const g = a.createGain(); g.gain.setValueAtTime(.22, t); g.gain.exponentialRampToValueAtTime(.0001, t + .12);
+    src.connect(f).connect(g).connect(this._bus(vol, pan)); src.start(t); src.stop(t + .2);
+  }
+  // Risas y voces de niños jugando (sílabas cantadas con formantes)
+  kidVoice(vol, pan, kind = 0) {
+    const a = this.unlock(); if (!a || !this.sfxOn || vol < .01) return;
+    const bus = this._bus(vol, pan), t0 = a.currentTime, base = 380 + Math.random() * 160;
+    const n = kind === 0 ? 4 + (Math.random() * 3 | 0) : 2 + (Math.random() * 2 | 0);
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * (kind === 0 ? .13 : .22), o = a.createOscillator(), g = a.createGain(), f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter();
+      o.type = 'sawtooth'; const p0 = base * (kind === 0 ? 1.25 - i * .04 : 1 + (i % 2) * .25);
+      o.frequency.setValueAtTime(p0, t); o.frequency.linearRampToValueAtTime(p0 * (kind === 0 ? .82 : 1.12), t + .1);
+      f1.type = 'bandpass'; f1.frequency.value = kind === 0 ? 900 : 700 + Math.random() * 500; f1.Q.value = 6;
+      f2.type = 'bandpass'; f2.frequency.value = kind === 0 ? 2400 : 1800 + Math.random() * 800; f2.Q.value = 8;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.18, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + (kind === 0 ? .11 : .2));
+      o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(bus); o.start(t); o.stop(t + .25);
+    }
+  }
   coin() { this.note(1318, .12, { type: 'triangle', vol: .14 }); this.note(1976, .5, { type: 'triangle', vol: .12, when: .07 }); this.note(2637, .6, { type: 'sine', vol: .05, when: .12 }); }
   talk() { this.note(587, .4, { type: 'sine', vol: .07 }); this.note(880, .6, { type: 'sine', vol: .05, when: .1 }); }
   // Efecto al recibir un regalo: campanitas que suben + destello

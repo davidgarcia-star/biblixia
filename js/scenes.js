@@ -28,6 +28,7 @@ const SPECIES = {
   caballo: { len: 1.6, leg: 1.0, w: .65, color: 0x6a3a1e, neck: .7, head: .38, mane: 0x1a0e06, tail: .6 },
   oveja: { len: .9, leg: .4, w: .7, color: 0xf0ebe0, wool: true, neck: .15, head: .22, headColor: 0x2a2420, tail: .15 },
   oso: { len: 1.4, leg: .6, w: .9, color: 0x4a2e1a, neck: .2, head: .4, ears2: true, tail: .1 },
+  mono: { len: .55, leg: .42, w: .38, color: 0x5a3a20, neck: .12, head: .24, headColor: 0xc89a70, ears2: true, tail: .9 },
   ciervo: { len: 1.2, leg: .9, w: .5, color: 0x9a6a3a, neck: .55, head: .28, horns: 'antler', tail: .2 },
 };
 export function makeAnimal(kind, scaleK = 1) {
@@ -80,6 +81,40 @@ export function makeAnimal(kind, scaleK = 1) {
   return g;
 }
 
+/* ---------------- Gallo y gallina (caminan en dos patas) ---------------- */
+export function makeBird(kind) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const rooster = kind === 'gallo';
+  const feathers = std({ color: rooster ? 0x8a3a1a : 0xd8c4a0, roughness: .9 });
+  const red = std({ color: 0xd42020, roughness: .6 }), yellow = std({ color: 0xf0b020, roughness: .6 }), dark = std({ color: 0x111111 });
+  const b = new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), feathers); b.scale.set(.85, .9, 1.2); b.position.y = .42; body.add(b);
+  const nk = new THREE.Mesh(new THREE.CylinderGeometry(.06, .09, .2, 10), feathers); nk.position.set(0, .58, .16); nk.rotation.x = .4; body.add(nk);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.08, 12, 10), feathers); hd.position.set(0, .7, .22); body.add(hd);
+  const bk = new THREE.Mesh(new THREE.ConeGeometry(.025, .07, 6), yellow); bk.position.set(0, .69, .31); bk.rotation.x = Math.PI / 2; body.add(bk);
+  const cm = new THREE.Mesh(new THREE.BoxGeometry(.02, rooster ? .09 : .05, .12), red); cm.position.set(0, .79, .22); body.add(cm);
+  const wt = new THREE.Mesh(new THREE.SphereGeometry(.025, 8, 6), red); wt.position.set(0, .63, .29); wt.scale.y = 1.6; body.add(wt);
+  for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.012, 6, 4), dark); e.position.set(sx * .06, .72, .27); body.add(e); }
+  const tailM = rooster ? std({ color: 0x1a3a2a, metalness: .4, roughness: .4, side: THREE.DoubleSide }) : feathers;
+  for (let i = 0; i < (rooster ? 5 : 3); i++) { const t = new THREE.Mesh(new THREE.SphereGeometry(.12, 10, 8), tailM); t.scale.set(.15, rooster ? 1.4 : .8, .6); t.position.set((i - (rooster ? 2 : 1)) * .03, .55 + (rooster ? .12 : 0), -.24); t.rotation.x = -.6 - i * .08; body.add(t); }
+  const legs = [];
+  const lg = new THREE.CylinderGeometry(.012, .012, .25, 6); lg.translate(0, -.125, 0);
+  for (const sx of [-1, 1]) { const pv = new THREE.Group(); pv.position.set(sx * .07, .28, 0); const l = new THREE.Mesh(lg, yellow); pv.add(l); const f = new THREE.Mesh(new THREE.BoxGeometry(.06, .015, .09), yellow); f.position.set(0, -.25, .03); pv.add(f); g.add(pv); legs.push(pv); }
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; });
+  const baked = bakeStatic(body); g.remove(body); g.add(baked);
+  g.userData = { legs, kind };
+  return g;
+}
+function makeFlyer(color, size = 1) {
+  const m = std({ color, roughness: .7, side: THREE.DoubleSide });
+  const d = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), m); b.scale.set(.8, .8, 1.7); d.add(b);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(.1, 8, 6), m); hd.position.set(0, .05, .3); d.add(hd);
+  const wl = new THREE.Mesh(new THREE.PlaneGeometry(.8, .32), m); wl.geometry.translate(-.4, 0, 0); wl.rotation.x = -Math.PI / 2;
+  const wr = new THREE.Mesh(new THREE.PlaneGeometry(.8, .32), m); wr.geometry.translate(.4, 0, 0); wr.rotation.x = -Math.PI / 2;
+  const tl = new THREE.Mesh(new THREE.PlaneGeometry(.22, .4), m); tl.rotation.x = -Math.PI / 2; tl.position.z = -.4; d.add(wl, wr, tl);
+  d.scale.setScalar(size);
+  return { d, wl, wr };
+}
+
 /* ---------------- EL ARCA DE NOÉ ---------------- */
 export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
   const L = 300 * C, Wd = 50 * C, H = 30 * C;           // 150 × 25 × 15 m
@@ -98,75 +133,126 @@ export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
   const hullG = new THREE.ExtrudeGeometry(sh, { depth: L, bevelEnabled: false }); hullG.translate(0, 0, -L / 2); hullG.rotateY(Math.PI / 2);
   const hull = new THREE.Mesh(hullG, pitch); hull.position.set(x, 0, z); A.add(hull);
   // Cuerpo superior de madera (tres pisos)
-  const up = new THREE.Mesh(new THREE.BoxGeometry(L - 2, H * .45, Wd - .6), wood); up.position.set(x, H * .55 + H * .225, z); A.add(up);
+  const hide = new THREE.MeshBasicMaterial({ visible: false });
+  const upH = H * .45, upY = H * .55 + upH / 2;
+  const up = new THREE.Mesh(new THREE.BoxGeometry(L - 2, upH, Wd - .6), [wood, wood, wood, wood, wood, hide]); up.position.set(x, upY, z); A.add(up);
+  // cara norte con el hueco de la puerta (Génesis 6:16)
+  const doorW = 6, doorH = 5;
+  const nf = new THREE.Shape(); nf.moveTo(-(L - 2) / 2, -upH / 2); nf.lineTo((L - 2) / 2, -upH / 2); nf.lineTo((L - 2) / 2, upH / 2); nf.lineTo(-(L - 2) / 2, upH / 2); nf.lineTo(-(L - 2) / 2, -upH / 2);
+  const hole = new THREE.Path(); const hb = -upH / 2 + .2; hole.moveTo(-doorW / 2, hb); hole.lineTo(-doorW / 2, hb + doorH); hole.lineTo(doorW / 2, hb + doorH); hole.lineTo(doorW / 2, hb); hole.lineTo(-doorW / 2, hb); nf.holes.push(hole);
+  const nTex = planks.clone(); nTex.repeat.set(1 / 12.3, 1 / 2.25); nTex.needsUpdate = true;
+  const north = new THREE.Mesh(new THREE.ShapeGeometry(nf), std({ map: nTex, roughness: .85 })); north.position.set(x, upY, z - (Wd - .6) / 2); north.rotation.y = Math.PI; A.add(north);
+  // marco de la puerta
+  for (const sx of [-1, 1]) { const jamb = new THREE.Mesh(new THREE.BoxGeometry(.4, doorH + .4, .6), pitch); jamb.position.set(x + sx * (doorW / 2 + .2), H * .55 + .2 + doorH / 2, z - Wd / 2 + .3); A.add(jamb); }
+  const lint = new THREE.Mesh(new THREE.BoxGeometry(doorW + .8, .4, .6), pitch); lint.position.set(x, H * .55 + .4 + doorH, z - Wd / 2 + .3); A.add(lint);
   // Ventana a un codo del techo (Génesis 6:16) y techo a dos aguas
   const win = new THREE.Mesh(new THREE.BoxGeometry(L - 6, C * 2, Wd - .2), std({ color: 0x1a120a })); win.position.set(x, H - C * 1.2, z); A.add(win);
   const roofSh = new THREE.Shape(); roofSh.moveTo(-Wd / 2 - .6, 0); roofSh.lineTo(0, 3.2); roofSh.lineTo(Wd / 2 + .6, 0); roofSh.lineTo(-Wd / 2 - .6, 0);
   const roofG = new THREE.ExtrudeGeometry(roofSh, { depth: L - 1, bevelEnabled: false }); roofG.translate(0, 0, -(L - 1) / 2); roofG.rotateY(Math.PI / 2);
   const roof = new THREE.Mesh(roofG, wood); roof.position.set(x, H - .2, z); A.add(roof);
   // franjas de los tres pisos
-  for (const k of [1, 2]) { const band = new THREE.Mesh(new THREE.BoxGeometry(L - 1.8, .35, Wd - .4), pitch); band.position.set(x, H * .55 + k * H * .15, z); A.add(band); }
+  for (const k of [1, 2]) {
+    const by = H * .55 + k * H * .15;
+    const strip = (w, d, px, pz) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, .35, d), pitch); b.position.set(px, by, pz); A.add(b); };
+    strip(L - 1.8, .25, x, z + (Wd - .4) / 2); strip(.25, Wd - .4, x - (L - 1.8) / 2, z); strip(.25, Wd - .4, x + (L - 1.8) / 2, z);
+    if (by < H * .55 + .2 + doorH + .4) { strip((L - 1.8) / 2 - 3.6, .25, x - 3.6 - ((L - 1.8) / 2 - 3.6) / 2, z - (Wd - .4) / 2); strip((L - 1.8) / 2 - 3.6, .25, x + 3.6 + ((L - 1.8) / 2 - 3.6) / 2, z - (Wd - .4) / 2); }
+    else strip(L - 1.8, .25, x, z - (Wd - .4) / 2);
+  }
   // Puerta al costado (Génesis 6:16) con rampa
   const doorY = H * .55 + .2, doorZ = z - Wd / 2;
-  const door = new THREE.Mesh(new THREE.BoxGeometry(6, 5, .4), std({ color: 0x0c0806 })); door.position.set(x, doorY + 2.5, doorZ + .05); A.add(door);
-  const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(6, .4, 5), wood); doorLeaf.position.set(x, doorY + .1, doorZ - 2.4); doorLeaf.rotation.x = 0; A.add(doorLeaf);
-  const rampLen = 26, rampZ0 = doorZ - rampLen;
-  const rampG = new THREE.BoxGeometry(6, .35, Math.hypot(rampLen, doorY));
-  const ramp = new THREE.Mesh(rampG, wood); ramp.position.set(x, doorY / 2, (rampZ0 + doorZ) / 2); ramp.rotation.x = Math.atan2(doorY, rampLen); A.add(ramp);
-  A.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
-  blockers.push(hull, up);
-  addBox(x - L / 2, x + L / 2, z - Wd / 2, z + Wd / 2, H + 3);
-  addRamp(x - 3, x + 3, rampZ0, doorZ - .2, 0, doorY + .2);
+  // Rampa con una sola inclinación que sube hasta la puerta, y plataforma (la hoja de la puerta bajada)
+  const leafLen = 5, rampLen = 30, rampEnd = doorZ - leafLen, rampZ0 = rampEnd - rampLen;
+  const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(doorW, .4, leafLen), wood); doorLeaf.position.set(x, doorY, doorZ - leafLen / 2); A.add(doorLeaf);
+  const slope = Math.atan2(doorY, rampLen), rl = Math.hypot(rampLen, doorY);
+  const ramp = new THREE.Mesh(new THREE.BoxGeometry(doorW, .4, rl), wood); ramp.position.set(x, doorY / 2, (rampZ0 + rampEnd) / 2); ramp.rotation.x = -slope; A.add(ramp);
+  for (const sx of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(.15, .15, rl), pitch); rail.position.set(x + sx * (doorW / 2 - .1), doorY / 2 + 1, (rampZ0 + rampEnd) / 2); rail.rotation.x = -slope; A.add(rail);
+    for (let i = 0; i <= 6; i++) { const t = i / 6, py = doorY * t; const post = new THREE.Mesh(new THREE.BoxGeometry(.15, 1, .15), pitch); post.position.set(x + sx * (doorW / 2 - .1), py + .5, rampZ0 + rampLen * t); A.add(post); }
+    const prop = new THREE.Mesh(new THREE.BoxGeometry(.3, doorY, .3), wood); prop.position.set(x + sx * (doorW / 2 - .3), doorY / 2, rampEnd - .3); A.add(prop);
+  }
+  // INTERIOR del arca (cubierta del medio): se puede entrar
+  const inW = L - 4, inD = Wd - 1.6, inH = doorH + .1, inZ = z + .3;
+  const inTex = planks.clone(); inTex.repeat.set(30, 2); inTex.needsUpdate = true;
+  const inMat = std({ map: inTex, color: 0xd8b890, roughness: .9, side: THREE.BackSide });
+  const room = new THREE.Mesh(new THREE.BoxGeometry(inW, inH, inD), inMat); room.position.set(x, doorY + inH / 2, inZ); room.receiveShadow = false; room.castShadow = false; A.add(room);
+  const hay = std({ color: 0xd8b04a, roughness: 1 }), lampM = std({ color: 0xffe0a0, emissive: 0xffb050, emissiveIntensity: 2.5 }), beam = std({ color: 0x5a3a1e, roughness: .8 });
+  for (let i = -6; i <= 6; i++) {
+    const bx = x + i * 10;
+    const bm = new THREE.Mesh(new THREE.BoxGeometry(.35, .35, inD), beam); bm.position.set(bx, doorY + inH - .2, inZ); A.add(bm);
+    for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.BoxGeometry(.3, inH, .3), beam); pst.position.set(bx, doorY + inH / 2, inZ + sz * (inD / 2 - 4.5)); A.add(pst); }
+    const lp = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), lampM); lp.position.set(bx + 5, doorY + inH - .9, inZ); A.add(lp);
+  }
+  // establos a ambos lados con cercas y heno
+  for (const sz of [-1, 1]) {
+    const fz = inZ + sz * (inD / 2 - 4.5);
+    const fence = new THREE.Mesh(new THREE.BoxGeometry(inW - 1, .12, .12), beam); fence.position.set(x, doorY + 1.1, fz); A.add(fence);
+    const fence2 = fence.clone(); fence2.position.y = doorY + .6; A.add(fence2);
+    for (let i = -14; i <= 14; i++) { if (sz < 0 && Math.abs(i) < 1) continue; const h2 = new THREE.Mesh(new THREE.BoxGeometry(1.4, .7, .9), hay); h2.position.set(x + i * 5 + 2, doorY + .35, inZ + sz * (inD / 2 - 1.5)); h2.rotation.y = (i * 37 % 10) * .05; A.add(h2); }
+  }
+  A.traverse(m => { if (m.isMesh && m !== room) { m.castShadow = true; m.receiveShadow = true; } });
+  blockers.push(hull, room);
+  // colisiones: casco bajo la cubierta, paredes con el hueco de la puerta, rampa y plataforma
+  addBox(x - L / 2, x + L / 2, doorZ + .4, z + Wd / 2, doorY);
+  addBox(x - L / 2, x + L / 2, z + Wd / 2 - .6, z + Wd / 2, H + 3);
+  addBox(x - L / 2, x - L / 2 + 2.2, doorZ, z + Wd / 2, H + 3); addBox(x + L / 2 - 2.2, x + L / 2, doorZ, z + Wd / 2, H + 3);
+  addBox(x - L / 2, x - doorW / 2, doorZ - .1, doorZ + .9, H + 3); addBox(x + doorW / 2, x + L / 2, doorZ - .1, doorZ + .9, H + 3);
+  addBox(x - doorW / 2, x + doorW / 2, doorZ - .1, doorZ + .9, doorY);   // umbral
+  for (const sz of [-1, 1]) { const fz = inZ + sz * (inD / 2 - 4.5); if (sz < 0) { addBox(x - inW / 2, x - 3, fz - .15, fz + .15, doorY + 1.2); addBox(x + 3, x + inW / 2, fz - .15, fz + .15, doorY + 1.2); } else addBox(x - inW / 2, x + inW / 2, fz - .15, fz + .15, doorY + 1.2); }
+  addRamp(x - doorW / 2, x + doorW / 2, rampZ0, rampEnd, 0, doorY + .2);
+  addBox(x - doorW / 2, x + doorW / 2, rampEnd, doorZ + .9, doorY + .2);
   // Arcoíris (Génesis 9:13)
   const cols = [0xff3b30, 0xff9500, 0xffcc00, 0x34c759, 0x007aff, 0x3f37c9, 0x9b59b6];
-  cols.forEach((c, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(150 - i * 3.2, 1.6, 6, 80, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .32, depthWrite: false, fog: false })); r.position.set(x, -10, z + 120); A.add(r); });
+  const rainbow = new THREE.Group(); A.add(rainbow);
+  cols.forEach((c, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(150 - i * 3.2, 1.6, 6, 80, Math.PI), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .32, depthWrite: false, fog: false })); r.position.set(x, -10, z + 120); rainbow.add(r); });
 
   // Animales que entran de dos en dos (Génesis 7:8-9)
-  const kinds = ['elefante', 'jirafa', 'leon', 'leona', 'cebra', 'camello', 'caballo', 'oveja', 'oso', 'ciervo'];
-  const path = [new THREE.Vector3(x - 70, 0, rampZ0 - 6), new THREE.Vector3(x - 4, 0, rampZ0 - 6), new THREE.Vector3(x, 0, rampZ0 - 1), new THREE.Vector3(x, 0, rampZ0), new THREE.Vector3(x, doorY, doorZ), new THREE.Vector3(x, doorY, doorZ + 3)];
+  const pairs = [['elefante', 'elefante'], ['jirafa', 'jirafa'], ['leon', 'leona'], ['cebra', 'cebra'], ['gallo', 'gallina'], ['camello', 'camello'], ['mono', 'mono'], ['caballo', 'caballo'], ['oveja', 'oveja'], ['oso', 'oso'], ['ciervo', 'ciervo']];
+  const yA = doorY + .2;
+  const path = [new THREE.Vector3(x - 70, 0, rampZ0 - 6), new THREE.Vector3(x - 4, 0, rampZ0 - 6), new THREE.Vector3(x, 0, rampZ0 - 1), new THREE.Vector3(x, 0, rampZ0), new THREE.Vector3(x, yA, rampEnd), new THREE.Vector3(x, yA, doorZ), new THREE.Vector3(x, yA, doorZ + 6), new THREE.Vector3(x + 9, yA, doorZ + 6)];
   const seg = []; let total = 0; for (let i = 1; i < path.length; i++) { const l = path[i].distanceTo(path[i - 1]); seg.push(l); total += l; }
   const at = (d, out) => { d = ((d % total) + total) % total; for (let i = 0; i < seg.length; i++) { if (d <= seg[i]) return out.lerpVectors(path[i], path[i + 1], d / seg[i]); d -= seg[i]; } return out.copy(path[path.length - 1]); };
   const animals = [];
-  kinds.forEach((k, i) => {
-    for (const side of [-1, 1]) {
-      const a = makeAnimal(k, k === 'leona' ? 1 : 1); A.add(a);
-      animals.push({ a, d: i * (total / kinds.length), side: k === 'leona' ? 0 : side, kind: k });
-    }
+  pairs.forEach((pr, i) => pr.forEach((k, j) => {
+    const a = (k === 'gallo' || k === 'gallina') ? makeBird(k) : makeAnimal(k); A.add(a);
+    animals.push({ a, d: i * (total / pairs.length), side: j ? 1 : -1, kind: k, small: k === 'gallo' || k === 'gallina' || k === 'mono' || k === 'oveja' });
+  }));
+  // animales ya acomodados dentro del arca
+  const inside = [];
+  [['oveja', -30], ['caballo', -40], ['camello', -52], ['cebra', 30], ['jirafa', 42], ['elefante', 55], ['mono', -20], ['oso', 20]].forEach(([k, ox], i) => {
+    for (const sd of [0, 1]) { const a = makeAnimal(k); a.position.set(x + ox + sd * 2.6, yA - .2, inZ + (i % 2 ? 1 : -1) * (inD / 2 - 2.2)); a.rotation.y = (i % 2 ? Math.PI : 0) + (sd ? .4 : -.3); A.add(a); inside.push(a); }
   });
-  // la leona camina junto al león
-  animals.filter(o => o.kind === 'leona').forEach(o => { o.side = 1; o.d -= 0; });
-  animals.filter(o => o.kind === 'leon').forEach((o, j) => { if (j === 0) o.side = -1; else { o.a.visible = false; o.skip = true; } });
+  for (const k of ['gallo', 'gallina', 'gallina']) { const b = makeBird(k); b.position.set(x - 8 + inside.length * .5, yA - .2, inZ + 4); b.rotation.y = inside.length; A.add(b); inside.push(b); }
   // palomas volando
+  // aves: palomas, guacamayos y águilas volando en parejas alrededor del arca
   const doves = [];
-  const dm = std({ color: 0xf6f6f2, roughness: .7, side: THREE.DoubleSide });
-  for (let i = 0; i < 6; i++) {
-    const d = new THREE.Group(); const b = new THREE.Mesh(new THREE.SphereGeometry(.18, 10, 8), dm); b.scale.set(.8, .8, 1.6); d.add(b);
-    const wl = new THREE.Mesh(new THREE.PlaneGeometry(.7, .3), dm); wl.position.x = -.35; const wr = wl.clone(); wr.position.x = .35; d.add(wl, wr);
-    A.add(d); doves.push({ d, wl, wr, k: i });
-  }
+  const flock = [[0xf6f6f2, 1], [0xf6f6f2, 1], [0xd82a2a, 1.2], [0xd82a2a, 1.2], [0x1e6ad8, 1.2], [0x1e6ad8, 1.2], [0x2aa84a, 1.1], [0x2aa84a, 1.1], [0x6a4a2a, 2.2], [0x6a4a2a, 2.2], [0xf2c230, 1], [0xf2c230, 1]];
+  flock.forEach(([c, sz], i) => { const f = makeFlyer(c, sz); A.add(f.d); doves.push({ ...f, k: i, r: 22 + (i % 6) * 4, h: H + 6 + (i % 4) * 2.5, sp: .25 + (i % 3) * .06 }); });
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   return {
-    zones: [{ id: 'arca-noe', name: 'El arca de Noé', minX: x - L / 2 - 6, maxX: x + L / 2 + 6, minZ: rampZ0 - 10, maxZ: z + Wd / 2 + 6, pri: 3,
+    zones: [{ id: 'arca-noe', name: 'El arca de Noé', minX: x - L / 2 - 6, maxX: x + L / 2 + 6, minZ: rampZ0 - 10, maxZ: doorZ, pri: 3,
       text: 'Dios mandó a Noé hacer un arca de madera de gofer, cubierta de brea por dentro y por fuera: 300 codos de largo, 50 de ancho y 30 de alto, con una ventana arriba, una puerta al costado y tres pisos. Entraron Noé, su familia y los animales de dos en dos, y Dios cerró la puerta. Después del diluvio puso su arco en las nubes como señal de su pacto.',
-      ref: 'Génesis 6:14-22; 7:7-16; 9:12-16' }],
-    noahSpot: [x + 6, rampZ0 - 2], lodItems: animals.map(o => o.a).concat(doves.map(d => d.d)),
+      ref: 'Génesis 6:14-22; 7:7-16; 9:12-16' },
+      { id: 'arca-dentro', name: 'Dentro del arca', minX: x - L / 2, maxX: x + L / 2, minZ: doorZ + .5, maxZ: z + Wd / 2, pri: 4,
+        text: 'El arca tenía tres pisos y compartimientos. Noé guardó en ella toda clase de alimento para su familia y para los animales. Ocho personas se salvaron: Noé, su esposa, sus tres hijos (Sem, Cam y Jafet) y sus esposas. Todo lo hizo Noé conforme a lo que Dios le mandó.',
+        ref: 'Génesis 6:14-16, 21-22; 7:13; 1 Pedro 3:20' }],
+    noahSpot: [x + 6, rampZ0 - 2], rainbow, lodItems: animals.map(o => o.a).concat(doves.map(d => d.d)), insideItems: inside, doorPos: [x, doorZ],
     update(t, dt) {
       for (const o of animals) {
         if (o.skip) continue;
         o.d += dt * 1.6;
         at(o.d, tmp); at(o.d + .5, tmp2);
         const dir = tmp2.clone().sub(tmp); dir.y = 0;
-        const offset = new THREE.Vector3(-dir.z, 0, dir.x).normalize().multiplyScalar(o.side * 1.4);
+        const offset = new THREE.Vector3(-dir.z, 0, dir.x).normalize().multiplyScalar(o.side * (o.small ? .8 : 1.4));
         o.a.position.copy(tmp).add(offset);
         if (dir.lengthSq() > 1e-6) o.a.rotation.y = Math.atan2(dir.x, dir.z);
         const dd = ((o.d % total) + total) % total;
         o.a.userData.inPath = dd < total - 3.2; o.a.visible = o.a.userData.inPath && !o.a.userData.far;
-        o.a.userData.legs.forEach((l, i) => l.rotation.x = Math.sin(t * 6 + (i === 0 || i === 3 ? 0 : Math.PI)) * .45);
+        o.a.userData.legs.forEach((l, i) => l.rotation.x = Math.sin(t * (o.small ? 11 : 6) + (i === 0 || i === 3 ? 0 : Math.PI)) * .45);
       }
       for (const d of doves) {
-        const a = t * .4 + d.k * 1.05;
-        d.d.position.set(x + Math.cos(a) * 30, H + 10 + Math.sin(a * 2) * 3, z + Math.sin(a) * 18);
-        d.d.rotation.y = -a; const f = Math.sin(t * 14 + d.k) * .7; d.wl.rotation.z = f; d.wr.rotation.z = -f;
+        const a = t * d.sp + Math.floor(d.k / 2) * 1.05 + (d.k % 2) * .08;
+        d.d.position.set(x + Math.cos(a) * d.r * 1.6, d.h + Math.sin(a * 2) * 2 + (d.k % 2) * .6, z + Math.sin(a) * d.r);
+        d.d.rotation.y = -a; const f = Math.sin(t * (d.r > 25 ? 9 : 14) + d.k) * .6; d.wl.rotation.z = f; d.wr.rotation.z = -f;
       }
     },
   };

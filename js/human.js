@@ -316,6 +316,12 @@ export function createHuman(opt = {}) {
       mesh(new THREE.TorusGeometry(.018, .006, 8, 16), gold, head, 0, .06, -.115).rotation.x = .9;
       const tail = mesh(latheUp([[0, -.3], [.022, -.27], [.035, -.18], [.038, -.08], [.028, 0], [.018, .02]], 16), hairM, head, 0, .06, -.13); tail.rotation.x = .35;
     }
+  } else if (o.hair === 'turban') {
+    // mitra / turbante de lino fino (Éxodo 28:39-40), con lámina de oro para el sumo sacerdote
+    const linen = new THREE.MeshStandardMaterial({ map: clothTexture(0xf4f0e6, 'linen'), roughness: .9 });
+    const cap = mesh(SG(.118, 32, 16, 0, Math.PI * 2, 0, Math.PI * .55), linen, head, 0, .045, -.006); cap.scale.set(.96, 1.3, 1.06);
+    for (let k = 0; k < 3; k++) { const tr = mesh(new THREE.TorusGeometry(.104 - k * .006, .016, 8, 36), linen, head, 0, .055 + k * .03, -.004); tr.rotation.x = Math.PI / 2 - .08; tr.scale.set(.97, 1.08, 1); }
+    if (o.priest) { const lam = mesh(new THREE.BoxGeometry(.075, .028, .006), gold, head, 0, .085, .108); lam.rotation.x = -.25; const cord = mesh(new THREE.TorusGeometry(.106, .004, 4, 32), new THREE.MeshStandardMaterial({ color: 0x1f3a8a }), head, 0, .1, -.004); cord.rotation.x = Math.PI / 2 - .2; }
   } else if (o.hair === 'cloth') {
     const cap = mesh(SG(.116, 36, 16, 0, Math.PI * 2, 0, Math.PI * .5), clothM, head, 0, .03, -.006); cap.scale.set(.95, 1.1, 1.06); cap.rotation.x = -.1;
     const band = mesh(new THREE.TorusGeometry(.105, .012, 8, 40), sashM, head, 0, .052, -.004); band.rotation.x = Math.PI / 2 - .1; band.scale.set(.96, 1.08, 1);
@@ -342,9 +348,31 @@ export function createHuman(opt = {}) {
   if (robe) {
     const rb = mesh(latheUp([[.29, .02], [.3, .05], [.27, .35], [.22, .7], [.2, .95], [.2, 1.15], [.21, 1.3], [.2, 1.4], [.15, 1.46], [.08, 1.5]], 40), robeM, root);
     rb.scale.set(1, 1, .78);
-    const mt = mesh(latheUp([[.3, .35], [.27, .7], [.235, 1.0], [.23, 1.25], [.225, 1.38], [.17, 1.46], [.1, 1.5]], 40, Math.PI - 1.55, 3.1), mantleM, root);
-    mt.scale.set(1.04, 1, .86);
+    if (o.mantle !== null) {
+      const mt = mesh(latheUp([[.3, .35], [.27, .7], [.235, 1.0], [.23, 1.25], [.225, 1.38], [.17, 1.46], [.1, 1.5]], 40, Math.PI - 1.55, 3.1), mantleM, root);
+      mt.scale.set(1.04, 1, .86);
+    }
     const sh = mesh(new THREE.TorusGeometry(.2, .022, 10, 40), sashM, root, 0, .98, 0); sh.rotation.x = Math.PI / 2; sh.scale.set(1, .8, 1);
+    // nombre en la espalda también con túnica
+    if (o.name) {
+      const nm = new THREE.MeshStandardMaterial({ map: nameTexture(o.name.toUpperCase(), '#ffd34d'), transparent: true, roughness: .7, polygonOffset: true, polygonOffsetFactor: -2 });
+      const r0 = o.mantle !== null ? .238 : .212;
+      const back = mesh(new THREE.CylinderGeometry(r0, r0, .11, 24, 1, true, Math.PI - .85, 1.7), nm, root, 0, 1.22, 0); back.scale.set(1.04, 1, o.mantle !== null ? .87 : .8); back.castShadow = false;
+    }
+  }
+  // Vestiduras del sumo sacerdote (Éxodo 28): manto azul con granadas y campanillas, efod, pectoral con 12 piedras y mitra con lámina de oro
+  if (o.priest) {
+    const blue = new THREE.MeshStandardMaterial({ map: clothTexture(0x1f3a8a, 'linen'), roughness: .85, side: THREE.DoubleSide });
+    const bm = mesh(latheUp([[.27, .46], [.255, .6], [.225, .9], [.212, 1.15], [.216, 1.3], [.2, 1.4], [.15, 1.46], [.08, 1.5]], 40), blue, root); bm.scale.set(1.02, 1, .8);
+    const pomC = [0x1f3a8a, 0x5b2a7a, 0xb3122e];
+    for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, x = Math.sin(a) * .272, z = Math.cos(a) * .272 * .8; if (i % 2) mesh(new THREE.ConeGeometry(.018, .035, 8), gold, root, x, .44, z); else { const pm = mesh(SG(.02, 10, 8), new THREE.MeshStandardMaterial({ color: pomC[(i / 2) % 3], roughness: .6 }), root, x, .445, z); pm.scale.y = 1.2; } }
+    const efTex = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d'); const cs = ['#d4a72c', '#20408f', '#5b2a7a', '#b3122e', '#efe8d8']; for (let i = 0; i < 16; i++) { g.fillStyle = cs[i % 5]; g.fillRect(i * 8, 0, 8, 64); } const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; })();
+    const efod = mesh(new THREE.CylinderGeometry(.228, .222, .42, 28, 1, true), new THREE.MeshStandardMaterial({ map: efTex, roughness: .6, metalness: .3, side: THREE.DoubleSide }), root, 0, 1.12, 0); efod.scale.z = .8;
+    const band = mesh(new THREE.TorusGeometry(.225, .02, 8, 36), new THREE.MeshStandardMaterial({ map: efTex, metalness: .3, roughness: .5 }), root, 0, .93, 0); band.rotation.x = Math.PI / 2; band.scale.set(1, .8, 1);
+    for (const s2 of [-1, 1]) { const ony = mesh(SG(.028, 12, 10), new THREE.MeshPhysicalMaterial({ color: 0x1a1a1a, roughness: .1, clearcoat: 1 }), root, s2 * .13, 1.44, .02); const st = mesh(new THREE.BoxGeometry(.05, .16, .03), new THREE.MeshStandardMaterial({ map: efTex }), root, s2 * .12, 1.36, .14); st.rotation.x = -.3; }
+    const plate = mesh(new THREE.BoxGeometry(.17, .2, .02), gold, root, 0, 1.26, .175); plate.rotation.x = -.08;
+    const gems = [0xc0392b, 0xf1c40f, 0x27ae60, 0x16a085, 0x2c3e8f, 0xecf0f1, 0xe67e22, 0x8e44ad, 0x9b59b6, 0x3498db, 0x34495e, 0x1abc9c];
+    gems.forEach((c, i) => { const col = i % 3, row = Math.floor(i / 3); mesh(new THREE.BoxGeometry(.034, .034, .02), new THREE.MeshPhysicalMaterial({ color: c, roughness: .05, clearcoat: 1, metalness: .1 }), root, (col - 1) * .048, 1.335 - row * .045, .19).rotation.x = -.08; });
   }
 
   // Brazos

@@ -7,6 +7,9 @@ import { createHuman, bakeStatic } from './human.js';
    ========================================================= */
 export const CHARACTERS = [
   // ---------- Nivel 1 ----------
+  { id: 'aaron', name: 'Aarón', kind: 'Sumo sacerdote', level: 0, spot: 'aaron', prop: null, look: { priest: true, mantle: null, robe: 0xf4f0e6, sash: 0x5b2a7a, hair: 'turban', beard: { color: 0x8a8278, len: .14 }, hairColor: 0x8a8278, age: 1 },
+    msg: 'Soy Aarón, hermano de Moisés. Dios me escogió como sumo sacerdote. Llevo el efod, el manto azul con granadas y campanillas de oro, y sobre el pecho el pectoral con doce piedras, una por cada tribu de Israel. En la mitra dice: «Santidad al SEÑOR».',
+    ref: 'Éxodo 28:1-38', gift: 'El pectoral con las doce piedras', emoji: '💎' },
   { id: 'noe', name: 'Noé', kind: 'Patriarca', level: 0, spot: 'noah', prop: 'staff', look: { beard: { color: 0xeeeae2, len: .2 }, hairColor: 0xe6e2da, hair: 'long', age: 1, robe: 0xbfa77a, mantle: 0x4a5a3a },
     msg: 'El SEÑOR me mandó construir un arca porque iba a enviar un diluvio. Hallé gracia ante los ojos del SEÑOR y, por la fe, obedecí: entré con mi familia y los animales de dos en dos. Al final, la paloma volvió con una hoja de olivo, y Dios puso su arco en las nubes como señal de su pacto.',
     ref: 'Génesis 6:8, 13-22; 8:11; 9:13; Hebreos 11:7', gift: 'La rama de olivo de la paloma', emoji: '🫒' },
@@ -128,6 +131,25 @@ export const CHARACTERS = [
   { id: 'pablo', name: 'Pablo', kind: 'Apóstol', level: 5, prop: 'scroll', look: { beard: { len: .08, color: 0x3a2a1c }, hairColor: 0x3a2a1c, robe: 0x8a3a3a, mantle: 0xd0c098 },
     msg: 'Perseguía a la iglesia hasta que Jesús se me apareció en el camino a Damasco. Desde entonces llevé el evangelio a las naciones y escribí cartas a las iglesias. No me avergüenzo del evangelio.',
     ref: 'Hechos 9:1-20; Romanos 1:16', gift: 'Las cartas a las iglesias', emoji: '✉️' },
+];
+// Regalos especiales en lugares santos (también suman como moneda)
+export const TREASURES = [
+  { id: 'lugar-santo', name: 'Regalo del Lugar Santo', kind: 'Tesoro del tabernáculo', spot: 'holy', gift: 'El pan de la Presencia', emoji: '🍞',
+    msg: 'Sobre la mesa de oro siempre había doce panes delante del SEÑOR, uno por cada tribu de Israel. Jesús dijo: «Yo soy el pan de la vida; el que viene a mí no tendrá hambre».', ref: 'Levítico 24:5-9; Juan 6:35' },
+  { id: 'lugar-santisimo', name: 'Regalo del Lugar Santísimo', kind: 'Tesoro del tabernáculo', spot: 'holiest', gift: 'La vasija de oro con el maná', emoji: '🏺',
+    msg: 'Dentro del arca del pacto se guardaban la vasija de oro con el maná, la vara de Aarón que reverdeció y las tablas del pacto. Dios alimentó a su pueblo con maná del cielo cada día en el desierto.', ref: 'Éxodo 16:31-35; Hebreos 9:4' },
+  { id: 'barco', name: 'Regalo del barco', kind: 'Tesoro del mar', spot: 'ship', gift: 'El ancla de la esperanza', emoji: '⚓',
+    msg: 'En medio de la tormenta, la esperanza en Dios es como un ancla del alma, segura y firme. Jesús calmó el viento y el mar con su palabra.', ref: 'Hebreos 6:19; Marcos 4:39' },
+  { id: 'belen', name: 'Regalo de Belén', kind: 'Lugar bíblico', spot: 'belen', gift: 'Oro, incienso y mirra', emoji: '🎁',
+    msg: 'Los magos vieron la estrella, se regocijaron con gran gozo y, al ver al niño con María, su madre, se postraron y lo adoraron. Le ofrecieron presentes: oro, incienso y mirra.', ref: 'Mateo 2:10-11' },
+  { id: 'jerico', name: 'Regalo de Jericó', kind: 'Lugar bíblico', spot: 'jerico', gift: 'El cordón escarlata de Rahab', emoji: '🧵',
+    msg: 'Rahab ató el cordón escarlata a su ventana, como le dijeron los espías, y ella y toda su familia fueron salvados cuando cayó Jericó. Por la fe, Rahab no pereció.', ref: 'Josué 2:18-21; 6:25; Hebreos 11:31' },
+  { id: 'babel', name: 'Regalo de Babel', kind: 'Lugar bíblico', spot: 'babel', gift: 'El ladrillo de Babel', emoji: '🧱',
+    msg: 'En Babel el orgullo dividió a los hombres en muchas lenguas. En Pentecostés el Espíritu Santo hizo lo contrario: personas de muchas naciones oyeron las maravillas de Dios en su propia lengua.', ref: 'Génesis 11:7-9; Hechos 2:6-11' },
+  { id: 'marrojo', name: 'Regalo del Mar Rojo', kind: 'Lugar bíblico', spot: 'marrojo', gift: 'La vara de Moisés', emoji: '🪄',
+    msg: 'Dios le dijo a Moisés: «Alza tu vara y extiende tu mano sobre el mar y divídelo». El SEÑOR peleó por su pueblo, e Israel vio la gran obra que hizo y creyó en Él.', ref: 'Éxodo 14:16, 31' },
+  { id: 'calvario', name: 'Regalo del Calvario', kind: 'Lugar bíblico', spot: 'calvario', gift: 'La tumba vacía: ¡Ha resucitado!', emoji: '✝️',
+    msg: 'Jesús dijo: «Yo soy la resurrección y la vida; el que cree en mí, aunque muera, vivirá». La tumba vacía es la gran noticia: ¡Cristo vive!', ref: 'Juan 11:25; Mateo 28:6' },
 ];
 export const forLevel = lvl => CHARACTERS.filter(c => c.level === lvl || c.level === 0);
 

@@ -39,3 +39,13 @@ Necesita un servidor web (usa módulos de JavaScript). Con GitHub Pages: *Settin
 - `js/vendor/` – three.js (licencia MIT)
 
 Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman Foundation. Usadas con permiso.
+
+## Novedades
+- **Mar, playa, muelle y barco** al occidente (se puede subir al barco).
+- **Lugares bíblicos al norte** que se desbloquean nivel a nivel: Belén, Jericó, la torre de Babel, el Mar Rojo abierto y el Calvario con la tumba vacía.
+- **Tabernáculo más grande** (1 codo = 0,8 m), con Aarón el sumo sacerdote, sacerdotes levitas y ovejas; regalos en el Lugar Santo y el Lugar Santísimo.
+- **Arca de Noé por dentro**, con rampa de una sola inclinación, animales que suben (incluidos gallinas y monos) y aves volando.
+- **Hora del día**: día, atardecer o noche con luna y estrellas.
+- **Vestimentas**: moderna, túnica y manto, pastor, levita y sumo sacerdote Aarón (se desbloquea al completar el nivel Intermedio), con más colores.
+- **Mapa completo** (tecla `M` o botón 🗺), **turbo** (tecla `R` o botón ⚡), pantalla completa (tecla `F`), joystick de bola en el celular.
+- Cada regalo cuenta como una moneda y suma 10 segundos. Niños jugando con voces y pasos que se oyen según la distancia.

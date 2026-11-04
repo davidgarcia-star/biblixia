@@ -1,11 +1,12 @@
 import * as THREE from 'three';
-import { bakeStatic } from './human.js';
+import { bakeStatic, createHuman } from './human.js';
+import { makeAnimal } from './scenes.js';
 
 /* =========================================================
    EL TABERNÁCULO (Éxodo 25–27; 30; 36–40)
-   Escala: 1 codo = 0,5 m. Entrada al oriente (+X). Norte = −Z.
+   Escala ampliada para el juego: 1 codo = 0,8 m (proporciones exactas). Entrada al oriente (+X). Norte = −Z.
    ========================================================= */
-const C = 0.5;
+export const C = 0.8;
 
 function tex(w, h, draw, rep = [1, 1]) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
@@ -110,7 +111,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     text: 'Altar de madera de acacia cubierto de bronce, de 5 codos de largo y ancho y 3 de alto, con un cuerno en cada esquina y una rejilla de bronce. Allí se ofrecían los holocaustos. Apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Juan 1:29' });
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
-  const lavX = cx + 6;
+  const lavX = cx + 10 * C;
   add(new THREE.CylinderGeometry(.35, .5, .7, 20), M.bronze, lavX, .35, cz);
   add(new THREE.LatheGeometry([[0, 0], [.3, .02], [.75, .2], [.85, .42], [.8, .45]].map(([x, y]) => new THREE.Vector2(x, y)), 32), M.bronze, lavX, .7, cz);
   add(new THREE.CircleGeometry(.76, 32), M.water, lavX, 1.08, cz).rotation.x = -Math.PI / 2;
@@ -145,7 +146,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     box(.3, .18, .3, M.bronze, tx1, .09, z); cyl(.09, TH, M.gold, tx1, TH / 2, z, 12); box(.2, .14, .2, M.gold, tx1, TH, z);
     if (i !== 2) addBox(tx1 - .15, tx1 + .15, z - .15, z + .15, TH);
   }
-  for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(1.6, TH - .3), M.screen, tx1 + .05, (TH - .3) / 2 + .15, cz + s * 1.7); p.rotation.y = Math.PI / 2; }
+  const eh = 5 * C; for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(eh - .9, TH - .3), M.screen, tx1 + .05, (TH - .3) / 2 + .15, cz + s * (eh + .9) / 2); p.rotation.y = Math.PI / 2; }
   const lintel = add(new THREE.PlaneGeometry(tz1 - tz0, .9), M.screen, tx1 + .05, TH - .45, cz); lintel.rotation.y = Math.PI / 2;
 
   /* ---------------- LUGAR SANTO: 20 codos ---------------- */
@@ -185,7 +186,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     const z = tz0 + (i + .5) / 4 * (tz1 - tz0);
     box(.28, .16, .28, M.silver, veilX, .08, z); cyl(.08, TH, M.gold, veilX, TH / 2, z, 12);
   }
-  for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(1.95, TH - .1), M.veil, veilX, (TH - .1) / 2, cz + s * 1.53); p.rotation.y = Math.PI / 2; }
+  const vh = 5 * C; for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(vh - .58, TH - .1), M.veil, veilX, (TH - .1) / 2, cz + s * (vh + .58) / 2); p.rotation.y = Math.PI / 2; }
   addBox(veilX - .1, veilX + .1, tz0, cz - .58, TH); addBox(veilX - .1, veilX + .1, cz + .58, tz1, TH);
   zones.push({ id: 'velo', name: 'El velo', minX: veilX - .8, maxX: veilX + .8, minZ: tz0, maxZ: tz1, pri: 4,
     text: 'Velo de azul, púrpura, carmesí y lino fino torcido con querubines bordados, colgado de 4 columnas cubiertas de oro. Separaba el Lugar Santo del Santísimo. Cuando Jesús murió, el velo del templo se rasgó en dos.', ref: 'Éxodo 26:31-33; Mateo 27:51; Hebreos 10:19-20' });
@@ -203,7 +204,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const wingShape = new THREE.Shape(); wingShape.moveTo(0, 0); wingShape.quadraticCurveTo(.12, .42, .52, .5); wingShape.quadraticCurveTo(.3, .3, .34, .12); wingShape.quadraticCurveTo(.2, .1, 0, 0);
   const wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth: .015, bevelEnabled: false });
   for (const sx of [-1, 1]) {
-    const ch = new THREE.Group(); ch.position.set(hhX + sx * (aL / 2 - .12), aH + .05, cz); ch.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2; S.add(ch);
+    const ch = new THREE.Group(); ch.position.set(hhX + sx * (aL / 2 - .12), aH + .05, cz); ch.rotation.y = sx > 0 ? -Math.PI / 2 : Math.PI / 2; ch.scale.setScalar(C / .5); S.add(ch);
     const body = new THREE.Mesh(new THREE.CapsuleGeometry(.06, .16, 6, 12), M.gold); body.position.y = .14; body.rotation.x = .35; ch.add(body);
     const hd = new THREE.Mesh(new THREE.SphereGeometry(.055, 16, 12), M.gold); hd.position.set(0, .3, .07); ch.add(hd);
     for (const s of [-1, 1]) { const w = new THREE.Mesh(wingGeo, M.gold); w.position.set(s * .04, .2, -.02); w.rotation.set(-.35, s > 0 ? -Math.PI / 2 + .25 : Math.PI / 2 - .25, 0); w.scale.set(1, 1, 1); if (s < 0) w.scale.x = -1; ch.add(w); }
@@ -224,17 +225,33 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const cloudM = new THREE.SpriteMaterial({ map: cloudTex, transparent: true, depthWrite: false, fog: false });
   const clouds = [];
   for (let i = 0; i < 26; i++) {
-    const s = new THREE.Sprite(cloudM); const y = 9 + i * 1.6;
+    const s = new THREE.Sprite(cloudM); const y = TH + 5 + i * 1.7;
     s.position.set(hhX + 3 + Math.sin(i * 1.7) * 1.2, y, cz + Math.cos(i * 2.3) * 1.2); s.scale.setScalar(6 + Math.sin(i) * 1.5);
     T.add(s); clouds.push({ s, y, k: i });
   }
   zones.push({ id: 'nube', name: 'La columna de nube', minX: -1e9, maxX: -1e9, minZ: 0, maxZ: 0, pri: 0, text: '', ref: '' });
 
+  // Sacerdotes levitas con vestiduras de lino (Éxodo 28:40-42) y ovejas para el sacrificio (Levítico 1:10)
+  const priest = (px, pz, ry, pose) => {
+    const h = createHuman({ detail: .5, outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: [0x20408f, 0x5b2a7a, 0xb3122e][(px * 7 | 0) % 3 < 0 ? 0 : (px * 7 | 0) % 3], hair: 'turban', beard: { len: .07 }, hairColor: 0x2a1a10, skin: 0xa8714f });
+    if (pose === 'offer') { for (const [i, sg] of [[0, -1], [1, 1]]) { h.arms[i].shoulder.rotation.set(-.9, 0, sg * -.1); h.arms[i].elbow.rotation.x = -.6; } }
+    if (pose === 'wash') { for (const [i, sg] of [[0, -1], [1, 1]]) { h.arms[i].shoulder.rotation.set(-.7, 0, sg * -.15); h.arms[i].elbow.rotation.x = -.9; } }
+    const b = bakeStatic(h.root); b.position.set(px, 0, pz); b.rotation.y = ry; S.add(b); addBox(px - .35, px + .35, pz - .35, pz + .35, 1.8);
+  };
+  priest(altX + aw / 2 + .9, cz - 1.2, -Math.PI / 2, 'offer');
+  priest(altX - .4, cz + aw / 2 + .9, Math.PI, 'offer');
+  priest(lavX + 1.2, cz + .2, -Math.PI / 2, 'wash');
+  priest(x1 - 3, cz - gateHalf + 2, -Math.PI / 2);
+  priest(x1 - 3, cz + gateHalf - 2, -Math.PI / 2);
+  const sheep = [];
+  [[altX + 5, cz + 4], [altX + 6.5, cz + 5.2], [altX + 4.2, cz + 6.2], [x1 - 7, cz - 4]].forEach(([sx2, sz2], i) => { const o = makeAnimal('oveja', .95); o.position.set(sx2, 0, sz2); o.rotation.y = i * 1.7; T.add(o); sheep.push(o); addBox(sx2 - .5, sx2 + .5, sz2 - .5, sz2 + .5, 1); });
   S.updateMatrixWorld(true);
   T.add(bakeStatic(S));
   const flames = []; T.traverse(m => { if (m.userData.flame) flames.push(m); });
   return {
     zones: zones.filter(z => z.text),
+    bounds: { x0, x1, z0, z1 }, gate: [x1, cz],
+    holyGift: [veilX + 3.2, cz], holiestGift: [hhX + 2.3, cz + 1.3], aaronSpot: [veilX + 7, cz],
     entrance: new THREE.Vector3(x1 + 4, 0, cz),
     update(t) {
       for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
@@ -246,17 +263,31 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
 
 /* Tiendas del campamento de Israel alrededor del tabernáculo */
 export function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }) {
-  const cols = [0xcdb48a, 0xb89a6a, 0xa88456, 0xd8c49a, 0x8f6c48, 0xc2a070];
-  const g = new THREE.ConeGeometry(1.8, 2.4, 4, 1, false, Math.PI / 4);
+  // Tiendas de pelo de cabra, como las de los patriarcas (Génesis 18:1; Cantares 1:5)
+  const hairT = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#2a221c'; x.fillRect(0, 0, 128, 64); for (let i = 0; i < 128; i += 16) { x.fillStyle = 'rgba(200,180,150,.18)'; x.fillRect(i, 0, 3, 64); } for (let i = 0; i < 1500; i++) { x.fillStyle = Math.random() < .5 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.1)'; x.fillRect(Math.random() * 128, Math.random() * 64, 2, 1); } const t = new THREE.CanvasTexture(x.canvas); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  const sh = new THREE.Shape(); sh.moveTo(-2.6, 0); sh.lineTo(-2.6, .9); sh.quadraticCurveTo(-1.9, 1.9, -1.3, 1.95); sh.quadraticCurveTo(-.65, 1.6, 0, 2.15); sh.quadraticCurveTo(.65, 1.6, 1.3, 1.95); sh.quadraticCurveTo(1.9, 1.9, 2.6, .9); sh.lineTo(2.6, 0); sh.lineTo(-2.6, 0);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 3.4, bevelEnabled: false }); g.translate(0, 0, -1.7);
+  const uvA = g.attributes.uv; for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uvA.getX(i) * .35, uvA.getY(i) * .35);
+  const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1 }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
+  const cols = [0, 0, 0];
   const pts = [];
   for (let i = 0; i < 36; i++) {
     const a = i / 36 * Math.PI * 2;
     const x = cx + Math.cos(a) * radiusX * (.92 + rnd() * .16), z = cz + Math.sin(a) * radiusZ * (.92 + rnd() * .16);
     pts.push([x, z]);
   }
+  const S = new THREE.Group();
   for (const [x, z] of pts) {
-    const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: cols[(rnd() * cols.length) | 0], roughness: 1 }));
-    m.position.set(x, 1.2, z); m.rotation.y = rnd() * 3; m.scale.set(1, 1, 1.4); m.castShadow = m.receiveShadow = true; group.add(m);
-    addBox(x - 1.5, x + 1.5, z - 1.8, z + 1.8, 2.4);
+    if (Math.abs(z - cz) < 6 && x > cx) continue; // camino libre hacia la puerta del atrio
+    const ry = Math.atan2(cx - x, cz - z) + Math.PI / 2;
+    const t = new THREE.Group(); t.position.set(x, 0, z); t.rotation.y = ry;
+    const m = new THREE.Mesh(g, tentM); m.castShadow = m.receiveShadow = true; t.add(m);
+    const op = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), dark); op.position.set(0, .7, 1.71); t.add(op);
+    for (const sx of [-2.4, 0, 2.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.2, 5), new THREE.MeshStandardMaterial({ color: 0x5a3a1e })); p.position.set(sx, 1.1, 2.1); t.add(p); }
+    const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .03, 2.6); t.add(r2);
+    S.add(t);
+    addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
   }
+  S.updateMatrixWorld(true);
+  group.add(bakeStatic(S));
 }
