@@ -1677,7 +1677,7 @@ async function startLevelNow(i) {
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; sound.swimLoop(0); sound.boatLoop(0);
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -1783,6 +1783,35 @@ function stopDriving() {
   world.ship.position.set(b.home.x, 0, b.home.z); world.ship.rotation.y = 0; b.heading = 0;
   P.pos.set(b.home.x - 4, b.deckY, b.home.z + 1.5); P.vy = 0; P.onGround = true; P.speed = 0;
   cam.dist = cam.distSave || 6.4; toast('⚓ El barco volvió al muelle', '#ffd34d'); sound.boatLoop(0); sound.splash(.4); sound.click();
+}
+/* ---------- Sentarse en una silla del templo ---------- */
+let sitPressed = false;
+function sitBtns(mode) { // mode: '' (oculto), 'sit' o 'stand'
+  for (const id of ['tSit', 'btnSit']) { const b = document.getElementById(id); if (!b) continue; b.classList.toggle('hidden', !mode); if (mode) b.textContent = id === 'tSit' ? (mode === 'sit' ? '🪑 SENTARSE' : '🧍 PARARSE') : (mode === 'sit' ? '🪑' : '🧍'); b.title = mode === 'sit' ? 'Sentarse (tecla T)' : 'Levantarse (tecla T)'; }
+}
+['tSit', 'btnSit'].forEach(id => { const b = document.getElementById(id); if (b) { b.addEventListener('pointerdown', e => { e.preventDefault(); sitPressed = true; }); b.addEventListener('click', e => e.preventDefault()); } });
+function nearSeat() {
+  const ch = world && world.church; if (!ch || !ch.seats) return null;
+  let best = null, bd = 1.15;
+  for (const st of ch.seats) { const d = Math.hypot(P.pos.x - st.x, P.pos.z - (st.z + .55)); if (d < bd && Math.abs(P.pos.y - st.y) < 1) { bd = d; best = st; } }
+  return best;
+}
+function sitDown(st) {
+  P.sit = { x: st.x, y: st.y, z: st.z - .06, ry: 0, back: P.pos.clone(), t: 0 };
+  P.speed = 0; P.vy = 0; P.praise = null; sitBtns('stand'); sound.click();
+  toast('🪑 Te sentaste · ' + (isTouch ? 'toca 🧍 PARARSE' : 'T para levantarte'), '#9fd8ff');
+}
+function standUp() {
+  const s = P.sit; if (!s) return;
+  P.sit = null; P.pos.copy(s.back); P.vy = 0; P.onGround = true; P.speed = 0; sitBtns(''); sound.click();
+}
+function sitUpdate(dt) {
+  const s = P.sit; s.t += dt;
+  P.pos.set(s.x, s.y, s.z); P.heading = s.ry; P.speed = 0; P.vy = 0; P.onGround = true;
+  const move = keys.KeyW || keys.ArrowUp || keys.KeyS || keys.ArrowDown || keys.KeyA || keys.ArrowLeft || keys.KeyD || keys.ArrowRight || (joy.active && Math.hypot(joy.x, joy.y) > .5);
+  const pr = $('prompt'); if (!s.shown) { s.shown = true; pr.innerHTML = `${isTouch ? 'Toca <b>TOMAR</b>' : '<kbd>T</kbd>'} 🧍 Levantarse`; pr.classList.add('show'); }
+  if (takePressed || sitPressed || jumpPressed || (move && s.t > .6)) { takePressed = sitPressed = jumpPressed = false; pr.classList.remove('show'); standUp(); }
+  updateZone(dt); updateHUD();
 }
 /* ---------- Autos de lujo: subir, conducir y bajar ---------- */
 const luxName = c => c.kind === 'pickup' ? 'la camioneta pickup blanca' : 'el superdeportivo blanco';
@@ -2030,6 +2059,14 @@ function updateZone(dt) {
     setTimeout(() => sound.say('¡Gloria a Dios! ¡Aleluya!', { male: save.player.gender !== 'f', rate: .95 }), 300);
   }
   P.inChurch = church;
+  // la servidora de la recepción saluda cuando llegas
+  const gr = world.church && world.church.greeter;
+  if (gr && gr.cool <= 0 && Math.hypot(P.pos.x - gr.x, P.pos.z - gr.z) < 5 && Math.abs(P.pos.y - gr.y) < 2) {
+    gr.g = 3.5; gr.cool = 20;
+    const f = save.player.gender === 'f';
+    sound.say(`¡Bendiciones! ${f ? 'Bienvenida' : 'Bienvenido'} a la casa de Dios.`, { male: false, rate: .95 });
+    toast(`💬 Servidora: «¡Bendiciones! ${f ? 'Bienvenida' : 'Bienvenido'} a la casa de Dios»`, '#ffe9a8');
+  }
   if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
 }
@@ -2055,6 +2092,7 @@ function update(dt) {
   let ix = 0, iz = 0;
   if (P.driving) { driveBoat(dt); return; }
   if (P.car) { driveCar(dt); return; }
+  if (P.sit) { sitUpdate(dt); return; }
   if (keys.KeyW || keys.ArrowUp) iz += 1;
   if (keys.KeyS || keys.ArrowDown) iz -= 1;
   if (keys.KeyA || keys.ArrowLeft) ix -= 1;
@@ -2225,6 +2263,15 @@ function update(dt) {
     takePressed = false;
     updateZone(dt); updateHUD(); return;
   }
+  // Silla libre del templo: sentarse (T, TOMAR o el botón 🪑)
+  const seat = !near && nearSeat();
+  sitBtns(seat ? 'sit' : '');
+  if (seat) {
+    pr.innerHTML = `${isTouch ? 'Toca <b>TOMAR</b> o 🪑' : '<kbd>T</kbd> o 🪑'} Sentarse`; pr.classList.add('show'); $('tTake').classList.add('ready');
+    if (takePressed || sitPressed) { takePressed = sitPressed = false; sitDown(seat); }
+    takePressed = false; sitPressed = false; updateZone(dt); updateHUD(); return;
+  }
+  sitPressed = false;
   // Acciones de la vida diaria (comer, beber, dormir, bañarse, comprar)
   if (world.life && !near) {
     let ba = null, bd = 9;
@@ -2476,7 +2523,7 @@ function loop() {
   // Resolución automática suave: solo baja un poco si el equipo va lento (nunca quita sombras ni detalle)
   // Cambiar la resolución obliga a rehacer la imagen de la pantalla (da un tirón), así que se hace pocas veces:
   // se mide durante 4 s, solo baja si de verdad va lento, solo sube si va muy sobrado y nunca sube y baja sin parar
-  if (!building && state === 'play' && raw < .25 && perf.changes < 5) {
+  if (!building && state === 'play' && raw < .25 && perf.changes < 2) {
     perf.acc += raw; perf.n++;
     if (perf.acc > 4) {
       const avg = perf.acc / perf.n; let pr = renderer.getPixelRatio();
@@ -2566,7 +2613,7 @@ function loop() {
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1, sit: P.sit ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {

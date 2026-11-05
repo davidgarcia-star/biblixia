@@ -55,7 +55,7 @@
 }
 </script>
 <link rel="preload" as="image" href="img/fondo.webp" fetchpriority="high">
-<link rel="stylesheet" href="css/style.css?v=20261105g">
+<link rel="stylesheet" href="css/style.css?v=20261105j">
 <script type="importmap">{"imports":{"three":"./js/vendor/three.module.js","three/addons/":"./js/vendor/addons/"}}</script>
 </head>
 <body>
@@ -91,6 +91,7 @@
     <button class="ib" id="btnFull" aria-label="Pantalla completa" title="Pantalla completa (tecla F)">⛶</button>
     <button class="ib" id="btnMusic" aria-label="Música instrumental" title="Música instrumental">🎵</button>
     <button class="ib" id="btnSfx" aria-label="Efectos de sonido" title="Efectos de sonido">🔊</button>
+    <button class="ib hidden" id="btnSit" aria-label="Sentarse" title="Sentarse (tecla T)">🪑</button>
     <button class="ib hidden" id="btnHonk" aria-label="Pitar" title="Pitar (tecla H)">📯</button>
   </div>
   <canvas id="minimap" width="300" height="300"></canvas>
@@ -110,6 +111,7 @@
     <button id="tTake" aria-label="Tomar">TOMAR<small>T</small></button>
     <button id="tRun" class="small" aria-label="Correr">CORRER</button>
     <button id="tTurbo" class="small turbo" aria-label="Turbo">⚡ TURBO</button>
+    <button id="tSit" class="small hidden" aria-label="Sentarse">🪑 SENTARSE</button>
     <button id="tHonk" class="small hidden" aria-label="Pitar (claxon)">📯 PITAR</button>
     <button id="tSwap" class="small hidden" aria-label="Cambiar entre Adán y Eva">👫 CAMBIAR</button>
   </div>
@@ -262,6 +264,6 @@
 <div id="glLost" class="screen hidden"><div class="spinner"></div><p class="sub">Recuperando los gráficos… tu progreso está guardado.</p></div>
 <div id="loading" class="screen"><div class="spinner"></div><p class="sub">Construyendo la ciudad…</p></div>
 
-<script type="module" src="js/biblixia.min.js?v=20261105i"></script>
+<script type="module" src="js/biblixia.min.js?v=20261105j"></script>
 </body>
 </html>

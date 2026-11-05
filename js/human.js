@@ -578,7 +578,7 @@ export function compactParts(root, keep = new Set()) {
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1, praise = -1 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1, praise = -1, sit = 0 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -643,6 +643,12 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     P.t0 = P.t1 = -.1 * kn; P.k0 = P.k1 = .04 + 1.5 * kn; P.a0 = P.a1 = .55 * kn; P.hipY = .93 - .44 * kn;
     P.spineX = .28 * bow + .12 * kn; P.spineY = 0; P.headX = .5 * bow;
     P.s0x = P.s1x = -.55 * bow - .2 * kn; P.s0z = .32 * bow; P.s1z = -.32 * bow; P.e0 = P.e1 = -1.55 * bow;
+  }
+  // sentado en una silla: muslos al frente, rodillas dobladas y manos sobre las piernas
+  if (sit) {
+    P.t0 = P.t1 = -1.5; P.k0 = P.k1 = 1.5; P.a0 = P.a1 = 0; P.hipY = .52;
+    P.spineX = .04; P.spineY = 0; P.headX = Math.sin(t * .6) * .05;
+    P.s0x = P.s1x = -.55; P.s0z = .12; P.s1z = -.12; P.e0 = P.e1 = -.75;
   }
   // alabanza al entrar al templo: salta con los brazos arriba, se arrodilla y mueve la cabeza adorando
   let headSide = 0;

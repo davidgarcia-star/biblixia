@@ -582,3 +582,8 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 #tHonk{right:100px;bottom:186px;width:92px;height:40px;border-radius:20px;background:linear-gradient(180deg,#ffe38a,#e0a31a);color:#2a1a00;font-weight:900}
 #tHonk.hidden,#btnHonk.hidden{display:none!important}
 #touch.pc #tHonk{right:130px;bottom:58px}
+
+/* Botón para sentarse en el templo */
+#tSit{right:100px;bottom:186px;width:110px;height:40px;border-radius:20px;background:linear-gradient(180deg,#bfe6ff,#4fa3d8);color:#06223a;font-weight:900}
+#tSit.hidden,#btnSit.hidden{display:none!important}
+#touch.pc #tSit{right:130px;bottom:58px;width:120px}

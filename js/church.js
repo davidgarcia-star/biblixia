@@ -19,7 +19,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, ...o });
   const box = (w, h, d, m, x, y, z, { cast = true, recv = true } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; group.add(b); return b; };
   const solid = (a, b, c, d, top, bottom = 0) => addBox(Math.min(a, b), Math.max(a, b), Math.min(c, d), Math.max(c, d), top, bottom);
-  const dance = [];
+  const dance = [], seats = [];
   const person = (opts, x, z, ry, pose, { y = y0, anim = null } = {}) => {
     const f = opts.gender ? opts.gender === 'f' : r() < .5;
     const h = createHuman({ detail: .45, gender: f ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: [0x22243a, 0x1a1a1e, 0x2b3a57][(r() * 3) | 0],
@@ -70,7 +70,19 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   wall(X0, LZ, cx - 3, LZ, 4); wall(cx + 3, LZ, X1, LZ, 4);
   box(6, H - 4, T, wallM, cx, y0 + 4 + (H - 4) / 2, LZ);
   box(4, 1.1, 1, mat(0x6a4a2a), cx, y0 + .55, Z0 + 3.2); box(4.1, .06, 1.1, mat(0x2a2420, { roughness: .3 }), cx, y0 + 1.12, Z0 + 3.2); solid(cx - 2, cx + 2, Z0 + 2.7, Z0 + 3.7, y0 + 1.15);
-  person({ gender: 'f', topStyle: 'traje', top: 0x2e2e38 }, cx, Z0 + 4.1, Math.PI, 'clap');      // recepcionista dando la bienvenida
+  // servidora de la recepción: se mueve, saluda con gestos y dice «¡Bendiciones!» cuando llegas
+  const recep = createHuman({ detail: .6, gender: 'f', topStyle: 'traje', top: 0x2e2e38, skin: SKINS[2], legwear: 'falda', skirt: 0x22243a, hair: 'long', hairColor: 0x1d130c, tie: 0x8a1c24, name: '' });
+  recep.root.position.set(cx, y0, Z0 + 4.1); recep.root.rotation.y = Math.PI; group.add(recep.root);
+  const bubble = (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 160; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(255,255,255,.96)'; g.strokeStyle = '#d4a72c'; g.lineWidth = 8;
+    g.beginPath(); g.roundRect(8, 8, 496, 112, 40); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(230, 118); g.lineTo(256, 152); g.lineTo(282, 118); g.fill();
+    g.fillStyle = '#5a3a00'; g.font = '800 64px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('¡Bendiciones!', 256, 86);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); sp.scale.set(1.9, .6, 1); sp.position.set(cx, y0 + 2.45, Z0 + 4.1); sp.renderOrder = 20; sp.visible = false; group.add(sp); return sp;
+  })();
+  const greeter = { x: cx, z: Z0 + 4.1, y: y0, g: 0, cool: 0, h: recep, bubble };
   for (const sx of [-1, 1]) { box(2.2, .45, .9, mat(0x2a4a7a, { roughness: .9 }), cx + sx * 6, y0 + .25, Z0 + 1.3); box(2.2, .7, .2, mat(0x2a4a7a, { roughness: .9 }), cx + sx * 6, y0 + .6, Z0 + .9); solid(cx + sx * 6 - 1.1, cx + sx * 6 + 1.1, Z0 + .8, Z0 + 1.8, y0 + .45); }
   // baños
   const bath = (bx, label) => {
@@ -90,7 +102,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   addRamp(cx - 1.5, cx + 1.5, SZ - 2.4, SZ, y0 + .1, y0 + SH);   // escalones al centro
   for (let k = 0; k < 4; k++) box(3, .05, .6, mat(0xd8d0c0), cx, y0 + .1 + (k + 1) * (SH - .1) / 4, SZ - 2.4 + (k + .5) * .6, { cast: false });
   // pantalla LED con letras de alabanza
-  const scr = document.createElement('canvas'); scr.width = 1024; scr.height = 512; const sc = scr.getContext('2d');
+  // a media resolución (se dibuja igual, en coordenadas de 1024×512): 4 veces menos para subir a la tarjeta gráfica
+  const scr = document.createElement('canvas'); scr.width = 512; scr.height = 256; const sc = scr.getContext('2d'); sc.scale(.5, .5);
   const scrTex = new THREE.CanvasTexture(scr); scrTex.colorSpace = THREE.SRGBColorSpace;
   const lyrics = ['SANTO, SANTO, SANTO', 'DIGNO ERES, SEÑOR', 'GLORIA A DIOS EN LAS ALTURAS', '¡ALELUYA!', 'CRISTO VIVE', 'MIPROAA · ARDIENDO POR EL AVIVAMIENTO'];
   const drawScreen = (i, t) => {
@@ -143,7 +156,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       const xa = side < 0 ? X0 + 1.2 : cx + 1.6, xb = side < 0 ? cx - 1.6 : X1 - 1.2;
       for (let x = xa; x < xb - .3; x += .75) { await pace();
         box(.55, .08, .5, chairM, x + .27, y0 + .46, z, { cast: false }); box(.55, .5, .06, chairM, x + .27, y0 + .72, z - .25, { cast: false });
-        if (r() < .62) {
+        if (r() >= .62) seats.push({ x: x + .27, z, y: y0 });
+        else {
           const p = r(); const pose = p < .45 ? 'up' : p < .6 ? 'one' : p < .72 ? 'clap' : p < .8 ? 'cry' : p < .86 ? 'kneelUp' : 'up';
           const anim = pose === 'up' && r() < .35 ? 'jump' : pose === 'up' || pose === 'one' ? 'sway' : pose === 'clap' ? 'clap' : pose === 'cry' ? 'sob' : null;
           person({}, x + .27, z + .35, 0, pose, { anim });
@@ -162,14 +176,34 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     { id: 'iglesia', name: 'MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios! El grupo de alabanza dirige la adoración, el predicador comparte la Palabra y la congregación adora con todo el corazón. «Venid, adoremos y postrémonos; doblemos la rodilla ante el SEÑOR nuestro Hacedor.»', ref: 'Salmo 95:6' },
     { id: 'iglesia-lobby', name: 'Lobby de MIPROAA', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros. «Yo me alegré cuando me dijeron: Vamos a la casa del SEÑOR.»', ref: 'Salmo 122:1' },
   ];
-  let li = 0, lt = 0;
+  let li = 0, lt = 0, scrT = 0;
   return {
-    zones, cx, cz, inside: p => p.x > X0 && p.x < X1 && p.z > LZ && p.z < Z1,
+    zones, cx, cz, seats, greeter, inside: p => p.x > X0 && p.x < X1 && p.z > LZ && p.z < Z1,
     update(dt, t, camPos) {
       const near = Math.hypot(cx - camPos.x, cz - camPos.z) < 70;
       if (!near) return;
+      // gestos de la servidora: al saludar levanta la mano y la mueve, abre el otro brazo y asiente; si no, conversa con las manos
+      {
+        const G = greeter, A = recep.arms, k = Math.min(1, dt * 8), L = THREE.MathUtils.lerp;
+        G.g = Math.max(0, G.g - dt); G.cool = Math.max(0, G.cool - dt); G.bubble.visible = G.g > .2;
+        const S = (o, p, v) => { o[p] = L(o[p], v, k); };
+        if (G.g > 0) {
+          S(A[1].shoulder.rotation, 'x', -2.55); S(A[1].shoulder.rotation, 'z', .3 + Math.sin(t * 10) * .28); S(A[1].elbow.rotation, 'x', -.55 + Math.sin(t * 10) * .25);
+          S(A[0].shoulder.rotation, 'x', -1.05); S(A[0].shoulder.rotation, 'z', -.55); S(A[0].elbow.rotation, 'x', -.35);
+          S(recep.head.rotation, 'x', .08 + Math.sin(t * 5) * .14); S(recep.spine.rotation, 'x', .1);
+        } else {
+          const talk = Math.sin(t * .7) > -.2;   // a ratos habla con las manos, a ratos las junta
+          S(A[1].shoulder.rotation, 'x', talk ? -.85 + Math.sin(t * 2.3) * .22 : -.55); S(A[1].shoulder.rotation, 'z', talk ? -.1 : -.25); S(A[1].elbow.rotation, 'x', talk ? -1.25 + Math.sin(t * 3.1) * .35 : -1.2);
+          S(A[0].shoulder.rotation, 'x', talk ? -.7 + Math.sin(t * 1.9 + 1) * .18 : -.55); S(A[0].shoulder.rotation, 'z', talk ? .1 : .25); S(A[0].elbow.rotation, 'x', talk ? -1.1 + Math.sin(t * 2.7 + 2) * .3 : -1.2);
+          S(recep.head.rotation, 'x', Math.sin(t * 1.3) * .06); S(recep.spine.rotation, 'x', 0);
+        }
+        recep.head.rotation.y = Math.sin(t * .45) * .35; recep.spine.rotation.y = Math.sin(t * .45) * .08;
+        recep.hips.position.y = .93 + Math.sin(t * 1.8) * .004;
+        for (const e of recep.eyes) e.scale.y = (t % 3.7) < .12 ? .15 : 1;
+      }
       if ((lt += dt) > 4) { lt = 0; li = (li + 1) % lyrics.length; }
-      if (((t * 6) | 0) % 2 === 0) drawScreen(li, t);
+      // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
+      if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
       for (const d of dance) {
         if (d.kind === 'jump') d.o.position.y = d.y + Math.max(0, Math.sin(t * 6 + d.ph)) * .35;
