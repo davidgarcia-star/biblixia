@@ -62,6 +62,8 @@ canvas.addEventListener('webglcontextlost', e => {
 }, false);
 canvas.addEventListener('webglcontextrestored', () => { const gl = document.getElementById('glLost'); if (gl) gl.classList.add('hidden'); }, false);
 setTimeout(() => { try { sessionStorage.removeItem('bx_reload'); } catch (_) {} }, 60000);
+// No revisar errores de sombreadores en el sitio publicado: esa revisión obliga a esperar a cada uno
+renderer.debug.checkShaderErrors = /^(localhost|127\.)/.test(location.hostname);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -435,21 +437,71 @@ M.sea.onBeforeCompile = sh => {
    MUNDO
    ========================================================= */
 let world = null;
-// Preparar los sombreadores por partes (unos cuantos objetos a la vez) para no congelar la pantalla:
-// en muchos celulares compilar todo de una sola vez bloquea el juego varios segundos.
+// Preparar los sombreadores y las texturas por partes para no congelar la pantalla.
+// Antes se mandaban a compilar todos de golpe y el celular se quedaba esperando a que terminaran
+// en el primer cuadro (varios segundos congelado). Ahora se espera a cada grupo SIN bloquear
+// (el teléfono los compila en segundo plano) y se terminan de preparar de a pocos.
+const TEX_KEYS = ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'aoMap', 'lightMap'];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let warmRT = null; const warmCam = new THREE.PerspectiveCamera();
 async function warmShaders(root, cam) {
-  const seen = new Set(), batch = [];
-  root.traverse(o => { if (!o.material) return; for (const m of [].concat(o.material)) if (m && !seen.has(m)) { seen.add(m); batch.push(o); break; } });
-  const t0 = performance.now(); let tick = performance.now();
-  for (const o of batch) {
-    try {
-      const mats = renderer.compile(o, cam, scene);
-      // esperar a que estén listos (sin la extensión de compilación paralela, esto espera aquí mismo)
-      for (const m of mats) { const pr = renderer.properties.get(m).currentProgram; if (pr && pr.isReady) pr.isReady(); }
-    } catch (e) {}
-    if (performance.now() - tick > 40) { await idle(); tick = performance.now(); }
-    if (performance.now() - t0 > 20000) break;
+  // en computadora el mundo se dibuja primero en una imagen intermedia (efectos): preparar esa misma versión
+  if (composer && !warmRT) warmRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+  const prevRT = renderer.getRenderTarget(); renderer.setRenderTarget(warmRT);
+  try { await warmShadersNow(root, cam); } finally { renderer.setRenderTarget(prevRT); }
+}
+async function warmShadersNow(root, cam) {
+  const seen = new Set(), batch = [], texs = new Set();
+  root.traverse(o => {
+    if (!o.material) return; let nuevo = false;
+    for (const m of [].concat(o.material)) {
+      if (!m) continue;
+      for (const k of TEX_KEYS) if (m[k] && m[k].isTexture && !renderer.properties.get(m[k]).__webglTexture) texs.add(m[k]);
+      if (!seen.has(m)) { seen.add(m); nuevo = true; }
+    }
+    if (nuevo) batch.push(o);
+  });
+  const t0 = performance.now(); let tick = t0;
+  const respirar = async () => { if (performance.now() - tick > 25) { await idle(); tick = performance.now(); } };
+  // 1) subir las texturas a la tarjeta gráfica de a pocas (antes se subían todas en el primer cuadro)
+  for (const t of texs) { try { renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
+  // 2) sombreadores: mandar a compilar un grupo pequeño, esperar sin bloquear y terminar de prepararlo
+  const progs = new Set();
+  let i = 0;
+  while (i < batch.length && performance.now() - t0 < 40000) {
+    const grupo = new Set(), tg = performance.now();
+    while (i < batch.length && performance.now() - tg < 12) {
+      const o = batch[i++], vis = o.visible; o.visible = true; // también los objetos que aparecen después
+      try { for (const m of renderer.compile(o, cam, scene)) { const pr = renderer.properties.get(m).currentProgram; if (pr && !progs.has(pr)) { progs.add(pr); grupo.add(pr); } } } catch (e) {}
+      o.visible = vis;
+    }
+    const tw = performance.now();
+    while ([...grupo].some(pr => !pr.isReady()) && performance.now() - tw < 4000) await sleep(10);
+    for (const pr of grupo) { try { pr.getUniforms(); pr.getAttributes(); } catch (e) {} await respirar(); }
+    await respirar();
   }
+  // 3) dibujar todo el mundo de a pocos en un cuadrito de 1 píxel: así se suben las figuras (geometría),
+  //    se preparan las sombras y no queda nada pendiente para cuando el jugador camine (antes daba tirones)
+  const luces = []; scene.traverse(o => { if (o.isLight) { luces.push(o); o.layers.enable(2); } });
+  const mallas = []; root.traverse(o => { if ((o.isMesh || o.isSprite || o.isPoints || o.isLine) && o.material) mallas.push(o); });
+  warmCam.copy(cam); warmCam.layers.set(2);
+  const vp = new THREE.Vector4(); renderer.getViewport(vp);
+  let k = 0, porVez = 120;
+  try {
+    while (k < mallas.length && performance.now() - t0 < 45000) {
+      const parte = mallas.slice(k, k + porVez); k += parte.length;
+      const fc = parte.map(m => m.frustumCulled);
+      for (const m of parte) { m.layers.enable(2); m.frustumCulled = false; }
+      const tr = performance.now();
+      try {
+        if (warmRT) renderer.render(scene, warmCam);
+        else { renderer.setViewport(0, 0, 1, 1); renderer.render(scene, warmCam); renderer.setViewport(vp); }
+      } catch (e) {}
+      parte.forEach((m, j) => { m.layers.disable(2); m.frustumCulled = fc[j]; });
+      const d = performance.now() - tr; porVez = d > 30 ? Math.max(20, porVez >> 1) : d < 10 ? Math.min(400, porVez * 2) : porVez;
+      await idle(); tick = performance.now();
+    }
+  } finally { for (const l of luces) l.layers.disable(2); if (!warmRT) renderer.setViewport(vp); }
 }
 // Pausa breve para que el navegador respire (dibuja la pantalla y atiende los toques) mientras se construye el mundo
 const idle = () => new Promise(r => setTimeout(r, 0));
@@ -2022,20 +2074,22 @@ function drawMinimap() {
 /* =========================================================
    BUCLE PRINCIPAL
    ========================================================= */
-let lastNow = performance.now(), elapsed = 0; const perf = { acc: 0, n: 0 };
+let lastNow = performance.now(), elapsed = 0; const perf = { acc: 0, n: 0, changes: 0, lowered: false };
 let mmTimer = 0, lodTimer = 0, worshipT = 0, worshipStep = 0;
 function loop() {
   requestAnimationFrame(loop);
   if (building) { lastNow = performance.now(); return; }
   const now = performance.now(), raw = (now - lastNow) / 1000, dt = Math.min(raw, .05); lastNow = now; elapsed += dt; const t = elapsed;
   // Resolución automática suave: solo baja un poco si el equipo va lento (nunca quita sombras ni detalle)
-  if (!building && (state === 'play' || state === 'menu') && raw < .5) {
+  // Cambiar la resolución obliga a rehacer la imagen de la pantalla (da un tirón), así que se hace pocas veces:
+  // se mide durante 4 s, solo baja si de verdad va lento, solo sube si va muy sobrado y nunca sube y baja sin parar
+  if (!building && state === 'play' && raw < .25 && perf.changes < 5) {
     perf.acc += raw; perf.n++;
-    if (perf.acc > 2) {
+    if (perf.acc > 4) {
       const avg = perf.acc / perf.n; let pr = renderer.getPixelRatio();
-      const MIN_PR = Math.min(MAX_PR, .9);
-      if (avg > .036 && pr > MIN_PR) renderer.setPixelRatio(Math.max(MIN_PR, pr - .1));
-      else if (avg < .02 && pr < MAX_PR) renderer.setPixelRatio(Math.min(MAX_PR, pr + .1));
+      const MIN_PR = Math.min(MAX_PR, .85);
+      if (avg > .04 && pr > MIN_PR) { renderer.setPixelRatio(Math.max(MIN_PR, pr - .2)); perf.changes++; perf.lowered = true; }
+      else if (avg < .017 && pr < MAX_PR && !perf.lowered) { renderer.setPixelRatio(Math.min(MAX_PR, pr + .2)); perf.changes++; }
       perf.acc = 0; perf.n = 0;
     }
   }
