@@ -2134,8 +2134,8 @@ const butterflies = (() => {
   for (let i = 0; i < n; i++) {
     const mat = new THREE.MeshLambertMaterial({ color: COLS[i % COLS.length], side: THREE.DoubleSide });
     const b = new THREE.Group(), L = new THREE.Mesh(gL, mat), R = new THREE.Mesh(gR, mat); b.add(new THREE.Mesh(gB, bodyMat), L, R);
-    b.scale.setScalar(1.5 + Math.random() * .6); b.traverse(m => { m.frustumCulled = false; m.castShadow = false; });
-    list.push({ b, L, R, a: Math.random() * 6.28, d: 3 + Math.random() * 9, h: .7 + Math.random() * 1.2, ph: Math.random() * 6.28, sp: .25 + Math.random() * .35, fs: 16 + Math.random() * 8, dir: Math.random() < .5 ? 1 : -1 });
+    const sc = 1.5 + Math.random() * .6; b.scale.setScalar(sc); b.traverse(m => { m.frustumCulled = false; m.castShadow = false; });
+    list.push({ b, L, R, sc, a: Math.random() * 6.28, d: 3 + Math.random() * 9, h: .7 + Math.random() * 1.2, ph: Math.random() * 6.28, sp: .25 + Math.random() * .35, fs: 16 + Math.random() * 8, dir: Math.random() < .5 ? 1 : -1 });
     grp.add(b);
   }
   grp.visible = false; scene.add(grp);
@@ -2153,6 +2153,9 @@ const butterflies = (() => {
         const y = P.pos.y + k.h + Math.sin(t * 2.2 + k.ph) * .18 + Math.abs(Math.sin(t * k.fs * .5 + k.ph)) * .05;
         const vx = -Math.sin(a) * k.dir, vz = Math.cos(a) * k.dir; // tangente: miran hacia donde vuelan
         k.b.position.set(x, y, z); k.b.rotation.set(-.15, Math.atan2(vx, vz), 0);
+        // Si una mariposa pasa pegada a la cámara se veía enorme tapando la pantalla: cerca de la cámara se encoge suavemente
+        const dc = Math.hypot(x - cp.x, y - cp.y, z - cp.z), near = Math.min(1, Math.max(0, (dc - 1.2) / 1.6));
+        k.b.scale.setScalar(k.sc * near); k.b.visible = near > .02;
         const f = Math.sin(t * k.fs + k.ph) * 1.1 + .25; k.L.rotation.z = -f; k.R.rotation.z = f;
       }
     }

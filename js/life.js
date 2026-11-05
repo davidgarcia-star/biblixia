@@ -112,7 +112,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(cx - 1.8, cz - 2.6, fy, '🍽 Comer', () => life.fx('eat'));
     act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
     W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
-    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, bañarte, comer, tomar agua o café y descansar en el sofá. «Mas yo y mi casa serviremos al SEÑOR.»', ref: 'Josué 24:15' });
+    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
   }
 
   await pace();
