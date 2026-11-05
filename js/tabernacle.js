@@ -109,8 +109,15 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(aw + .1, .08, .05, M.bronze, altX, ah * .5, cz - aw / 2 - .02); box(aw + .1, .08, .05, M.bronze, altX, ah * .5, cz + aw / 2 + .02); // rejilla
   for (const sz of [-1, 1]) { const pole = add(new THREE.CylinderGeometry(.04, .04, aw + 1.2, 8), M.bronze, altX, ah * .45, cz + sz * (aw / 2 + .12)); pole.rotation.z = Math.PI / 2; }
   addBox(altX - aw / 2, altX + aw / 2, cz - aw / 2, cz + aw / 2, ah);
+  // Fuego vivo y humo del holocausto que sube al cielo (Levítico 1:9; 6:13)
+  const smokeTex = tex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(235,232,228,.7)'); gr.addColorStop(.55, 'rgba(200,196,190,.3)'); gr.addColorStop(1, 'rgba(190,186,180,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+  const smoke = [], smokeCol = new THREE.Color();
+  for (let i = 0; i < 12; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 })); s.renderOrder = 2; T.add(s); smoke.push({ s, k: i / 12, dx: Math.sin(i * 2.1) * .5, dz: Math.cos(i * 1.3) * .5 }); }
+  const tongueM = new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: .85, depthWrite: false });
+  const tongues = [];
+  for (let i = 0; i < 7; i++) { const f = new THREE.Mesh(new THREE.ConeGeometry(.16 + (i % 3) * .05, .7, 6).translate(0, .35, 0), tongueM); f.position.set(altX + Math.sin(i * 2.4) * aw * .3, ah + .04, cz + Math.cos(i * 1.7) * aw * .3); f.castShadow = false; T.add(f); tongues.push(f); }
   zones.push({ id: 'altar', name: 'El altar de bronce', minX: altX - 3, maxX: altX + 3, minZ: cz - 3, maxZ: cz + 3, pri: 2,
-    text: 'Altar de madera de acacia cubierto de bronce, de 5 codos de largo y ancho y 3 de alto, con un cuerno en cada esquina y una rejilla de bronce. Allí se ofrecían los holocaustos. Apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Juan 1:29' });
+    text: 'Altar de madera de acacia cubierto de bronce, de 5 codos de largo y ancho y 3 de alto, con un cuerno en cada esquina y una rejilla de bronce. Allí se ofrecían los holocaustos. El fuego se mantenía encendido continuamente sobre el altar; no se apagaba. Apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Levítico 6:13; Juan 1:29' });
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
   const lavX = cx + 10 * C;
@@ -261,6 +268,18 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
+      for (let i = 0; i < tongues.length; i++) { const f = tongues[i]; f.scale.set(1, .7 + Math.abs(Math.sin(t * 11 + i * 1.9)) * .7 + Math.sin(t * 23 + i) * .12, 1); f.rotation.z = Math.sin(t * 6 + i) * .12; }
+      let root = T; while (root.parent) root = root.parent;
+      const fc = root.fog && root.fog.color, lum = fc ? Math.min(1, (fc.r * .3 + fc.g * .59 + fc.b * .11) * 1.25) : 1; // de noche el humo no brilla
+      smokeCol.setRGB(.16 + .7 * lum, .17 + .68 * lum, .2 + .62 * lum);
+      // Columna de nube de día y columna de fuego de noche (Éxodo 40:38)
+      const day = THREE.MathUtils.smoothstep(lum, .05, .3); cloudM.color.setRGB(1, .45 + .55 * day, .15 + .85 * day);
+      for (const m of smoke) {
+        m.s.material.color.copy(smokeCol);
+        const u = (t * .09 + m.k) % 1, y = ah + .4 + u * 9;
+        m.s.position.set(altX + m.dx * (1 - u) + Math.sin(t * .4 + m.k * 9) * u * 1.2 + u * 1.5, y, cz + m.dz * (1 - u) + Math.cos(t * .3 + m.k * 7) * u * .8);
+        m.s.scale.setScalar(.9 + u * 3.6); m.s.material.opacity = Math.min(1, u * 6) * (1 - u) * .55; m.s.material.rotation = m.k * 6 + t * .1;
+      }
     },
   };
 }
