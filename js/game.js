@@ -2870,6 +2870,9 @@ window.__game = { carHits, islandH, buildLODNow: () => buildHumanLOD(world, true
    Contador de personas que han entrado al juego (una vez por navegador)
    ========================================================= */
 (function () {
+// la última cifra conocida se muestra enseguida, sin esperar al servidor
+try { const c = localStorage.getItem('miproaa-monedas-visitas'); if (c !== null) document.querySelectorAll('.js-visitas').forEach(e => e.textContent = Number(c).toLocaleString('es-DO')); } catch (e) {}
+function iniciarContador() {
   const BASE = 'https://abacus.jasoncameron.dev/', RUTA = 'miproaa-luisdavidgarcia/monedas-de-fe';
   const MARCA = 'miproaa-monedas-contado', CACHE = 'miproaa-monedas-visitas';
   const els = document.querySelectorAll('.js-visitas');
@@ -2888,7 +2891,18 @@ window.__game = { carHits, islandH, buildLODNow: () => buildHumanLOD(world, true
   let contado = !!leer(MARCA);
   const p = contado ? pedir('get').catch(e => { if (e.noExiste) { contado = false; return pedir('hit'); } throw e; }) : pedir('hit');
   const ok = n => { if (!contado) guardar(MARCA, '1'); guardar(CACHE, String(n)); mostrar(n); };
-  p.then(ok).catch(() => setTimeout(() => pedir(contado ? 'get' : 'hit').then(ok).catch(() => { if (previo === null) mostrar(0); }), 3000));
+  // Si el servicio está ocupado (muchas personas a la vez, p. ej. en el wifi de la iglesia), se reintenta
+  // hasta 3 veces con esperas crecientes y al azar para no golpear el servidor todos al mismo tiempo.
+  const reintentar = (n) => pedir(contado ? 'get' : 'hit').then(ok).catch(() => {
+    if (n < 3) setTimeout(() => reintentar(n + 1), (3 + 4 * n) * 1000 + Math.random() * 4000);
+    else if (previo === null) mostrar(0);
+  });
+  p.then(ok).catch(() => setTimeout(() => reintentar(1), 2000 + Math.random() * 3000));
+}
+// el contador se pide cuando la página ya cargó, así no compite con la descarga del juego;
+// una pequeña espera al azar reparte las peticiones cuando muchas personas entran juntas
+if (document.readyState === 'complete') setTimeout(iniciarContador, 400 + Math.random() * 1600);
+else addEventListener('load', () => setTimeout(iniciarContador, 400 + Math.random() * 1600), { once: true });
 })();
 
 /* ---------- Intro: brasas doradas que suben (solo mientras se ve la portada) ---------- */
