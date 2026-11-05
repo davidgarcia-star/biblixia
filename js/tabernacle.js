@@ -195,6 +195,10 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(C + .06, .05, C + .06, M.gold, inX, 2 * C, cz);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.ConeGeometry(.035, .1, 6), M.gold, inX + sx * .21, 2 * C + .07, cz + sz * .21);
   addBox(inX - .3, inX + .3, cz - .3, cz + .3, 1.05);
+  // Incienso aromático que Aarón quemaba cada mañana y cada tarde: brasas y un humo suave que sube (Éxodo 30:7-8)
+  box(C * .55, .03, C * .55, M.fire, inX, 2 * C + .04, cz, { cast: false });
+  const incense = [];
+  for (let i = 0; i < 7; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0, color: 0xeef0ff })); s.renderOrder = 2; T.add(s); incense.push({ s, k: i / 7 }); }
   zones.push({ id: 'santo', name: 'El Lugar Santo', minX: veilX, maxX: tx1, minZ: tz0, maxZ: tz1, pri: 3,
     text: 'Primera sala de la tienda (20 codos). Al norte, la mesa de los panes de la Presencia con 12 panes en dos hileras de seis; al sur, el candelabro de oro puro con siete lámparas; y delante del velo, el altar de oro del incienso.', ref: 'Éxodo 25:23-40; 26:35; 30:1-8; Levítico 24:5-9' });
 
@@ -288,6 +292,11 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
         const u = (t * .09 + m.k) % 1, y = ah + .4 + u * 9;
         m.s.position.set(altX + m.dx * (1 - u) + Math.sin(t * .4 + m.k * 9) * u * 1.2 + u * 1.5, y, cz + m.dz * (1 - u) + Math.cos(t * .3 + m.k * 7) * u * .8);
         m.s.scale.setScalar(.9 + u * 3.6); m.s.material.opacity = Math.min(1, u * 6) * (1 - u) * .55; m.s.material.rotation = m.k * 6 + t * .1;
+      }
+      for (const m of incense) {
+        const u = (t * .12 + m.k) % 1;
+        m.s.position.set(inX + Math.sin(t * .7 + m.k * 11) * u * .25, 2 * C + .12 + u * 1.7, cz + Math.cos(t * .5 + m.k * 5) * u * .2);
+        m.s.scale.setScalar(.12 + u * .55); m.s.material.opacity = Math.min(1, u * 5) * (1 - u) * .35; m.s.material.rotation = m.k * 4 + t * .2;
       }
     },
   };
