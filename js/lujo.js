@@ -14,7 +14,9 @@ function sideShape(pts, width, bevel = .06) {
   g.translate(0, 0, -(width - bevel * 2) / 2); g.rotateY(-Math.PI / 2); return g;
 }
 function wheel(g, x, z, r, w, rimM, tireM, discM) {
-  const wg = new THREE.Group(); wg.position.set(x, r, z); g.add(wg);
+  // dos grupos: el de afuera gira para doblar (solo las delanteras) y el de adentro rueda
+  const steer = new THREE.Group(); steer.position.set(x, r, z); g.add(steer);
+  const wg = new THREE.Group(); steer.add(wg); wg.userData.steer = steer;
   const t = new THREE.Mesh(new THREE.TorusGeometry(r * .78, r * .24, 12, 28), tireM); t.rotation.y = Math.PI / 2; t.scale.z = w / (r * .5); t.castShadow = true; wg.add(t);
   const side = Math.sign(x);
   const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * .62, r * .62, w * .7, 24), discM); disc.rotation.z = Math.PI / 2; wg.add(disc);

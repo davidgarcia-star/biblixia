@@ -1460,6 +1460,7 @@ function climbStep(dt) {
 const canSwim = () => !!world.seaInfo;
 function blocked(x, z, y, swimmer = false) {
   const sw = swimmer && canSwim();
+  if (world.npcs && y < 2) for (const n of world.npcs) if (!n.treasure && !n.ship && Math.hypot(x - n.x, z - n.z) < RADIUS + .28) return true;
   if (world.lux && y < 1.6) for (const c of world.lux) if (c !== P.car) { const dx = x - c.obj.position.x, dz = z - c.obj.position.z, cs = Math.cos(c.heading), sn = Math.sin(c.heading), lx = dx * cs - dz * sn, lz = dx * sn + dz * cs; if (Math.abs(lx) < c.wid / 2 + RADIUS - .1 && Math.abs(lz) < c.len / 2 + RADIUS - .1) return true; }
   if (sw && world.boat && (x < world.boat.minX + 5 || z < world.boat.minZ + 5 || z > world.boat.maxZ - 5)) return true;
   for (const c of world.colliders) {
@@ -1479,6 +1480,8 @@ const CAM_MODES = [{ id: 'normal', name: '🎥 Vista normal', dist: 6.4 }, { id:
 let camMode = 0;
 try { camMode = Math.max(0, CAM_MODES.findIndex(m => m.id === localStorage.getItem('biblixia_cam'))); } catch (e) {}
 const fpArms = new THREE.Group(); camera.add(fpArms); scene.add(camera); fpArms.visible = false;
+let fpSwing = 0, honkPressed = false;
+const FP_BASE = -2.35; // brazos hacia abajo (antes apuntaban al frente con las palmas arriba)
 function buildFpArms() {
   fpArms.clear();
   const o = playerOpts(), skinM = new THREE.MeshStandardMaterial({ color: o.skin, roughness: .55 });
@@ -1486,11 +1489,12 @@ function buildFpArms() {
   const shortS = o.outfit === 'robe' ? !!o.skins : ['camiseta', 'camisa'].includes(o.topStyle);
   const sleeveM = new THREE.MeshStandardMaterial({ color: sleeveCol, roughness: .85 });
   for (const sx of [-1, 1]) {
-    const arm = new THREE.Group(); arm.position.set(sx * .27, -.3, -.42); arm.rotation.set(-1.25, sx * .18, sx * -.12);
-    const fore = new THREE.Mesh(new THREE.CylinderGeometry(.04, .048, .34, 14), shortS ? skinM : sleeveM); fore.position.y = -.12; arm.add(fore);
-    const hg = new THREE.Group(); hg.rotation.y = Math.PI; arm.add(hg); // se ve el dorso de la mano
+    // brazo relajado: la mano cuelga hacia abajo y un poco adelante (en las esquinas de abajo de la pantalla)
+    const arm = new THREE.Group(); arm.position.set(sx * .22, -.21, -.3); arm.rotation.set(FP_BASE, 0, sx * .18);
+    const fore = new THREE.Mesh(new THREE.CylinderGeometry(.038, .044, .2, 14), shortS ? skinM : sleeveM); fore.position.y = -.06; arm.add(fore);
+    const hg = new THREE.Group(); hg.rotation.y = -sx * Math.PI / 2; arm.add(hg); // la palma mira hacia el cuerpo, como al caminar
     const hand = new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 12), skinM); hand.scale.set(.8, 1.15, .55); hand.position.y = .09; hg.add(hand);
-    for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0105, .045, 3, 6), skinM); f.position.set((k - 1.5) * .019, .16, .012); f.rotation.x = .35; hg.add(f); }
+    for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0105, .045, 3, 6), skinM); f.position.set((k - 1.5) * .019, .16, .008); f.rotation.x = .15; hg.add(f); } // dedos relajados
     const th = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .04, 3, 6), skinM); th.position.set(sx * .045, .1, .02); th.rotation.z = -sx * .7; hg.add(th);
     if (!shortS) { const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .03, 14), sleeveM); cuff.position.y = .03; arm.add(cuff); }
     arm.userData.sx = sx; fpArms.add(arm);
@@ -1619,7 +1623,7 @@ async function startLevelNow(i) {
   $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER';
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
-  P.driving = false; if (P.car) { P.car = null; sound.carLoop(0); }
+  P.driving = false; if (P.car) { P.car = null; sound.carLoop(0); } honkBtns(false);
   if (mate) { placeMate(); if (isPair()) setTimeout(() => toast('🌿 Adán y Eva van juntos · ' + (isTouch ? 'toca 👫' : 'pulsa Q') + ' para cambiar', '#7ef0a4'), 1800); }
   setTimeout(() => { if (state === 'play') toast('⏰ Toma los relojes azules para ganar +' + CLOCK_SECS + ' s', '#6fd0ff'); }, 3200);
   if (lvlIdx >= 1) setTimeout(() => { if (state === 'play') toast('⛵ ¡El barco ya está habilitado! Ve al muelle (oeste)', '#7ef0a4'); }, lvlIdx === 1 ? 5600 : 99999999);
@@ -1715,25 +1719,39 @@ function stopDriving() {
 const luxName = c => c.kind === 'pickup' ? 'la camioneta pickup blanca' : 'el superdeportivo blanco';
 function carHits(c, x, z, h) {
   const cs = Math.cos(h), sn = Math.sin(h), hl = c.len / 2 - .15, hw = c.wid / 2 - .1;
+  // el auto es una caja girada: se prueba contra cada obstáculo (paredes, postes de luz, árboles, bancas…)
+  const ex = Math.abs(cs) * hw + Math.abs(sn) * hl, ez = Math.abs(sn) * hw + Math.abs(cs) * hl; // medio tamaño en x/z del auto girado
+  const inCar = (qx, qz, r) => { const dx = qx - x, dz = qz - z, lx = dx * cs - dz * sn, lz = dx * sn + dz * cs; const cx = Math.max(-hw, Math.min(hw, lx)), cz = Math.max(-hl, Math.min(hl, lz)); return (lx - cx) ** 2 + (lz - cz) ** 2 < r * r; };
+  for (const k of world.colliders) {
+    if (k.ramp || (k.tag === 'ship' && world.boat && world.boat.away)) continue;
+    if (k.top < CURB + .45 || (k.bottom && k.bottom > 1.6)) continue;
+    if (k.maxX < x - ex || k.minX > x + ex || k.maxZ < z - ez || k.minZ > z + ez) continue;      // eje x y z del mundo
+    const kx = (k.minX + k.maxX) / 2, kz = (k.minZ + k.maxZ) / 2, khx = (k.maxX - k.minX) / 2, khz = (k.maxZ - k.minZ) / 2;
+    const dx = kx - x, dz = kz - z;
+    if (Math.abs(dx * cs - dz * sn) > hw + khx * Math.abs(cs) + khz * Math.abs(sn)) continue;    // ejes del auto
+    if (Math.abs(dx * sn + dz * cs) > hl + khx * Math.abs(sn) + khz * Math.abs(cs)) continue;
+    return true;
+  }
+  // personas, animales y personajes bíblicos
+  if (world.dyn) for (const d of world.dyn) { const q = d.obj.position; if (d.obj.visible !== false && Math.abs(q.y - c.obj.position.y) < 2.5 && inCar(q.x, q.z, d.r + .15)) return true; }
+  for (const n of world.npcs) if (!n.treasure && !n.ship && inCar(n.x, n.z, .55)) return true;
   for (const [lx, lz] of [[-hw, hl], [hw, hl], [-hw, -hl], [hw, -hl], [-hw, 0], [hw, 0], [0, hl + .1], [0, -hl - .1]]) {
     const px = x + lx * cs + lz * sn, pz = z - lx * sn + lz * cs;
-    for (const k of world.colliders) {
-      if (k.ramp || (k.tag === 'ship' && world.boat && world.boat.away)) continue;
-      if (k.top < CURB + .45 || (k.bottom && k.bottom > 1.6)) continue;
-      if (px > k.minX && px < k.maxX && pz > k.minZ && pz < k.maxZ) return true;
-    }
     if (world.islands && islandH(px, pz) > .5) return true;
     for (const o of world.lux) if (o !== c) { const dx = px - o.obj.position.x, dz = pz - o.obj.position.z, oc = Math.cos(o.heading), os = Math.sin(o.heading); if (Math.abs(dx * oc - dz * os) < o.wid / 2 + .05 && Math.abs(dx * os + dz * oc) < o.len / 2 + .05) return true; }
   }
   return false;
 }
+function honkBtns(on) { for (const id of ['tHonk', 'btnHonk']) { const b = document.getElementById(id); if (b) b.classList.toggle('hidden', !on); } }
+['tHonk', 'btnHonk'].forEach(id => { const b = document.getElementById(id); if (b) { const f = e => { e.preventDefault(); honkPressed = true; }; b.addEventListener('pointerdown', f); b.addEventListener('click', e => e.preventDefault()); } });
 function startCar(c) {
+  honkBtns(true);
   P.car = c; c.speed = 0; c.steer = 0; cam.distSave = cam.dist; cam.dist = c.kind === 'pickup' ? 9.5 : 8; cam.pitch = .3;
-  $('prompt').classList.remove('show'); sound.carStart(); toast(`🚗 ¡Conduces ${luxName(c)}! · T para bajar · Espacio: claxon`, '#7ef0a4');
+  $('prompt').classList.remove('show'); sound.carStart(); toast(`🚗 ¡Conduces ${luxName(c)}! · T para bajar · ${isTouch ? 'botón 📯 para pitar' : 'H o Espacio para pitar'}`, '#7ef0a4');
 }
 function stopCar() {
   const c = P.car; if (!c) return;
-  P.car = null; c.speed = 0; sound.carLoop(0); sound.click();
+  P.car = null; c.speed = 0; sound.carLoop(0); sound.click(); honkBtns(false);
   const h = c.heading, cs = Math.cos(h), sn = Math.sin(h);
   for (const side of [-1, 1, -1.6, 1.6]) { // bajarse por la puerta del conductor (o la del otro lado si está tapada)
     const lx = side * (c.wid / 2 + .7), x = c.obj.position.x + lx * cs, z = c.obj.position.z - lx * sn;
@@ -1752,18 +1770,20 @@ function driveCar(dt) {
   const want = thr > 0 ? thr * top : thr < 0 ? (c.speed > 1 ? 0 : thr * 7) : 0;
   const acc = thr < 0 && c.speed > 1 ? 3.5 : thr === 0 ? .9 : 1.1;              // frena fuerte, acelera suave
   c.speed += (want - c.speed) * Math.min(1, dt * acc);
-  c.steer += (turn * .55 - c.steer) * Math.min(1, dt * 6);
-  c.heading += c.steer * dt * c.speed / (c.len * .62) ;
+  // dirección moderada: a más velocidad, menos se puede girar el volante
+  const maxSteer = .34 * (1 - Math.min(.55, Math.abs(c.speed) / top * .6));
+  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 3.5);
+  c.heading += c.steer * dt * c.speed / (c.len * .62);
   const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
   const nx = o.position.x + fx * c.speed * dt, nz = o.position.z + fz * c.speed * dt;
   if (carHits(c, nx, nz, c.heading)) {
     if (Math.abs(c.speed) > 4 && (!c.bumpT || performance.now() - c.bumpT > 700)) { c.bumpT = performance.now(); sound.step('hard', true); toast('💥 ¡Choque! Maneja con cuidado', '#ffb36b'); }
-    c.speed *= -.25; c.heading -= c.steer * dt * c.speed / (c.len * .62);
+    c.speed *= -.25; c.heading = o.rotation.y;
   } else { o.position.x = nx; o.position.z = nz; }
   o.rotation.y = c.heading;
   o.position.y = floorAt(o.position.x, o.position.z, CURB + .3);
-  for (let k = 0; k < c.wheels.length; k++) { const w = c.wheels[k]; w.rotation.x += c.speed * dt / .4; if (k < 2) w.rotation.y = c.steer * .8; }
-  if (keys.Space || jumpPressed) { jumpPressed = false; if (!c.honkT || performance.now() - c.honkT > 600) { c.honkT = performance.now(); sound.honk(.9, 0); } }
+  for (let k = 0; k < c.wheels.length; k++) { const w = c.wheels[k]; w.rotation.x += c.speed * dt / (c.kind === 'pickup' ? .45 : .36); if (k < 2) w.userData.steer.rotation.y = c.steer * 1.1; }
+  if (keys.Space || keys.KeyH || jumpPressed || honkPressed) { jumpPressed = false; honkPressed = false; if (!c.honkT || performance.now() - c.honkT > 600) { c.honkT = performance.now(); sound.honk(.9, 0); } }
   // el jugador va sentado adentro
   P.pos.set(o.position.x, o.position.y, o.position.z); P.heading = c.heading; P.speed = 0; P.onGround = true; P.inv = .2;
   cam.yaw += Math.atan2(Math.sin(c.heading - cam.yaw), Math.cos(c.heading - cam.yaw)) * Math.min(1, dt * 3);
@@ -2156,7 +2176,16 @@ function updateCamera(dt, follow = true) {
     cam.look.copy(eye);
     fpArms.visible = true;
     const sw = Math.sin(human.phase) * Math.min(1, P.speed / 6);
-    for (const a of fpArms.children) { const sx = a.userData.sx; a.position.y = -.3 + sw * sx * .03; a.position.z = -.42 + sw * sx * .05; a.rotation.x = P.climb ? -2.6 : -1.25 + sw * sx * .12; }
+    // balanceo natural: quieto casi no se mueve, caminando suave, corriendo más amplio y en turbo todavía más rápido y amplio
+    const spd = P.speed, amp = spd < .3 ? 0 : spd < WALK + .5 ? .28 : spd < RUN + .5 ? .5 : .62;
+    fpSwing += (amp - fpSwing) * Math.min(1, dt * 6);
+    const ph = Math.sin(human.phase), breath = Math.sin(performance.now() / 900) * .006;
+    for (const a of fpArms.children) {
+      const sx = a.userData.sx, k = ph * sx * fpSwing;            // un brazo adelante y el otro atrás
+      if (P.climb) { a.position.set(sx * .22, -.05, -.4); a.rotation.set(-1.2, 0, sx * .1); continue; }
+      a.position.set(sx * .22, -.21 + Math.max(0, k) * .1 + breath, -.3 - k * .1);
+      a.rotation.set(FP_BASE + k * .9, 0, sx * (.18 + fpSwing * .1));
+    }
     if (camera.fov !== 70) { camera.fov = 70; camera.updateProjectionMatrix(); }
     return;
   }
