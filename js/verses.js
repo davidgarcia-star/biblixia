@@ -32,5 +32,11 @@ export const VERSES = [
   ["En el principio creó Dios los cielos y la tierra.","Génesis 1:1"],
   ["En el principio existía el Verbo, y el Verbo estaba con Dios, y el Verbo era Dios.","Juan 1:1"],
   ["El que habita al amparo del Altísimo morará a la sombra del Omnipotente.","Salmos 91:1"],
-  ["Y no os adaptéis a este mundo, sino transformaos mediante la renovación de vuestra mente, para que verifiquéis cuál es la voluntad de Dios: lo que es bueno, aceptable y perfecto.","Romanos 12:2"]
+  ["Y no os adaptéis a este mundo, sino transformaos mediante la renovación de vuestra mente, para que verifiquéis cuál es la voluntad de Dios: lo que es bueno, aceptable y perfecto.","Romanos 12:2"],
+  ["Aunque pase por el valle de sombra de muerte, no temeré mal alguno, porque tú estás conmigo; tu vara y tu cayado me infunden aliento.","Salmos 23:4"],
+  ["Reconócele en todos tus caminos, y Él enderezará tus sendas.","Proverbios 3:6"],
+  ["Así brille vuestra luz delante de los hombres, para que vean vuestras buenas acciones y glorifiquen a vuestro Padre que está en los cielos.","Mateo 5:16"],
+  ["En mi corazón he atesorado tu palabra, para no pecar contra ti.","Salmos 119:11"],
+  ["Y ahora permanecen la fe, la esperanza y el amor, estos tres; pero el mayor de ellos es el amor.","1 Corintios 13:13"],
+  ["Pero el fruto del Espíritu es amor, gozo, paz, paciencia, benignidad, bondad, fidelidad, mansedumbre, dominio propio; contra tales cosas no hay ley.","Gálatas 5:22-23"]
 ];
