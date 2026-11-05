@@ -578,7 +578,7 @@ export function compactParts(root, keep = new Set()) {
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1, praise = -1 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -644,6 +644,18 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     P.spineX = .28 * bow + .12 * kn; P.spineY = 0; P.headX = .5 * bow;
     P.s0x = P.s1x = -.55 * bow - .2 * kn; P.s0z = .32 * bow; P.s1z = -.32 * bow; P.e0 = P.e1 = -1.55 * bow;
   }
+  // alabanza al entrar al templo: salta con los brazos arriba, se arrodilla y mueve la cabeza adorando
+  let headSide = 0;
+  if (praise >= 0) {
+    const sm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); }, T = praise;
+    const up = sm(0, .25, T) * (1 - sm(5.7, 6.3, T)), kn = sm(2.4, 2.9, T) * (1 - sm(5.5, 6.1, T));
+    P.s0x = lerp(P.s0x, -2.75 + Math.sin(t * 6) * .18, up); P.s1x = lerp(P.s1x, -2.75 - Math.sin(t * 6) * .18, up);
+    P.s0z = lerp(P.s0z, -.38, up); P.s1z = lerp(P.s1z, .38, up); P.e0 = lerp(P.e0, -.25, up); P.e1 = lerp(P.e1, -.25, up);
+    P.t0 = lerp(P.t0, -.1, kn); P.t1 = lerp(P.t1, -.1, kn); P.k0 = lerp(P.k0, 1.54, kn); P.k1 = lerp(P.k1, 1.54, kn);
+    P.a0 = lerp(P.a0, .55, kn); P.a1 = lerp(P.a1, .55, kn); P.hipY = lerp(P.hipY, .49, kn);
+    P.spineX = lerp(P.spineX, -.1, kn); P.headX = lerp(P.headX, -.32 + Math.sin(t * 3.4) * .2, kn);
+    headSide = Math.sin(t * 2.6) * .45 * kn;
+  }
   // gesto de mal olor: se tapa la nariz y mueve la cabeza
   if (gesture > 0) { P.s1x = -2.45; P.s1z = .55; P.e1 = -2.1; P.headX = .15; }
   const k = Math.min(1, dt * 16);
@@ -660,7 +672,7 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
   if (Math.abs(h.hips.rotation.x) < .002) h.hips.rotation.x = 0;
   S(h.hips.position, 'y', P.hipY);
   S(h.head.rotation, 'x', P.headX);
-  h.head.rotation.y = -h.spine.rotation.y * .8 + (gesture > 0 ? Math.sin(t * 9) * .35 : 0);
+  h.head.rotation.y = -h.spine.rotation.y * .8 + (gesture > 0 ? Math.sin(t * 9) * .35 : 0) + headSide;
   if (h.skirt) { const sw = Math.max(Math.abs(h.legs[0].thigh.rotation.x), Math.abs(h.legs[1].thigh.rotation.x)); h.skirt.scale.z = .86 + sw * .75; h.skirt.scale.x = 1 + sw * .1; }
   const blink = (t % 3.7) < .12;
   for (const e of h.eyes) e.scale.y = blink ? .15 : 1;

@@ -1677,7 +1677,7 @@ async function startLevelNow(i) {
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; sound.swimLoop(0); sound.boatLoop(0);
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -2022,6 +2022,14 @@ function updateZone(dt) {
     setTimeout(() => { toast('🙏 Reverencia ante la presencia del SEÑOR', '#ffe9a8'); sound.life('worship'); }, 200);
   }
   P.inHoly = holy;
+  // al entrar al templo MIPROAA: salta de alegría, se arroja de rodillas y adora moviendo la cabeza
+  const church = world.zones.some(q => q.id === 'iglesia' && P.pos.x > q.minX && P.pos.x < q.maxX && P.pos.z > q.minZ && P.pos.z < q.maxZ);
+  if (church && !P.inChurch && !P.praise && !P.kneel && !P.driving && !P.car) {
+    P.praise = { t: 0, dur: 6.6, j: 0 }; P.speed = 0;
+    toast('🙌 ¡Gloria a Dios! ¡Aleluya!', '#ffe9a8');
+    setTimeout(() => sound.say('¡Gloria a Dios! ¡Aleluya!', { male: save.player.gender !== 'f', rate: .95 }), 300);
+  }
+  P.inChurch = church;
   if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
 }
@@ -2056,6 +2064,12 @@ function update(dt) {
   if (joy.active) { ix = joy.x; iz = -joy.y; mag = Math.min(1, Math.hypot(ix, iz)); if (mag < .12) mag = 0; else mag = Math.min(1, mag * 1.15); }
   // reverencia en el Lugar Santísimo: se queda quieto mientras se inclina y se arrodilla
   if (P.kneel) { P.kneel.t += dt; mag = 0; ix = iz = 0; jumpPressed = false; if (P.kneel.t >= P.kneel.dur) P.kneel = null; }
+  // alabanza al entrar al templo: tres saltos de alegría, luego de rodillas moviendo la cabeza
+  if (P.praise) {
+    const w = P.praise; w.t += dt; mag = 0; ix = iz = 0; jumpPressed = false;
+    if (w.j < 3 && w.t > .15 + w.j * .8 && P.onGround) { w.j++; jumpPressed = true; }
+    if (w.t >= w.dur) P.praise = null;
+  }
   if (runToggle) run = true;
   // Mantener presionada la flecha ↑ (o W) hace correr más rápido
   if ((keys.KeyW || keys.ArrowUp) && P.onGround !== null) P.holdFwd = (P.holdFwd || 0) + dt; else P.holdFwd = 0;
@@ -2552,7 +2566,7 @@ function loop() {
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {
