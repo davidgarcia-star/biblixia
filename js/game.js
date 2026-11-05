@@ -2320,7 +2320,7 @@ function updateCamera(dt, follow = true) {
     const look = -(cam.pitch - .3) * 1.5;
     camera.lookAt(eye.x + Math.sin(cam.yaw) * Math.cos(look), eye.y + Math.sin(look), eye.z + Math.cos(cam.yaw) * Math.cos(look));
     cam.look.copy(eye);
-    fpArms.visible = true;
+    fpArms.visible = false; // en primera persona solo se ve lo que mira la cámara (sin manos ni brazos)
     const sw = Math.sin(human.phase) * Math.min(1, P.speed / 6);
     // balanceo natural: quieto casi no se mueve, caminando suave, corriendo más amplio y en turbo todavía más rápido y amplio
     const spd = P.speed, amp = spd < .3 ? 0 : spd < WALK + .5 ? .28 : spd < RUN + .5 ? .5 : .62;
