@@ -1781,6 +1781,15 @@ function takeGift() {
   talkNPC = null; state = 'play';
   if (collected >= goal) endLevel(true);
 }
+// Lugares especiales (tabernáculo, casa, oficinas, templo…): tarjeta al entrar y cierre automático.
+// Se llama también cuando hay una acción cerca (adorar, comer, dormir…) para que la tarjeta no se quede vieja.
+function updateZone(dt) {
+  let z = null;
+  for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
+  if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
+  if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
+}
+
 function showInfo(z) {
   $('iName').textContent = z.name; $('iText').textContent = z.text; $('iRef').textContent = z.ref;
   $('info').classList.add('show'); infoTimer = 12;
@@ -1948,9 +1957,7 @@ function update(dt) {
     pr.classList.add('show'); $('tTake').classList.toggle('ready', can);
     if (takePressed) { takePressed = false; if (can) startDriving(); else { toast('🔒 Pasa el nivel Básico para usar el barco', '#ffd34d'); sound.hurt(); } }
     takePressed = false;
-    let z0 = null; for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z0 || zz.pri > z0.pri)) z0 = zz;
-    if (z0 !== curZone) { curZone = z0; if (z0) showInfo(z0); }
-    updateHUD(); return;
+    updateZone(dt); updateHUD(); return;
   }
   // Acciones de la vida diaria (comer, beber, dormir, bañarse, comprar)
   if (world.life && !near) {
@@ -1959,7 +1966,7 @@ function update(dt) {
     if (ba) {
       pr.innerHTML = `${isTouch ? 'Toca <b>TOMAR</b>:' : '<kbd>T</kbd>'} ${ba.label}`; pr.classList.add('show'); $('tTake').classList.add('ready');
       if (takePressed) { takePressed = false; ba.fn(); }
-      takePressed = false; updateHUD(); return;
+      takePressed = false; updateZone(dt); updateHUD(); return;
     }
   }
   if (near) {
@@ -1968,11 +1975,7 @@ function update(dt) {
     if (takePressed) { takePressed = false; openTalk(near); return; }
   } else { pr.classList.remove('show'); $('tTake').classList.remove('ready'); }
   takePressed = false;
-  // Lugares especiales del tabernáculo
-  let z = null;
-  for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
-  if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
-  if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
+  updateZone(dt);
   if (!isFinite(P.pos.x) || !isFinite(P.pos.y) || !isFinite(P.pos.z)) { P.pos.copy(P.safe || world.start); P.vy = 0; P.speed = 0; } else if (P.onGround && !P.driving) (P.safe || (P.safe = new THREE.Vector3())).copy(P.pos);
   updateHUD();
 }
@@ -2121,6 +2124,33 @@ const fireflies = (() => {
     }
   };
 })();
+// Estrellas fugaces: de noche, de vez en cuando cruza el cielo una estela brillante (Salmo 19:1)
+const shootingStar = (() => {
+  const pos = new Float32Array(6), col = new Float32Array([1, 1, .95, 0, 0, 0]);
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  line.frustumCulled = false; line.visible = false; line.renderOrder = -1; scene.add(line);
+  const start = new THREE.Vector3(), dir = new THREE.Vector3();
+  let wait = 4 + Math.random() * 6, life = 0, dur = 1;
+  return {
+    update(dt, cp) {
+      if (!stars.visible) { line.visible = false; return; }
+      if (life <= 0) {
+        line.visible = false;
+        if ((wait -= dt) > 0) return;
+        wait = 7 + Math.random() * 12; dur = .7 + Math.random() * .6; life = dur;
+        const th = Math.random() * Math.PI * 2, el = .45 + Math.random() * .5;
+        start.set(Math.cos(th) * Math.cos(el), Math.sin(el), Math.sin(th) * Math.cos(el)).multiplyScalar(1200);
+        dir.set(-Math.sin(th) + (Math.random() - .5) * .4, -.35 - Math.random() * .3, Math.cos(th) + (Math.random() - .5) * .4).normalize().multiplyScalar(Math.random() < .5 ? 700 : -700); dir.y = -Math.abs(dir.y);
+      }
+      life -= dt; const k = 1 - Math.max(0, life) / dur, fade = Math.sin(Math.PI * Math.min(1, k));
+      const hx = cp.x + start.x + dir.x * k, hy = cp.y + start.y + dir.y * k, hz = cp.z + start.z + dir.z * k, tl = .16 + .1 * k;
+      pos[0] = hx; pos[1] = hy; pos[2] = hz; pos[3] = hx - dir.x * tl; pos[4] = hy - dir.y * tl; pos[5] = hz - dir.z * tl;
+      col[0] = fade; col[1] = fade; col[2] = .95 * fade;
+      geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true; line.visible = true;
+    }
+  };
+})();
 function loop() {
   requestAnimationFrame(loop);
   if (building) { lastNow = performance.now(); return; }
@@ -2141,6 +2171,7 @@ function loop() {
   if (state === 'play') update(dt);
   birds.update(dt, elapsed, camera.position);
   fireflies.update(dt, elapsed, camera.position);
+  shootingStar.update(dt, camera.position);
 
   if (world) {
     followShip();
