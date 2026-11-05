@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { bakeInPlace } from './human.js';
 
 /* =========================================================
    AUTOS DE LUJO (diseños propios, sin marcas) y la cochera moderna.
@@ -58,6 +59,7 @@ export function makeSportsCar(color = 0xf4f5f7) {
   for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .08, .1), paint); m.position.set(s * 1.02, 1.0, .35); g.add(m); }
   for (const s of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .45), C.seat); st.position.set(s * .36, .78, -.25); g.add(st); }
   const wheels = [[-.92, 1.38], [.92, 1.38], [-.94, -1.35], [.94, -1.35]].map(([x, z]) => wheel(g, x, z, .36, .3, C.rim, C.tire, C.disc));
+  bakeInPlace(g, wheels.map(w => w.userData.steer));
   g.userData = { kind: 'deportivo', wheels, len: 4.7, wid: 2.0, seatY: .5, top: 36 };
   return g;
 }
@@ -99,6 +101,7 @@ export function buildCarport(group, x0, x1, z0, z1, fy) {
   for (let k = 0; k < 14; k++) { const sl = new THREE.Mesh(new THREE.BoxGeometry(w, .14, .08), wood); sl.position.set(cx, fy + H + .18, cz - d * .26 + k * d * .045); sl.castShadow = true; g.add(sl); }
   // luces empotradas
   for (const x of [cx - w / 4, cx + w / 4]) { const l = new THREE.Mesh(new THREE.BoxGeometry(.4, .03, .4), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0d0, emissiveIntensity: 1.6 })); l.position.set(x, fy + H - .14, cz); g.add(l); }
+  bakeInPlace(g);
   return { group: g, cols };
 }
 
@@ -132,6 +135,7 @@ export function makePickup(color = 0xf4f5f7) {
   for (const [z] of [[1.75], [-1.55]]) for (const s of [-1, 1]) { const fl = new THREE.Mesh(new THREE.TorusGeometry(.5, .07, 6, 16, Math.PI), trim); fl.position.set(s * 1.0, .45, z); fl.rotation.y = Math.PI / 2; g.add(fl); }
   for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.22, .15, .12), C.black); m.position.set(s * 1.1, 1.55, 1.15); g.add(m); }
   const wheels = [[-.95, 1.75], [.95, 1.75], [-.95, -1.55], [.95, -1.55]].map(([x, z]) => wheel(g, x, z, .45, .34, C.rim, C.tire, C.disc));
+  bakeInPlace(g, wheels.map(w => w.userData.steer));
   g.userData = { kind: 'pickup', wheels, len: 5.6, wid: 2.15, seatY: 1.0, top: 27 };
   return g;
 }
@@ -227,5 +231,6 @@ export function buildYacht() {
   add(new THREE.CylinderGeometry(.025, .025, 1.6, 6), steel, -L / 2 + .5, DECK + 1.6, 0, false);
   const flag = add(new THREE.PlaneGeometry(.9, .55, 6, 2), new THREE.MeshStandardMaterial({ color: 0x1a4aa0, side: THREE.DoubleSide, roughness: .8 }), -L / 2 + .02, DECK + 2.1, 0, false);
   flag.rotation.y = Math.PI / 2; g.userData.flag = flag;
+  bakeInPlace(g, [hull, rad, flag]);
   return g;
 }

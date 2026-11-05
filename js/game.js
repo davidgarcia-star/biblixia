@@ -7,7 +7,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VERSES } from './verses.js';
-import { createHuman, animateHuman, bakeStatic, physM } from './human.js';
+import { createHuman, animateHuman, bakeStatic, bakeInPlace, bakeColored, FAR_MAT, physM } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
 import { buildArk, buildValley } from './scenes.js';
 import { buildPlaces } from './places.js';
@@ -97,7 +97,7 @@ scene.fog = new THREE.Fog(0xd8b9a0, 110, 760);
 const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x4b3a2c, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffcf9e, 3.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(isTouch ? 1024 : 4096, isTouch ? 1024 : 4096); sun.shadow.radius = 1.4;
+sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048); sun.shadow.radius = 1.4;
 const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
@@ -193,7 +193,7 @@ const birds = (() => {
   };
 })();
 const TIMES = {
-  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .3, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
+  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .04, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
@@ -286,12 +286,18 @@ const facades = FACADE_STYLES.map(st => {
     g.fillStyle = st.base; g.fillRect(0, 0, W, H);
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
       const x = c * cw, y = r * rh, on = lit[r * cols + c];
-      const gr = g.createLinearGradient(x, y, x + cw, y + rh);
+      // vidrio que refleja el cielo (más claro arriba), algunas ventanas con persianas o cortinas
       const gc = st.glass[(r * 7 + c * 3) % 3];
-      gr.addColorStop(0, on ? '#ffd9a0' : gc); gr.addColorStop(1, on ? '#e6a95e' : '#0d141c');
+      const gr = g.createLinearGradient(x, y, x + cw * .35, y + rh);
+      gr.addColorStop(0, '#9fb6c8'); gr.addColorStop(.18, gc); gr.addColorStop(.75, gc); gr.addColorStop(1, '#0b1118');
       g.fillStyle = gr;
-      const m = st.band ? 2 : 6;
-      g.fillRect(x + m, y + (st.band ? 10 : 8), cw - m * 2, rh - (st.band ? 20 : 14));
+      const m = st.band ? 2 : 6, wy = y + (st.band ? 10 : 8), wh = rh - (st.band ? 20 : 14);
+      g.fillRect(x + m, wy, cw - m * 2, wh);
+      if (on) { g.fillStyle = 'rgba(255,236,200,.18)'; g.fillRect(x + m, wy, cw - m * 2, wh); }
+      const bl = (r * 13 + c * 7) % 5;
+      if (bl === 0) { g.fillStyle = 'rgba(225,220,205,.55)'; g.fillRect(x + m, wy, cw - m * 2, wh * (.25 + ((r + c) % 3) * .2)); for (let k = wy; k < wy + wh * .6; k += 3) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(x + m, k, cw - m * 2, 1); } }
+      if (bl === 2) { g.fillStyle = 'rgba(240,235,225,.25)'; g.fillRect(x + m, wy, (cw - m * 2) * .3, wh); }
+      g.fillStyle = 'rgba(255,255,255,.07)'; g.beginPath(); g.moveTo(x + m, wy + wh * .7); g.lineTo(x + m + cw * .5, wy); g.lineTo(x + m + cw * .62, wy); g.lineTo(x + m, wy + wh * .9); g.fill(); // reflejo diagonal
       if (!st.band) { g.fillStyle = st.frame; g.fillRect(x + cw / 2 - 1, y + 8, 2, rh - 14); }
     }
     if (st.band) { g.fillStyle = st.frame; for (let r = 0; r <= rows; r++) g.fillRect(0, r * rh - 4, W, 8); }
@@ -737,7 +743,7 @@ async function buildWorld(cfg) {
       g.setAttribute('color', new THREE.BufferAttribute(c, 3)); g.computeVertexNormals(); crown.push(g);
     }
     const crownGeo = mergeGeometries(crown);
-    const leafV = M.leaf.clone(); leafV.vertexColors = true; leafV.flatShading = false;
+    const leafV = leafify(M.leaf.clone()); leafV.vertexColors = true; leafV.flatShading = false;
     const fol = new THREE.InstancedMesh(crownGeo, leafV, n);
     const o = new THREE.Object3D(), col = new THREE.Color();
     trees.forEach(([x, z, base], i) => {
@@ -915,8 +921,8 @@ async function buildWorld(cfg) {
       W.islands.push({ x: ix, z: iz, rad, h, wl: rad * Math.pow(.5, .75) });
     }
     W.sails = [];
-    for (let i = 0; i < 5; i++) { const sb = buildShip(.35); sb.position.set(SX - 150 - r() * 300, 0, O + r() * (T + SZ)); sb.rotation.y = r() * 6; sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: r() * 6, r: 30 + r() * 40, cx: sb.position.x, cz: sb.position.z }); }
-    { const sb = buildShip(.8); sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: 0, r: 70, cx: SX - 140, cz: Zc + 40, speed: .05, near: true }); }
+    for (let i = 0; i < 5; i++) { const sb = buildShip(.35); bakeInPlace(sb, [], false); sb.position.set(SX - 150 - r() * 300, 0, O + r() * (T + SZ)); sb.rotation.y = r() * 6; sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: r() * 6, r: 30 + r() * 40, cx: sb.position.x, cz: sb.position.z }); }
+    { const sb = buildShip(.8); bakeInPlace(sb, [], true); sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: 0, r: 70, cx: SX - 140, cz: Zc + 40, speed: .05, near: true }); }
     W.seaInfo = { SX, Zc, shipX, deckY };
     W.zones.push({ id: 'mar', name: 'El mar y el barco', minX: shipX - 18, maxX: SX + 4, minZ: pz0 - 6, maxZ: pz0 + 6, pri: 3,
       text: 'Jonás huyó de Dios en un barco rumbo a Tarsis, pero el SEÑOR envió una gran tormenta. Siglos después, Jesús calmó el viento y el mar con su palabra, y el apóstol Pablo, en medio de un naufragio, animó a todos porque Dios había prometido salvarlos.',
@@ -1150,6 +1156,8 @@ async function buildWorld(cfg) {
   if (W.ark) for (const a of W.ark.insideItems) W.lod.push({ obj: a, range: 70 });
   for (const c of W.cars) W.lod.push({ obj: c.obj, range: 170 });
   await idle();
+  W.humanLOD = [];
+  await idle();
   W.cull = buildCull(group);
   W.start = new THREE.Vector3(startX, 0, startZ);
   W.startYaw = Math.atan2(-startX, -startZ);
@@ -1161,6 +1169,43 @@ async function buildWorld(cfg) {
    Lo grande (suelo, mar, montañas, edificios) se ve siempre. Se usa la capa 1 de three.js para no tocar "visible". */
 const CULL_K = isTouch ? 1 : 1.8;
 const _cb = new THREE.Box3(), _cs = new THREE.Sphere(), _ci = new THREE.Matrix4(), _cv = new THREE.Vector3();
+// pieza diminuta bajo el suelo para que el material de las personas lejanas se prepare junto con los demás
+{ const g = new THREE.BoxGeometry(.01, .01, .01); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); const m = new THREE.Mesh(g, FAR_MAT); m.position.y = -40; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
+const LOD_FAR = isTouch ? 16 : 22, LOD_HIDE = isTouch ? 110 : 170, _lv = new THREE.Vector3();
+// Personas lejanas: una versión sencilla (una sola pieza, sin dedos) en la misma postura.
+// Se prepara DESPUÉS de mostrar el mundo, de a poquito, para no alargar la carga ni congelar la pantalla.
+let lodJob = 0;
+async function buildHumanLOD(W, fast = false) {
+  const job = ++lodJob;
+  const roots = []; W.group.traverse(o => { if (((o.userData.isHuman && o.userData.hum) || o.userData.bakedHum) && !o.userData.noLOD && !o.userData.hasLOD) roots.push(o); });
+  const cp = (a, b) => { if (a && b) { b.position.copy(a.position); b.rotation.copy(a.rotation); b.scale.copy(a.scale); } };
+  // los más cercanos al jugador primero
+  roots.sort((a, b) => a.getWorldPosition(_lv).distanceToSquared(P.pos) - b.getWorldPosition(_lv).distanceToSquared(P.pos));
+  let t0 = performance.now();
+  for (const root of roots) {
+    // se trabaja ~6 ms por cuadro y luego se cede el turno (el juego sigue fluido)
+    if (!fast && performance.now() - t0 > 6) { await sleep(state === 'play' ? 8 : 2); await idle(); t0 = performance.now(); }
+    if (job !== lodJob || world !== W) return;               // cambió el nivel: dejar de preparar este
+    const h = root.userData.hum || root.userData.bakedHum, lo = createHuman({ ...h.opts, detail: .22, name: '' });
+    for (const k of ['hips', 'spine', 'chest', 'neck', 'head']) cp(h[k], lo[k]);
+    for (let i = 0; i < 2; i++) { for (const k of ['thigh', 'knee', 'ankle']) cp(h.legs[i] && h.legs[i][k], lo.legs[i] && lo.legs[i][k]); for (const k of ['shoulder', 'elbow', 'hand']) cp(h.arms[i] && h.arms[i][k], lo.arms[i] && lo.arms[i][k]); }
+    const far = bakeColored(lo.root); far.visible = false;
+    const near = root.children.slice();
+    root.add(far); root.userData.hasLOD = true; delete root.userData.bakedHum;
+    W.humanLOD.push({ root, far, near, isFar: false });
+  }
+}
+function updateHumanLOD() {
+  if (!world || !world.humanLOD) return;
+  const cp = camera.position;
+  for (const e of world.humanLOD) {
+    if (!e.root.visible) continue;
+    _lv.setFromMatrixPosition(e.root.matrixWorld);
+    const d = Math.hypot(_lv.x - cp.x, _lv.z - cp.z), far = e.isFar ? d > LOD_FAR - 3 : d > LOD_FAR;
+    if (far !== e.isFar) { e.isFar = far; for (const c of e.near) c.visible = !far; }
+    e.far.visible = far && d < LOD_HIDE;
+  }
+}
 function buildCull(root) {
   root.updateMatrixWorld(true);
   const units = [];
@@ -1199,11 +1244,33 @@ function mountainGeo(rad, h, r, rough = .12) {
   }
   g.computeVertexNormals(); return g;
 }
+// Follaje más natural: racimos de hojas con huecos oscuros, brillos y relieve (se calcula en el sombreador, sin texturas)
+function leafify(mat, scale = 4.5) {
+  mat.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vLeafP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLeafP = position * ' + scale.toFixed(2) + ';');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+varying vec3 vLeafP;
+float lHash(vec3 p) { p = fract(p * .3183099 + .1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float lNoise(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3. - 2. * f);
+  return mix(mix(mix(lHash(i), lHash(i + vec3(1, 0, 0)), f.x), mix(lHash(i + vec3(0, 1, 0)), lHash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(lHash(i + vec3(0, 0, 1)), lHash(i + vec3(1, 0, 1)), f.x), mix(lHash(i + vec3(0, 1, 1)), lHash(i + vec3(1, 1, 1)), f.x), f.y), f.z); }`)
+      .replace('#include <color_fragment>', `#include <color_fragment>
+float lfA = lNoise(vLeafP), lfB = lNoise(vLeafP * 2.7 + 3.1);
+float lfLeaf = smoothstep(.22, .78, lfA * .55 + lfB * .45);
+diffuseColor.rgb *= mix(.42, 1.2, lfLeaf);
+diffuseColor.rgb += vec3(.025, .04, -.01) * (lfB - .5);`)
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+normal = normalize(normal + (vec3(lfA, lfB, lfA * lfB) - .45) * .9);`);
+  };
+  mat.customProgramCacheKey = () => 'leaf' + scale;
+  return mat;
+}
 const TREE_M = {
-  oliveLeaf: new THREE.MeshStandardMaterial({ color: 0x7d8c5a, roughness: .9 }),
+  oliveLeaf: leafify(new THREE.MeshStandardMaterial({ color: 0x7d8c5a, roughness: .9 })),
   oliveBark: new THREE.MeshStandardMaterial({ color: 0x6a5a48, roughness: 1 }),
-  figLeaf: new THREE.MeshStandardMaterial({ color: 0x3f6b28, roughness: .85 }),
-  cedarLeaf: new THREE.MeshStandardMaterial({ color: 0x2c4a2a, roughness: .9 }),
+  figLeaf: leafify(new THREE.MeshStandardMaterial({ color: 0x3f6b28, roughness: .85 })),
+  cedarLeaf: leafify(new THREE.MeshStandardMaterial({ color: 0x2c4a2a, roughness: .9 }), 3),
   bark: new THREE.MeshStandardMaterial({ color: 0x5a3e28, roughness: 1 }),
   palmLeaf: new THREE.MeshStandardMaterial({ color: 0x4a7a2a, roughness: .8, side: THREE.DoubleSide }),
   palmBark: new THREE.MeshStandardMaterial({ color: 0x8a6a44, roughness: 1 }),
@@ -1602,6 +1669,7 @@ async function startLevel(i) {
   try { await startLevelNow(i); } finally { building = false; ld.classList.add('hidden'); }
 }
 async function startLevelNow(i) {
+  lodJob++; // dejar de preparar las personas lejanas del mundo anterior
   await menuReady; // si el mundo de la portada aún se está construyendo, esperar (no construir dos a la vez)
   lvlIdx = i; L = LEVELS[i];
   // Si el mundo de la portada ya es este nivel (Básico), se reutiliza: no se construye dos veces
@@ -1609,7 +1677,7 @@ async function startLevelNow(i) {
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; sound.swimLoop(0); sound.boatLoop(0);
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -1633,6 +1701,7 @@ async function startLevelNow(i) {
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
   camera.updateMatrixWorld(); updateCull(camera.position);
   await warmShaders(scene, camera); pendingGroups.clear();
+  buildHumanLOD(world);
   lastNow = performance.now();
   state = 'play'; ensureMusic();
 }
@@ -1902,12 +1971,12 @@ function drawBigMap() {
   for (const c of W2.coins) if (!c.taken) { g.fillStyle = '#ffd34d'; g.beginPath(); g.arc(X(c.x), Z(c.z), 3.5, 0, 7); g.fill(); }
   if (W2.clocks) for (const c of W2.clocks) if (!c.taken) drawClockIcon(g, X(c.x), Z(c.z), 6);
   g.font = '18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  if (W2.house) { g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('Tu casa', X(W2.house.cx), Z(W2.house.cz) + 16); g.font = '18px system-ui'; }
+  if (W2.house) { g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('Mi casa', X(W2.house.cx), Z(W2.house.cz) + 16); g.font = '18px system-ui'; }
   if (W2.church) { g.fillText('⛪', X(W2.church.cx), Z(W2.church.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('MIPROAA', X(W2.church.cx), Z(W2.church.cz) + 16); }
   for (const n of W2.npcs) { g.fillStyle = n.given ? 'rgba(160,200,255,.5)' : n.treasure ? '#ff7ab6' : '#6fd0ff'; g.beginPath(); g.arc(X(n.x), Z(n.z), 4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); }
   // jugador
   g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading + Math.PI); g.fillStyle = '#ff4040'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 9); g.lineTo(0, 4); g.lineTo(-8, 9); g.closePath(); g.fill(); g.stroke(); g.restore();
-  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Tu casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>`;
+  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Mi casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>`;
 }
 
 /* ---------- Personajes: hablar y recibir regalos ---------- */
@@ -1946,6 +2015,13 @@ function updateZone(dt) {
   let z = null;
   for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
   const bano = !!(z && z.id === 'bano'); if (bano !== enBata) ponerBata(bano);
+  // al entrar al Lugar Santísimo: reverencia y se arrodilla (una vez cada vez que entra)
+  const holy = world.zones.some(q => q.id === 'santisimo' && P.pos.x > q.minX && P.pos.x < q.maxX && P.pos.z > q.minZ && P.pos.z < q.maxZ);
+  if (holy && !P.inHoly && !P.kneel && !P.driving && !P.car) {
+    P.kneel = { t: 0, dur: 5.5 }; P.speed = 0;
+    setTimeout(() => { toast('🙏 Reverencia ante la presencia del SEÑOR', '#ffe9a8'); sound.life('worship'); }, 200);
+  }
+  P.inHoly = holy;
   if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
 }
@@ -1978,6 +2054,8 @@ function update(dt) {
   let mag = Math.min(1, Math.hypot(ix, iz));
   let run = keys.ShiftLeft || keys.ShiftRight;
   if (joy.active) { ix = joy.x; iz = -joy.y; mag = Math.min(1, Math.hypot(ix, iz)); if (mag < .12) mag = 0; else mag = Math.min(1, mag * 1.15); }
+  // reverencia en el Lugar Santísimo: se queda quieto mientras se inclina y se arrodilla
+  if (P.kneel) { P.kneel.t += dt; mag = 0; ix = iz = 0; jumpPressed = false; if (P.kneel.t >= P.kneel.dur) P.kneel = null; }
   if (runToggle) run = true;
   // Mantener presionada la flecha ↑ (o W) hace correr más rápido
   if ((keys.KeyW || keys.ArrowUp) && P.onGround !== null) P.holdFwd = (P.holdFwd || 0) + dt; else P.holdFwd = 0;
@@ -2471,7 +2549,7 @@ function loop() {
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {
@@ -2503,6 +2581,7 @@ function loop() {
   }
   if (gradePass) gradePass.uniforms.time.value = (t * 60) % 1000;
   for (const g of pendingGroups) g.visible = false;
+  updateHumanLOD();
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
   for (const g of pendingGroups) g.visible = true;
   skyClouds.grp.position.set(camera.position.x * .3, 0, camera.position.z * .3);
@@ -2717,10 +2796,11 @@ setTimeout(async () => {
   // el mundo 3D ya se dibuja: la imagen de fondo provisional se desvanece (después de un par de cuadros)
   requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('mundo-listo')));
   menuReadyDone();
+  if (world) buildHumanLOD(world);
 }, 30);
 
 // Acceso para pruebas
-window.__game = { carHits, islandH, renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };
+window.__game = { carHits, islandH, buildLODNow: () => buildHumanLOD(world, true), sun, get composer() { return composer; }, set composer(v) { composer = v; }, renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };
 
 /* =========================================================
    Contador de personas que han entrado al juego (una vez por navegador)

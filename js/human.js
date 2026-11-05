@@ -542,11 +542,43 @@ export function createHuman(opt = {}) {
     const st = mesh(new THREE.CylinderGeometry(.018, .024, 1.9, 8), wood, arms[1].hand, 0, -.12, .04); st.rotation.x = .08;
     mesh(new THREE.TorusGeometry(.055, .017, 6, 12, Math.PI), wood, arms[1].hand, 0, .86, .04);
   }
-  return { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
+  // Unir las piezas que se mueven juntas (mismo hueso y mismo material): ~55 piezas → ~20 (mucho más rápido de dibujar)
+  compactParts(root, new Set([...eyes, skirt].filter(Boolean)));
+  const H = { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
+  root.userData.isHuman = true; root.userData.hum = H;
+  return H;
+}
+
+const _ATTRS = ['position', 'normal', 'uv'];
+function plainGeo(src, matrix) {
+  let g = new THREE.BufferGeometry();
+  for (const k of _ATTRS) g.setAttribute(k, src.attributes[k]);
+  if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); }
+  else for (const k of _ATTRS) g.setAttribute(k, g.attributes[k].clone());
+  g.applyMatrix4(matrix); return g;
+}
+export function compactParts(root, keep = new Set()) {
+  const nodes = []; root.traverse(n => { if (!n.isMesh) nodes.push(n); });
+  for (const n of nodes) {
+    const byMat = new Map();
+    for (const c of n.children) {
+      if (!c.isMesh || c.isInstancedMesh || keep.has(c) || c.children.length || !c.visible || Array.isArray(c.material)) continue;
+      const a = c.geometry.attributes; if (!a.position || !a.normal || !a.uv || c.geometry.morphAttributes.position) continue;
+      if (!byMat.has(c.material)) byMat.set(c.material, []); byMat.get(c.material).push(c);
+    }
+    for (const [mat, list] of byMat) {
+      if (list.length < 2) continue;
+      const geos = list.map(c => { c.updateMatrix(); return plainGeo(c.geometry, c.matrix); });
+      const merged = mergeGeometries(geos, false); if (!merged) continue;
+      const m = new THREE.Mesh(merged, mat); m.castShadow = list.some(c => c.castShadow); m.receiveShadow = list.some(c => c.receiveShadow); m.renderOrder = list[0].renderOrder;
+      for (const c of list) n.remove(c);
+      n.add(m);
+    }
+  }
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -604,6 +636,14 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     }
     P.hipY = .93;
   }
+  // reverencia: primero inclina la cabeza con las manos juntas, luego se arrodilla y al final se levanta
+  if (kneel >= 0) {
+    const sm = (a, b, x) => { const u = Math.min(1, Math.max(0, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    const up = 1 - sm(.82, .97, kneel), bow = sm(0, .14, kneel) * up, kn = sm(.12, .3, kneel) * up;
+    P.t0 = P.t1 = -.1 * kn; P.k0 = P.k1 = .04 + 1.5 * kn; P.a0 = P.a1 = .55 * kn; P.hipY = .93 - .44 * kn;
+    P.spineX = .28 * bow + .12 * kn; P.spineY = 0; P.headX = .5 * bow;
+    P.s0x = P.s1x = -.55 * bow - .2 * kn; P.s0z = .32 * bow; P.s1z = -.32 * bow; P.e0 = P.e1 = -1.55 * bow;
+  }
   // gesto de mal olor: se tapa la nariz y mueve la cabeza
   if (gesture > 0) { P.s1x = -2.45; P.s1z = .55; P.e1 = -2.1; P.headX = .15; }
   const k = Math.min(1, dt * 16);
@@ -627,7 +667,7 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
 }
 
 /* ---------- Unir mallas estáticas (personajes quietos) ---------- */
-export function bakeStatic(obj, skip = []) {
+export function bakeStatic(obj, skip = [], cast = true) {
   obj.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(obj.matrixWorld).invert();
   const byMat = new Map();
@@ -653,10 +693,56 @@ export function bakeStatic(obj, skip = []) {
     } else push(m.material, g);
   });
   const out = new THREE.Group();
+  if (obj.userData.isHuman) out.userData.bakedHum = obj.userData.hum; // para crear su versión lejana
   for (const [mat, list] of byMat) {
     const merged = mergeGeometries(list, false);
     if (!merged) continue;
-    const mm = new THREE.Mesh(merged, mat); mm.castShadow = true; mm.receiveShadow = true; out.add(mm);
+    const mm = new THREE.Mesh(merged, mat); mm.castShadow = cast; mm.receiveShadow = true; out.add(mm);
   }
+  return out;
+}
+
+// Unir en el mismo lugar las piezas fijas de un objeto (menos las que se mueven, en `skip`)
+export function bakeInPlace(obj, skip = [], cast = true) {
+  const skipped = new Set(); skip.forEach(s => s && s.traverse(o => skipped.add(o)));
+  const baked = bakeStatic(obj, skip.filter(Boolean), cast);
+  const rm = []; obj.traverse(m => { if (m.isMesh && !skipped.has(m) && m.visible && m.geometry.attributes.uv && m.geometry.attributes.position) rm.push(m); });
+  for (const m of rm) m.parent.remove(m);
+  obj.add(baked); return baked;
+}
+
+// Versión lejana de una persona: TODO en una sola pieza con colores por vértice (1 sola llamada de dibujo)
+const _avg = new WeakMap();
+function avgColor(mat) {
+  const c = mat.color ? mat.color.clone() : new THREE.Color(1, 1, 1);
+  const img = mat.map && mat.map.image;
+  if (img && img.width) {
+    let a = _avg.get(img);
+    if (!a) {
+      a = new THREE.Color(1, 1, 1);
+      try { const cv = document.createElement('canvas'); cv.width = cv.height = 4; const g = cv.getContext('2d'); g.drawImage(img, 0, 0, 4, 4); const d = g.getImageData(0, 0, 4, 4).data; let r = 0, gg = 0, b = 0; for (let i = 0; i < 64; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; } a.setRGB(r / 16 / 255, gg / 16 / 255, b / 16 / 255, THREE.SRGBColorSpace); } catch (e) {}
+      _avg.set(img, a);
+    }
+    c.multiply(a);
+  }
+  return c;
+}
+export const FAR_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .78 });
+export function bakeColored(obj) {
+  obj.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(obj.matrixWorld).invert(), geos = [];
+  obj.traverse(m => {
+    if (!m.isMesh || !m.visible) return;
+    const src = m.geometry; if (!src.attributes.position || !src.attributes.normal) return;
+    let g = new THREE.BufferGeometry(); g.setAttribute('position', src.attributes.position); g.setAttribute('normal', src.attributes.normal);
+    if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); } else { g.setAttribute('position', g.attributes.position.clone()); g.setAttribute('normal', g.attributes.normal.clone()); }
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    const col = avgColor(Array.isArray(m.material) ? m.material[0] : m.material), n = g.attributes.position.count, arr = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { arr[i * 3] = col.r; arr[i * 3 + 1] = col.g; arr[i * 3 + 2] = col.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g);
+  });
+  const merged = geos.length ? mergeGeometries(geos, false) : null;
+  const out = new THREE.Group();
+  if (merged) { const mm = new THREE.Mesh(merged, FAR_MAT); mm.castShadow = false; mm.receiveShadow = true; out.add(mm); }
   return out;
 }

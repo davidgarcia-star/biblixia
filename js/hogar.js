@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { bakeInPlace } from './human.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* =========================================================
    HOGAR: detalles de la casa del jugador
@@ -144,6 +146,7 @@ export function buildFood(group, tx, ty, tz, w = 1.4, d = .9) {
   const asa = add(g, new THREE.TorusGeometry(.04, .007, 6, 14, Math.PI), S.glass, .555, y0 + .12, .3, { cast: false }); asa.rotation.z = -Math.PI / 2;
   // servilletas
   for (const [x, z] of [[-.58, -.2], [.58, .22]]) add(g, new THREE.BoxGeometry(.09, .006, .12), S.towelWhite, x, y0 + .003, z, { cast: false });
+  bakeInPlace(g, [], false); // todo en pocas piezas
   return g;
 }
 
@@ -156,6 +159,7 @@ export function buildChairs(group, tx, fy, tz, positions) {
     for (const [a, b] of [[-.19, -.18], [.19, -.18], [-.19, .18], [.19, .18]]) add(c, new THREE.BoxGeometry(.04, .47, .04), S.wood, a, .235, b);
     add(c, new THREE.BoxGeometry(.44, .5, .04), S.wood, 0, .74, .2);
     add(c, new THREE.BoxGeometry(.36, .03, .34), S.towelBlue, 0, .51, -.01, { cast: false });
+    bakeInPlace(c);
   }
 }
 
@@ -188,6 +192,7 @@ export function buildBedroomTV(group, x, fy, wz) {
   const offM = new THREE.MeshStandardMaterial({ color: 0x050608, roughness: .12, metalness: .3 });
   const screen = add(g, new THREE.PlaneGeometry(1.34, .75), onM, 0, 1.58, .068, { cast: false, recv: false });
   const led = add(g, new THREE.BoxGeometry(.02, .01, .01), new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x30ff60, emissiveIntensity: 2 }), .6, 1.18, .07, { cast: false });
+  bakeInPlace(g, [screen, led]);
   let on = true;
   return { group: g, toggle() { on = !on; screen.material = on ? onM : offM; led.material.emissive.setHex(on ? 0x30ff60 : 0xff3030); return on; }, get on() { return on; } };
 }
@@ -228,11 +233,14 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   add(g, new THREE.BoxGeometry(tL - .14, .02, tW - .14), M(0xeaf2f4, { roughness: .2 }), tX, fl + tH + .001, tZ, { cast: false });
   const water = add(g, new THREE.BoxGeometry(tL - .16, .01, tW - .16), S.water, tX, fl + tH + .014, tZ, { cast: false, recv: false });
   water.renderOrder = 2;
-  const foam = [];
+  // espuma: muchas burbujas unidas en una sola pieza
+  const foamGeos = [];
   for (let k = 0; k < 34; k++) {
-    const fx = tX + (Math.random() - .5) * (tL - .3), fz = tZ + (Math.random() - .5) * (tW - .26), r = .05 + Math.random() * .06;
-    const b = add(g, new THREE.SphereGeometry(r, 12, 8), S.foam, fx, fl + tH + .02, fz, { cast: false }); b.scale.y = .55; foam.push(b);
+    const fx = (Math.random() - .5) * (tL - .3), fz = (Math.random() - .5) * (tW - .26), r = .05 + Math.random() * .06;
+    const sg = new THREE.SphereGeometry(r, 12, 8); sg.scale(1, .55, 1); sg.translate(fx, 0, fz); foamGeos.push(sg);
   }
+  const foamMesh = add(g, mergeGeometries(foamGeos, false), S.foam, tX, fl + tH + .02, tZ, { cast: false });
+  const foam = [foamMesh];
   // patito de goma
   const dk = new THREE.Group(); dk.position.set(tX - .35, fl + tH + .045, tZ + .1); dk.rotation.y = .8; g.add(dk);
   add(dk, new THREE.SphereGeometry(.05, 14, 10), S.duck, 0, 0, 0).scale.set(1.25, .8, 1);
@@ -280,7 +288,8 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   // batas colgadas detrás de la puerta (lo que el jugador se pone al entrar)
   add(g, new THREE.CapsuleGeometry(.12, .7, 6, 12), S.towelWhite, bx0 + e + .1, fl + 1.2, bz0 + .25).scale.set(.6, 1, 1.2);
 
+  bakeInPlace(g, [dk, ...foam], false);
   // espuma que se mueve suavemente y llamitas de las velas
-  const update = (t) => { for (let k = 0; k < foam.length; k++) { const b = foam[k]; b.scale.x = b.scale.z = 1 + Math.sin(t * 1.3 + k) * .06; } dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3; };
+  const update = (t) => { foamMesh.scale.set(1 + Math.sin(t * 1.3) * .02, 1 + Math.sin(t * 1.7) * .08, 1 + Math.sin(t * 1.1) * .02); dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3; };
   return { group: g, update, shower: { x: shX, z: shZ }, tub: { x: tX, z: tZ - tW / 2 - .55 }, sink: { x: lX, z: lZ - .55 }, toilet: { x: iX - .9, z: iZ } };
 }

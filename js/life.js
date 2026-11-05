@@ -39,7 +39,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
   const sign = (text, sub, x, y, z, ry = 0) => {
     const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
     g.fillStyle = '#1a1206'; g.fillRect(0, 0, 512, 128); g.strokeStyle = '#f5c542'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
-    g.fillStyle = '#ffd34d'; g.font = '800 44px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(text, 256, 62); g.fillStyle = '#e9dcc0'; g.font = '600 24px system-ui, sans-serif'; g.fillText(sub, 256, 100);
+    g.fillStyle = '#ffd34d'; g.font = '800 ' + (sub ? 44 : 60) + 'px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(text, 256, sub ? 62 : 86); if (sub) { g.fillStyle = '#e9dcc0'; g.font = '600 24px system-ui, sans-serif'; g.fillText(sub, 256, 100); }
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, .65), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .35 }));
     m.position.set(x, y, z); m.rotation.y = ry; group.add(m); return m;
@@ -64,7 +64,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     const wallM = mat(0xf6f5f2, { roughness: .75 }), trimM = mat(0x6b4a32, { roughness: .55 }), floorM = mat(0xdcd8d0, { roughness: .3 });
     const darkM = mat(0x24272c, { roughness: .45, metalness: .3 }), woodM = mat(0xa8743f, { roughness: .55 }), frameM = mat(0x111214, { roughness: .35, metalness: .5 });
     // jardín, camino de losas y luces bajas
-    box(BLOCK - 2, .04, BLOCK - 2, mat(0x5f8f3e, { roughness: 1 }), cx, fy + .02, cz, { cast: false });
+    const lawnT = M.grass.map.clone(); lawnT.repeat.set(BLOCK / 4, BLOCK / 4); lawnT.needsUpdate = true;
+    box(BLOCK - 2, .04, BLOCK - 2, new THREE.MeshStandardMaterial({ map: lawnT, bumpMap: lawnT, bumpScale: 2, roughness: 1 }), cx, fy + .02, cz, { cast: false });
     const pathL = BLOCK / 2 - HD - 1;
     for (let k = 0; k < 6; k++) box(1.6, .08, pathL / 6 - .25, mat(0xcfccc6, { roughness: .6 }), cx, fy + .05, z0 + 1 + (k + .5) * pathL / 6, { cast: false });
     const ledM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0c8, emissiveIntensity: 2 });
@@ -108,7 +109,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(5.9, .2, 4.6, darkM, cx - 3.5, fy + H + 2.2, cz + 1.4, { cast: false });
     const lampM = new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 2 });
     for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
-    sign('Casa de ' + (playerName || 'mi personaje'), '🏠 Tu casa', cx, fy + H - .25, Z0 - .14, Math.PI);
+    sign('MI CASA', '', cx, fy + H - .25, Z0 - .14, Math.PI);
     const glass = winGlass;
     // patio trasero: terraza de madera y piscina (no se puede caminar dentro)
     const pX = cx - 2, pZ = Z1 + 5, pW = 8, pD = 3.6;
@@ -163,7 +164,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
     W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
     W.zones.push({ id: 'bano', name: 'Baño', minX: BX0, maxX: X1, minZ: Z0, maxZ: BZ1, pri: 6, text: 'Tu baño está preparado: la bañera llena con espuma, la ducha, toallas limpias y el lavamanos. Al entrar te pones la bata de baño. «Lávame, y seré más blanco que la nieve.»', ref: 'Salmo 51:7' });
-    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, ver la tele, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
+    W.zones.push({ id: 'casa', name: 'Mi casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, ver la tele, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
   }
 
   await pace();
