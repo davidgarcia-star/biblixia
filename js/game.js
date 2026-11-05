@@ -2104,12 +2104,13 @@ const fireflies = (() => {
   const p = new THREE.Points(geo, new THREE.PointsMaterial({ size: .26, map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
   p.frustumCulled = false; p.visible = false; scene.add(p);
   const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo']);
-  let cx = 0, cz = 0, chk = 0, inside = false;
+  let cx = 0, cz = 0, chk = 0, inside = false, crk = 2;
   return {
     update(dt, t, cp) {
       if (!stars.visible || !world) { p.visible = false; return; }
       if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ); }
       p.visible = !inside; if (inside) return;
+      if (state === 'play' && (crk -= dt) <= 0) { crk = .9 + Math.random() * 2.6; sound.cricket(.35 + Math.random() * .4, Math.random() * 1.6 - .8); } // grillos de noche al aire libre
       if (Math.hypot(cp.x - cx, cp.z - cz) > 18) { cx = cp.x; cz = cp.z; }
       const gy = P.pos.y;
       for (let i = 0; i < n; i++) {

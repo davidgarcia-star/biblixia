@@ -180,6 +180,17 @@ export class Sound {
       default: voice(300, 250, .5, { formants: [600, 1200], gain: .25 });
     }
   }
+  // Grillo nocturno: unos chirridos agudos y suaves (solo si el audio ya fue activado por el jugador)
+  cricket(vol = .5, pan = 0) {
+    const a = this.ctx; if (!a || a.state !== 'running' || !this.sfxOn || vol < .01) return;
+    const bus = this._bus(vol, pan), t = a.currentTime, f = 4200 + Math.random() * 600, n = 2 + (Math.random() * 3 | 0);
+    for (let i = 0; i < n; i++) {
+      const o = a.createOscillator(), g = a.createGain(), t0 = t + i * .11; o.type = 'sine'; o.frequency.value = f;
+      const am = a.createOscillator(), ag = a.createGain(), trem = a.createGain(); am.frequency.value = 55; ag.gain.value = .5; trem.gain.value = .5; am.connect(ag).connect(trem.gain); // trino: volumen que tiembla entre 0 y 1
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.05, t0 + .01); g.gain.setValueAtTime(.05, t0 + .06); g.gain.linearRampToValueAtTime(0, t0 + .08);
+      o.connect(trem).connect(g).connect(bus); o.start(t0); o.stop(t0 + .1); am.start(t0); am.stop(t0 + .1);
+    }
+  }
   // Rugido de león: gruñido grave que crece y se apaga, con respiración áspera
   roar(vol = 1) {
     const a = this.unlock(); if (!a || !this.sfxOn) return;
