@@ -337,8 +337,6 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #splash .sub{color:#e9dcc0}
 .gold-cta{position:relative;overflow:hidden;font-size:19px;letter-spacing:2px;text-transform:uppercase;padding:17px 22px;border:1px solid #fff0b8;
   background:linear-gradient(180deg,#fff3c2 0%,#f5c542 45%,#c48a12 100%);color:#2a1a00;box-shadow:0 10px 30px rgba(245,197,66,.4),0 0 0 3px rgba(245,197,66,.18)}
-.gold-cta::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);transform:skewX(-20deg);animation:sweep 3.2s ease-in-out infinite}
-@keyframes sweep{0%,60%{left:-60%}100%{left:130%}}
 #splash .btn.ghost{background:rgba(20,14,2,.55);border:1px solid rgba(245,197,66,.55);color:#f6e3a8;letter-spacing:1px}
 #splash .btn.ghost:hover{background:rgba(245,197,66,.15)}
 #splash .credit{color:#cdb98a;font-size:12px}
@@ -573,3 +571,9 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #btnArkExit{position:absolute;top:84px;left:50%;transform:translateX(-50%);z-index:6;pointer-events:auto;font:inherit;font-weight:700;font-size:1rem;color:#2a1a04;background:linear-gradient(#ffd866,#f5b82e);border:2px solid #fff3c4;border-radius:999px;padding:10px 20px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.45);white-space:nowrap}
 #btnArkExit:hover{filter:brightness(1.08)}
 @media (pointer:coarse){#btnArkExit{top:96px;font-size:1.05rem;padding:12px 22px}}
+
+/* Fondo provisional: una foto del mundo 3D que aparece al instante mientras el mundo se construye; luego se desvanece */
+#splash>.fondo-previo{position:fixed!important;inset:0;z-index:-1!important;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 0%,rgba(4,3,0,.35) 45%,rgba(2,1,0,.88) 100%),url(../img/fondo.webp) center/cover no-repeat #6f8fae;
+  transition:opacity 1.4s ease,visibility 0s linear 1.4s}
+body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}

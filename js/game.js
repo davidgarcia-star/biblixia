@@ -2529,6 +2529,8 @@ setTimeout(async () => {
   await idle();
   try { await buildMenuWorld(); } catch (e) { console.error(e); pendingGroups.clear(); }
   startLoop();
+  // el mundo 3D ya se dibuja: la imagen de fondo provisional se desvanece (después de un par de cuadros)
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.add('mundo-listo')));
   menuReadyDone();
 }, 30);
 
