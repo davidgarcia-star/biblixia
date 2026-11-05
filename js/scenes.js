@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createHuman, bakeStatic } from './human.js';
+import { createHuman, bakeStatic, animateHuman } from './human.js';
 import { pace } from './pace.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { nameSprite } from './characters.js';
@@ -166,33 +166,38 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
     for (let y = 0; y < Hh; y += 16) { g.fillStyle = `rgba(${40 + Math.random() * 30},${25 + Math.random() * 15},10,.5)`; g.fillRect(0, y, W, 2); for (let x = (y / 16 % 2) * 60; x < W; x += 120) g.fillRect(x, y, 2, 16); }
     for (let i = 0; i < 4000; i++) { g.fillStyle = Math.random() < .5 ? 'rgba(255,220,170,.05)' : 'rgba(0,0,0,.08)'; g.fillRect(Math.random() * W, Math.random() * Hh, 6, 1); }
   }, [12, 3]);
-  const wood = std({ map: planks, roughness: .85 });
+  // "la calafatearás con brea por dentro y por fuera" (Génesis 6:14): la madera se ve oscura y brillante de brea
+  const wood = std({ map: planks, color: 0x6a5644, roughness: .55 });
   const pitch = std({ color: 0x2a1e14, roughness: .6 });
   const A = new THREE.Group(); group.add(A);
-  // Casco con fondo redondeado (sección transversal extruida)
+  // Casco en forma de caja rectangular, como lo describe Génesis 6:15 (300 × 50 × 30 codos), sin proa ni quilla
   const sh = new THREE.Shape();
-  sh.moveTo(-Wd / 2, H * .55); sh.lineTo(-Wd / 2, H * .25); sh.quadraticCurveTo(-Wd / 2, 0, -Wd / 3, 0); sh.lineTo(Wd / 3, 0); sh.quadraticCurveTo(Wd / 2, 0, Wd / 2, H * .25); sh.lineTo(Wd / 2, H * .55);
-  sh.lineTo(Wd / 2, H * .55); sh.lineTo(-Wd / 2, H * .55);
+  sh.moveTo(-Wd / 2, 0); sh.lineTo(Wd / 2, 0); sh.lineTo(Wd / 2, H * .55); sh.lineTo(-Wd / 2, H * .55); sh.lineTo(-Wd / 2, 0);
   const hullG = new THREE.ExtrudeGeometry(sh, { depth: L, bevelEnabled: false }); hullG.translate(0, 0, -L / 2); hullG.rotateY(Math.PI / 2);
   const hull = new THREE.Mesh(hullG, pitch); hull.position.set(x, 0, z); A.add(hull);
   // Cuerpo superior de madera (tres pisos)
   const hide = new THREE.MeshBasicMaterial({ visible: false });
-  const upH = H * .45, upY = H * .55 + upH / 2;
+  const upH = H * .45 - C, upY = H * .55 + upH / 2; // las paredes llegan hasta un codo debajo del techo
   const up = new THREE.Mesh(new THREE.BoxGeometry(L - 2, upH, Wd - .6), [wood, wood, wood, wood, wood, hide]); up.position.set(x, upY, z); A.add(up);
   // cara norte con el hueco de la puerta (Génesis 6:16)
   const doorW = 6, doorH = 5;
   const nf = new THREE.Shape(); nf.moveTo(-(L - 2) / 2, -upH / 2); nf.lineTo((L - 2) / 2, -upH / 2); nf.lineTo((L - 2) / 2, upH / 2); nf.lineTo(-(L - 2) / 2, upH / 2); nf.lineTo(-(L - 2) / 2, -upH / 2);
   const hole = new THREE.Path(); const hb = -upH / 2 + .2; hole.moveTo(-doorW / 2, hb); hole.lineTo(-doorW / 2, hb + doorH); hole.lineTo(doorW / 2, hb + doorH); hole.lineTo(doorW / 2, hb); hole.lineTo(-doorW / 2, hb); nf.holes.push(hole);
   const nTex = planks.clone(); nTex.repeat.set(1 / 12.3, 1 / 2.25); nTex.needsUpdate = true;
-  const north = new THREE.Mesh(new THREE.ShapeGeometry(nf), std({ map: nTex, roughness: .85 })); north.position.set(x, upY, z - (Wd - .6) / 2); north.rotation.y = Math.PI; A.add(north);
+  const north = new THREE.Mesh(new THREE.ShapeGeometry(nf), std({ map: nTex, color: 0x6a5644, roughness: .55 })); north.position.set(x, upY, z - (Wd - .6) / 2); north.rotation.y = Math.PI; A.add(north);
   // marco de la puerta
   for (const sx of [-1, 1]) { const jamb = new THREE.Mesh(new THREE.BoxGeometry(.4, doorH + .4, .6), pitch); jamb.position.set(x + sx * (doorW / 2 + .2), H * .55 + .2 + doorH / 2, z - Wd / 2 + .3); A.add(jamb); }
   const lint = new THREE.Mesh(new THREE.BoxGeometry(doorW + .8, .4, .6), pitch); lint.position.set(x, H * .55 + .4 + doorH, z - Wd / 2 + .3); A.add(lint);
-  // Ventana a un codo del techo (Génesis 6:16) y techo a dos aguas
-  const win = new THREE.Mesh(new THREE.BoxGeometry(L - 6, C * 2, Wd - .2), std({ color: 0x1a120a })); win.position.set(x, H - C * 1.2, z); A.add(win);
-  const roofSh = new THREE.Shape(); roofSh.moveTo(-Wd / 2 - .6, 0); roofSh.lineTo(0, 3.2); roofSh.lineTo(Wd / 2 + .6, 0); roofSh.lineTo(-Wd / 2 - .6, 0);
-  const roofG = new THREE.ExtrudeGeometry(roofSh, { depth: L - 1, bevelEnabled: false }); roofG.translate(0, 0, -(L - 1) / 2); roofG.rotateY(Math.PI / 2);
-  const roof = new THREE.Mesh(roofG, wood); roof.position.set(x, H - .2, z); A.add(roof);
+  // Ventana de un codo de alto, alrededor, justo debajo del techo: "la acabarás a un codo de lo alto" (Génesis 6:16)
+  const winY = H - C * 1.5;
+  for (const sz of [-1, 1]) { const wv = new THREE.Mesh(new THREE.BoxGeometry(L - 6, C, .3), std({ color: 0x0d0906 })); wv.position.set(x, winY, z + sz * ((Wd - .6) / 2 + .02)); A.add(wv); }
+  for (const sx of [-1, 1]) { const wv = new THREE.Mesh(new THREE.BoxGeometry(.3, C, Wd - 4), std({ color: 0x0d0906 })); wv.position.set(x + sx * ((L - 2) / 2 + .02), winY, z); A.add(wv); }
+  // postes que sostienen el techo sobre la ventana
+  for (let i = -15; i <= 15; i++) for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.BoxGeometry(.3, C, .4), wood); pst.position.set(x + i * 4.9, winY, z + sz * ((Wd - .6) / 2)); A.add(pst); }
+  // Techo con caída suave: la altura total del arca es exactamente 30 codos
+  const roofSh = new THREE.Shape(); roofSh.moveTo(-Wd / 2 - .3, 0); roofSh.lineTo(-Wd / 2 - .3, .15); roofSh.lineTo(0, C); roofSh.lineTo(Wd / 2 + .3, .15); roofSh.lineTo(Wd / 2 + .3, 0); roofSh.lineTo(-Wd / 2 - .3, 0);
+  const roofG = new THREE.ExtrudeGeometry(roofSh, { depth: L, bevelEnabled: false }); roofG.translate(0, 0, -L / 2); roofG.rotateY(Math.PI / 2);
+  const roof = new THREE.Mesh(roofG, wood); roof.position.set(x, H - C, z); A.add(roof);
   // franjas de los tres pisos
   for (const k of [1, 2]) {
     const by = H * .55 + k * H * .15;
@@ -216,7 +221,7 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   // INTERIOR del arca (cubierta del medio): se puede entrar
   const inW = L - 4, inD = Wd - 1.6, inH = doorH + .1, inZ = z + .3;
   const inTex = planks.clone(); inTex.repeat.set(30, 2); inTex.needsUpdate = true;
-  const inMat = std({ map: inTex, color: 0xd8b890, roughness: .9, side: THREE.BackSide });
+  const inMat = std({ map: inTex, color: 0xa88866, roughness: .6, side: THREE.BackSide }); // brea también por dentro
   const room = new THREE.Mesh(new THREE.BoxGeometry(inW, inH, inD), inMat); room.position.set(x, doorY + inH / 2, inZ); room.receiveShadow = false; room.castShadow = false; A.add(room);
   const hay = std({ color: 0xd8b04a, roughness: 1 }), lampM = std({ color: 0xffe0a0, emissive: 0xffb050, emissiveIntensity: 2.5 }), beam = std({ color: 0x5a3a1e, roughness: .8 });
   for (let i = -6; i <= 6; i++) {
@@ -264,6 +269,32 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   for (const [i, [k, ox]] of [['oveja', -30], ['caballo', -40], ['camello', -52], ['cebra', 30], ['jirafa', 42], ['elefante', 55], ['mono', -20], ['oso', 20]].entries()) { await pace();
     for (const sd of [0, 1]) { const a = makeAnimal(k); const ax2 = x + ox + sd * 2.6, az2 = inZ + (i % 2 ? 1 : -1) * (inD / 2 - 2.2); a.position.set(ax2, yA - .2, az2); a.rotation.y = (i % 2 ? Math.PI : 0) + (sd ? .4 : -.3); A.add(a); inside.push(a); const rr = { elefante: 1.6, jirafa: 1, camello: 1.2, caballo: 1, oso: 1, cebra: .9, oveja: .6, mono: .4 }[k] || .8; addBox(ax2 - rr, ax2 + rr, az2 - rr, az2 + rr, yA + 2); }
   }
+  // De los animales limpios, siete parejas (Génesis 7:2): más ovejas y ciervos ya acomodados en sus compartimientos
+  for (let k = 0; k < 12; k++) { if (k % 4 === 0) await pace();
+    const kind = k < 6 ? 'oveja' : 'ciervo';
+    for (const sd of [0, 1]) { const a = makeAnimal(kind); const ax2 = x - 64 + k * 10.5 + sd * 2.2 + (k < 6 ? 0 : 6), az2 = inZ + (k % 2 ? 1 : -1) * (inD / 2 - 2.2); if (Math.abs(ax2 - x) < 5) continue;
+      a.position.set(ax2, yA - .2, az2); a.rotation.y = (k % 2 ? Math.PI : 0) + (sd ? .35 : -.25); A.add(a); inside.push(a); }
+  }
+  // "toma contigo de todo alimento que se come y guárdalo" (Génesis 6:21): sacos de grano y tinajas
+  const sackM = std({ color: 0xcdb48a, roughness: 1 }), jarM = std({ color: 0xa8603a, roughness: .8 });
+  for (let i = 0; i < 10; i++) {
+    const sx2 = x + 8 + (i % 5) * 1.3, sz2 = inZ - inD / 2 + 7.5 + ((i / 5) | 0) * 1.4;
+    if (i % 2) { const jar = new THREE.Mesh(new THREE.CylinderGeometry(.28, .2, .9, 12), jarM); jar.position.set(sx2, yA + .25, sz2); A.add(jar); }
+    else { const sk = new THREE.Mesh(new THREE.SphereGeometry(.45, 10, 8), sackM); sk.scale.set(1, .8, .8); sk.position.set(sx2, yA + .15, sz2); A.add(sk); }
+  }
+  addBox(x + 7.4, x + 14.4, inZ - inD / 2 + 7, inZ - inD / 2 + 10.4, yA + 1);
+
+  // La familia de Noé: ocho personas en total (Génesis 7:13; 1 Pedro 3:20). Noé es el personaje con quien se habla.
+  const family = [
+    ['Esposa de Noé', 'f', 0x8a6a8a, 0x5a4a5a, 0xc8c2b8, 'cloth'], ['Sem', 'm', 0x7a6a4a, 0x4a3a2a, 0x3a2414, 'short'], ['Esposa de Sem', 'f', 0xa85a4a, 0x6a3a2a, 0x2a1a10, 'cloth'],
+    ['Cam', 'm', 0x5a6a7a, 0x3a4a5a, 0x1a100a, 'short'], ['Esposa de Cam', 'f', 0x4a7a5a, 0x2a4a3a, 0x1a100a, 'cloth'], ['Jafet', 'm', 0x9a7a4a, 0x6a4a2a, 0x5a3a1e, 'short'], ['Esposa de Jafet', 'f', 0x6a5aa0, 0x4a3a7a, 0x4a2a14, 'cloth']];
+  for (const [i, [nm, gd, robe, mantle, hairColor, hair]] of family.entries()) { await pace();
+    const fx = x + 11 + (i % 4) * 2.1, fz = rampZ0 - 3.5 - ((i / 4) | 0) * 2.2;
+    const h = createHuman({ detail: .45, gender: gd, outfit: 'robe', robe, mantle, sash: 0x5a3a1e, hair, hairColor, beard: gd === 'm' ? { color: hairColor, len: .08 } : null, age: i === 0 ? 1 : 0, skin: [0xc68e6a, 0xa8714f, 0xb98260][i % 3] });
+    const b = bakeStatic(h.root); b.position.set(fx, 0, fz); b.rotation.y = Math.PI + (i % 2 ? .25 : -.2); A.add(b);
+    const lb = nameSprite(nm, 'Familia de Noé'); lb.position.set(fx, 2.2, fz); lb.scale.multiplyScalar(.7); A.add(lb);
+    addBox(fx - .3, fx + .3, fz - .3, fz + .3, 1.8);
+  }
   // estiércol en los establos (de ahí el olor)
   const dung = std({ color: 0x4a3418, roughness: .9 });
   for (let i = 0; i < 22; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.22 + Math.random() * .15, 8, 6), dung); d.scale.y = .35; d.position.set(x - 60 + i * 5.6 + Math.random() * 2, yA - .17, inZ + (i % 2 ? 1 : -1) * (inD / 2 - 3.2 + Math.random())); A.add(d); }
@@ -271,13 +302,13 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   // palomas volando
   // aves: palomas, guacamayos y águilas volando en parejas alrededor del arca
   const doves = [];
-  const flock = [[0xf6f6f2, 1], [0xf6f6f2, 1], [0xd82a2a, 1.2], [0xd82a2a, 1.2], [0x1e6ad8, 1.2], [0x1e6ad8, 1.2], [0x2aa84a, 1.1], [0x2aa84a, 1.1], [0x6a4a2a, 2.2], [0x6a4a2a, 2.2], [0xf2c230, 1], [0xf2c230, 1]];
-  flock.forEach(([c, sz], i) => { const f = makeFlyer(c, sz); A.add(f.d); doves.push({ ...f, k: i, r: 22 + (i % 6) * 4, h: H + 6 + (i % 4) * 2.5, sp: .25 + (i % 3) * .06 }); });
+  const flock = [...Array(14)].map(() => [0xf6f6f2, 1]).concat([[0xd82a2a, 1.2], [0xd82a2a, 1.2], [0x1e6ad8, 1.2], [0x1e6ad8, 1.2], [0x2aa84a, 1.1], [0x2aa84a, 1.1], [0x6a4a2a, 2.2], [0x6a4a2a, 2.2], [0xf2c230, 1], [0xf2c230, 1]]); // siete parejas de palomas (Génesis 7:3) y otras aves en parejas
+  flock.forEach(([c, sz], i) => { const f = makeFlyer(c, sz); A.add(f.d); doves.push({ ...f, k: i, r: 20 + (i % 9) * 3.2, h: H + 5 + (i % 5) * 2.2, sp: .22 + (i % 4) * .05 }); });
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   return {
     zones: [{ id: 'arca-noe', name: 'El arca de Noé', minX: x - L / 2 - 6, maxX: x + L / 2 + 6, minZ: rampZ0 - 10, maxZ: doorZ, pri: 3,
-      text: 'Dios mandó a Noé hacer un arca de madera de gofer, cubierta de brea por dentro y por fuera: 300 codos de largo, 50 de ancho y 30 de alto, con una ventana arriba, una puerta al costado y tres pisos. Entraron Noé, su familia y los animales de dos en dos, y Dios cerró la puerta. Después del diluvio puso su arco en las nubes como señal de su pacto.',
-      ref: 'Génesis 6:14-22; 7:7-16; 9:12-16' },
+      text: 'Dios mandó a Noé hacer un arca de madera de gofer, con compartimientos y cubierta de brea por dentro y por fuera: 300 codos de largo, 50 de ancho y 30 de alto (unos 150 × 25 × 15 metros), con una ventana de un codo debajo del techo, la puerta al costado y tres pisos: bajo, segundo y tercero. De todo animal limpio entraron siete parejas, de los animales que no son limpios una pareja, y de las aves del cielo siete parejas, macho y hembra. Noé tenía 600 años. Entraron ocho personas y Dios cerró la puerta. Después del diluvio puso su arco en las nubes como señal de su pacto.',
+      ref: 'Génesis 6:14-22; 7:1-16; 9:12-16' },
       { id: 'arca-dentro', name: 'Dentro del arca', minX: x - L / 2, maxX: x + L / 2, minZ: doorZ + .5, maxZ: z + Wd / 2, pri: 4,
         text: 'El arca tenía tres pisos y compartimientos. Noé guardó en ella toda clase de alimento para su familia y para los animales. Ocho personas se salvaron: Noé, su esposa, sus tres hijos (Sem, Cam y Jafet) y sus esposas. Todo lo hizo Noé conforme a lo que Dios le mandó.',
         ref: 'Génesis 6:14-16, 21-22; 7:13; 1 Pedro 3:20' }],
@@ -425,6 +456,120 @@ export async function buildValley({ group, addBox, blockers, x, z, rnd }) {
       stone.position.copy(sp); pouch.position.copy(sp);
       const pos = rope.geometry.attributes.position; pos.setXYZ(0, hp.x, hp.y, hp.z); pos.setXYZ(1, sp.x, sp.y, sp.z); pos.needsUpdate = true;
       dv.head.rotation.y = Math.sin(t * .8) * .08;
+    },
+  };
+}
+
+/* ---------------- EL RÍO JORDÁN: Juan el Bautista bautizando (Mateo 3:1-6; Marcos 1:4-5) ---------------- */
+function bubbleSprite(text) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,.93)'; g.beginPath(); g.roundRect(12, 10, 488, 92, 40); g.fill();
+  g.beginPath(); g.moveTo(236, 100); g.lineTo(256, 124); g.lineTo(276, 100); g.fill();
+  g.fillStyle = '#7a4a00'; g.textAlign = 'center'; g.font = '800 48px system-ui, sans-serif'; g.fillText(text, 256, 74);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, opacity: 0 }));
+  s.scale.set(4.2, 1.05, 1); s.renderOrder = 20; return s;
+}
+
+export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
+  const J = new THREE.Group(); group.add(J);
+  const HW = 4.2, len = z1 - z0, zc = (z0 + z1) / 2;
+  const mx = zz => x + Math.sin((zz - z0) * .055) * 2.2;           // el río serpentea un poco
+  // agua: una cinta que sigue el cauce
+  const segs = Math.ceil(len / 2), pos = [], idx = [];
+  for (let i = 0; i <= segs; i++) { const zz = z0 + len * i / segs, cx = mx(zz); pos.push(cx - HW, 0, zz, cx + HW, 0, zz); if (i) { const a = (i - 1) * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); } }
+  const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); wg.setIndex(idx); wg.computeVertexNormals();
+  const waterM = new THREE.MeshStandardMaterial({ color: 0x3f8fa8, roughness: .12, metalness: .25, transparent: true, opacity: .9, emissive: 0x0a2a3a, emissiveIntensity: .3 });
+  const water = new THREE.Mesh(wg, waterM); water.position.y = .16; water.receiveShadow = true; J.add(water);
+  // orillas de arena y juncos (Mateo 11:7)
+  const bankM = new THREE.MeshStandardMaterial({ color: 0xbfa77a, roughness: 1 }), reedM = new THREE.MeshStandardMaterial({ color: 0x6a8a3a, roughness: .9 });
+  for (const sd of [-1, 1]) {
+    const bp = []; for (let i = 0; i <= segs; i++) { const zz = z0 + len * i / segs, cx = mx(zz) + sd * HW; bp.push(cx, 0, zz, cx + sd * 1.6, 0, zz); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3)); bg.setIndex(idx); bg.computeVertexNormals();
+    const bank = new THREE.Mesh(bg, bankM); bank.position.y = .1; bank.material.side = THREE.DoubleSide; bank.receiveShadow = true; J.add(bank);
+  }
+  const reedG = new THREE.CylinderGeometry(.025, .035, 1.6, 4); reedG.translate(0, .8, 0);
+  const reeds = new THREE.InstancedMesh(reedG, reedM, 260), o3 = new THREE.Object3D(); let nr = 0;
+  for (let i = 0; i < 52; i++) {
+    const zz = z0 + 4 + rnd() * (len - 8); if (Math.abs(zz - zc) < 9 || zz < z0 + 16) continue; const sd = rnd() < .5 ? -1 : 1, bx = mx(zz) + sd * (HW + .3 + rnd() * .9);
+    for (let k = 0; k < 5 && nr < 260; k++) { o3.position.set(bx + (rnd() - .5) * .6, 0, zz + (rnd() - .5) * .6); o3.rotation.set((rnd() - .5) * .3, 0, (rnd() - .5) * .3); o3.scale.setScalar(.7 + rnd() * .6); o3.updateMatrix(); reeds.setMatrixAt(nr++, o3.matrix); }
+  }
+  reeds.count = nr; J.add(reeds);
+  // no se puede caminar por el agua honda; solo se cruza por el vado de piedras (Josué 2:7)
+  const fordZ = z0 + 9;
+  for (let zz = z0; zz < z1; zz += 2) { if (Math.abs(zz + 1 - fordZ) < 3) continue; const cx = mx(zz + 1); addBox(cx - HW + .4, cx + HW - .4, zz, zz + 2, 1.2); }
+  const stoneM = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: .95 });
+  for (let k = 0; k < 6; k++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.55, .65, .3, 9), stoneM); st.position.set(mx(fordZ) - HW + .9 + k * 1.3, .2, fordZ + (k % 2 ? .4 : -.4)); st.receiveShadow = st.castShadow = true; J.add(st); }
+
+  // Juan el Bautista: vestido de pelo de camello y un cinto de cuero (Mateo 3:4), metido en el río
+  const cx0 = mx(zc), wy = -.82;                                   // el agua le llega a la cintura
+  const john = createHuman({ detail: .6, outfit: 'robe', robe: 0x9a7a4a, mantle: 0x7a5a32, sash: 0x3a2412, hair: 'long', hairColor: 0x2a1c12, beard: { color: 0x2a1c12, len: .13 }, skin: 0xa8714f });
+  john.root.position.set(cx0 + .55, wy, zc); john.root.rotation.y = -Math.PI / 2; J.add(john.root);
+  // la persona que está siendo bautizada
+  const conv = createHuman({ detail: .55, outfit: 'robe', robe: 0xe6dcc6, mantle: null, sash: 0x6a4a2a, hair: 'short', hairColor: 0x1a100a, beard: { color: 0x1a100a, len: .05 }, skin: 0xc68e6a });
+  conv.root.position.set(cx0 - .45, wy, zc); conv.root.rotation.y = Math.PI / 2; J.add(conv.root);
+  // los que esperan en el agua y en la orilla, confesando sus pecados (Mateo 3:6)
+  const SK = [0xc68e6a, 0xa8714f, 0xb98260, 0x9a6444], ROB = [0xd8c9a8, 0x8a5a3a, 0x5a6a8a, 0xa85a4a, 0x6a7a4a, 0xcbb994];
+  const still = (look, px, py, pz, ry, pose) => {
+    const h = createHuman({ detail: .45, outfit: 'robe', sash: 0x5a3a1e, ...look });
+    if (pose === 'pray') for (const a of h.arms) { a.shoulder.rotation.x = -1.1; a.shoulder.rotation.z = a === h.arms[0] ? .35 : -.35; a.elbow.rotation.x = -1.2; }
+    const b = bakeStatic(h.root); b.position.set(px, py, pz); b.rotation.y = ry; J.add(b); return b;
+  };
+  for (let k = 0; k < 2; k++) { await pace(); still({ gender: k ? 'f' : 'm', robe: ROB[k], mantle: null, hair: k ? 'cloth' : 'short', skin: SK[k], beard: k ? null : { len: .06 } }, cx0 - .2 + k * .2, wy, zc + 1.9 + k * 1.6, Math.PI, 'pray'); }
+  const eastX = mx(zc) + HW + 2.2;
+  for (let k = 0; k < 5; k++) { await pace();
+    const f = k % 2 === 1, px = eastX + (k % 2) * .7, pz = zc + 4.5 + k * 1.3;
+    still({ gender: f ? 'f' : 'm', robe: ROB[(k + 2) % 6], mantle: k % 3 ? 0x5a4a3a : null, hair: f ? 'cloth' : 'short', skin: SK[(k + 1) % 4], beard: f ? null : { len: .07 } }, px, 0, pz, -Math.PI / 2 - .3, k % 2 ? 'pray' : null);
+    addBox(px - .3, px + .3, pz - .3, pz + .3, 1.8);
+  }
+  // los hombres que alaban: al acercarte dicen "¡Santo, Santo, Santo!" (Isaías 6:3; Apocalipsis 4:8)
+  const men = [];
+  for (let k = 0; k < 5; k++) { await pace();
+    const px = eastX + 1.2 + (k % 3) * 1.15, pz = zc - 3.5 - (k > 2 ? 1.5 : 0) - (k % 3) * .35;
+    const h = createHuman({ detail: .5, outfit: 'robe', robe: ROB[k], mantle: [0x6a3d24, 0x4a5a3a, 0x3e4f6b, null, 0x5a4a3a][k], sash: 0x5a3a1e, hair: k % 2 ? 'cloth' : 'short', hairColor: [0x2a1a10, 0x3a2a1c, 0x1a100a][k % 3], beard: { color: 0x2a1a10, len: .07 + (k % 3) * .02 }, skin: SK[k % 4] });
+    h.root.position.set(px, 0, pz); h.root.rotation.y = -Math.PI / 2 + (k - 2) * .15; J.add(h.root); men.push({ h, ph: k * .9 });
+    addBox(px - .3, px + .3, pz - .3, pz + .3, 1.8);
+  }
+  const bubble = bubbleSprite('¡Santo, Santo, Santo!'); bubble.position.set(eastX + 2.3, 3.2, zc - 4.2); J.add(bubble);
+  const menC = [eastX + 2.3, zc - 4.2];
+  J.traverse(m => { if (m.isMesh && m !== water) m.castShadow = true; });
+
+  let cyc = 0, praiseT = -1, cool = 0;
+  const tmp = new THREE.Vector3();
+  return {
+    zones: [{ id: 'jordan', name: 'El río Jordán', minX: x - HW - 10, maxX: x + HW + 12, minZ: z0, maxZ: z1, pri: 3,
+      text: 'Juan el Bautista predicaba en el desierto de Judea: «Arrepentíos, porque el reino de los cielos se ha acercado». Vestía ropa de pelo de camello con un cinto de cuero, y comía langostas y miel silvestre. La gente de Jerusalén, de toda Judea y de la región del Jordán iba a él, y confesando sus pecados, eran bautizados por él en el río Jordán.',
+      ref: 'Mateo 3:1-6; Marcos 1:4-6' }],
+    johnSpot: [eastX + .8, zc + 1.2],
+    menPos: menC,
+    // onSanto: se llama cuando el jugador se acerca a los hombres (para la voz)
+    update(t, dt, pp, onSanto) {
+      const near = Math.hypot(cx0 - pp.x, zc - pp.z) < 130; J.visible = near; if (!near) return;
+      water.position.y = .16 + Math.sin(t * 1.4) * .01;
+      // ciclo del bautismo: de pie, lo sumerge hacia atrás en el agua y lo levanta
+      cyc = (cyc + dt) % 7;
+      const dip = cyc < 2 ? 0 : cyc < 3 ? (cyc - 2) : cyc < 4 ? 1 : cyc < 5 ? 1 - (cyc - 4) : 0, e = dip * dip * (3 - 2 * dip);
+      animateHuman(john, dt, { speed: 0, onGround: true, vy: 0, land: 0, t });
+      animateHuman(conv, dt, { speed: 0, onGround: true, vy: 0, land: 0, t });
+      const [jl, jr] = john.arms;
+      jr.shoulder.rotation.x = -2.6 + e * 1.4; jr.shoulder.rotation.z = .25; jr.elbow.rotation.x = -.2 - e * .8;   // una mano al cielo, luego sobre el pecho del que se bautiza
+      jl.shoulder.rotation.x = -1.1 + e * .3; jl.shoulder.rotation.z = -.2; jl.elbow.rotation.x = -.9;              // la otra le sostiene la espalda
+      john.spine.rotation.x = e * .35;
+      conv.root.rotation.z = 0; conv.root.rotation.x = 0;
+      conv.root.position.set(cx0 - .45 + e * .35, wy - e * .55, zc);
+      conv.spine.rotation.x = -e * 1.25; conv.head.rotation.x = -e * .3;
+      for (const a of conv.arms) { a.shoulder.rotation.x = -1.2; a.shoulder.rotation.z = a === conv.arms[0] ? .5 : -.5; a.elbow.rotation.x = -1.4; } // manos cruzadas al pecho
+      // los hombres alaban
+      const d = Math.hypot(menC[0] - pp.x, menC[1] - pp.z);
+      cool -= dt;
+      if (d < 16 && cool <= 0 && onSanto) { cool = 14; praiseT = 0; onSanto(); }
+      if (praiseT >= 0) { praiseT += dt; if (praiseT > 5) praiseT = -1; }
+      bubble.material.opacity = praiseT >= 0 ? Math.min(1, praiseT * 3, (5 - praiseT) * 2) : 0;
+      bubble.position.y = 3.2 + Math.sin(t * 2) * .05;
+      for (const m of men) {
+        animateHuman(m.h, dt, { speed: 0, onGround: true, vy: 0, land: 0, t: t + m.ph, praise: praiseT >= 0 ? Math.min(praiseT, 2) : -1 });
+        if (praiseT >= 0) { m.h.head.rotation.x = -.35; }
+      }
     },
   };
 }

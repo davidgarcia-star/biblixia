@@ -31,7 +31,7 @@ export const CHARACTERS = [
   { id: 'eliseo', name: 'Eliseo', kind: 'Profeta', level: 1, prop: 'jar', look: { beard: { len: .06 }, hairColor: 0x2a1c12, hair: 'cloth', robe: 0xcbb994, mantle: 0x7a2e2e, cloth: 0xe2d6bc },
     msg: 'Pedí una doble porción del espíritu de Elías y recibí su manto. Por medio de mí Dios multiplicó el aceite de una viuda, resucitó al hijo de la sunamita y sanó a Naamán de la lepra.',
     ref: '2 Reyes 2; 4; 5', gift: 'La vasija de aceite que no se acaba', emoji: '🏺' },
-  { id: 'bautista', name: 'Juan el Bautista', kind: 'Profeta', level: 1, prop: 'staff', look: { beard: { len: .1, color: 0x2a1c12 }, hairColor: 0x2a1c12, hair: 'long', robe: 0x7a5a3a, mantle: 0x5a4028 },
+  { id: 'bautista', name: 'Juan el Bautista', kind: 'Profeta', level: 1, spot: 'jordan', prop: 'staff', look: { beard: { len: .1, color: 0x2a1c12 }, hairColor: 0x2a1c12, hair: 'long', robe: 0x9a7a4a, mantle: 0x7a5a32, sash: 0x3a2412 },
     msg: 'Preparé el camino del Señor en el desierto, llamando al arrepentimiento y bautizando en el Jordán. Cuando vi a Jesús, dije: «He aquí el Cordero de Dios que quita el pecado del mundo».',
     ref: 'Mateo 3; Juan 1:29', gift: 'Agua del río Jordán', emoji: '💧' },
   { id: 'pedro', name: 'Pedro', kind: 'Apóstol', level: 1, prop: 'net', look: { beard: { len: .07, color: 0x6a6258 }, hairColor: 0x6a6258, age: 1, robe: 0x5d7a8c, mantle: 0xc9a86a },

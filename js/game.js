@@ -9,7 +9,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { VERSES } from './verses.js';
 import { createHuman, animateHuman, bakeStatic, bakeInPlace, bakeColored, FAR_MAT, physM } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
-import { buildArk, buildValley } from './scenes.js';
+import { buildArk, buildJordan, buildValley } from './scenes.js';
 import { buildPlaces } from './places.js';
 import { CHARACTERS, TREASURES, forLevel, createCharacter, nameSprite, giftBox } from './characters.js';
 import { Sound } from './audio.js';
@@ -776,6 +776,7 @@ async function buildWorld(cfg) {
     const palmT = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: .9 }), palmL = new THREE.MeshStandardMaterial({ color: 0x3f6b2a, roughness: .8, side: THREE.DoubleSide });
     for (let i = 0; i < 10; i++) {
       const x = X0 + 6 + r() * (DES - 12), z = (r() < .5 ? -1 : 1) * (32 + r() * (T / 2 - 38));
+      if (z < O + 20) continue; // el camino de la procesión del arca queda libre
       const tr = new THREE.Mesh(new THREE.CylinderGeometry(.14, .22, 6, 8), palmT); tr.position.set(x, 3, z); tr.rotation.z = (r() - .5) * .2; tr.castShadow = true; group.add(tr);
       for (let k = 0; k < 7; k++) { const lf = new THREE.Mesh(new THREE.PlaneGeometry(.7, 3.2), palmL); lf.position.set(x, 6, z); lf.rotation.set(-1.0, k / 7 * 6.28, 0, 'YXZ'); lf.geometry.translate(0, 1.5, 0); lf.castShadow = true; group.add(lf); }
       addBox(x - .25, x + .25, z - .25, z + .25, 6);
@@ -790,6 +791,8 @@ async function buildWorld(cfg) {
     // sacerdotes, levitas, el arca en procesión y los corderos del sacrificio (desde el nivel Básico)
     await pace();
     W.priests = await buildPriests({ group, tab, r, addBox });
+    // los levitas llevan el arca del pacto por el desierto, al norte del campamento (lejos del arca de Noé, que está al sur)
+    W.zones.push(W.priests.setProcessionPath({ x0: X0 + 16, x1: X0 + DES - 16, z0: O + 5, z1: O + 12 }));
     // Niños corriendo y jugando en el campamento
     W.kids = [];
     const kidCols = [0xc0392b, 0x2a4a9a, 0xe0a31a, 0x2e7d4f, 0x8a5a9a, 0xd8c6a0];
@@ -819,14 +822,16 @@ async function buildWorld(cfg) {
     const ark = await buildArk({ group, addBox, addRamp, blockers, x: O + Wt / 2, z: Z0 + SZ - 40, rnd: r });
     await pace();
     const valley = await buildValley({ group, addBox, blockers, x: O + Wt - 38, z: Z0 + 24, rnd: r });
-    W.ark = ark; W.valley = valley; W.zones.push(...ark.zones, ...valley.zones);
+    // El río Jordán, al occidente del valle (Juan el Bautista bautizando: Mateo 3)
+    await pace();
+    const jordan = await buildJordan({ group, addBox, x: O + 22, z0: Z0 + 3, z1: Z0 + SZ - 3, rnd: r });
+    W.ark = ark; W.valley = valley; W.jordan = jordan; W.zones.push(...ark.zones, ...valley.zones, ...jordan.zones);
+    W.johnSpot = jordan.johnSpot;
     W.south = { Z0, Wt, arkX: O + Wt / 2, arkZ: Z0 + SZ - 40 };
-    await plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52]], ['olivo', 'cedro', 'higuera', 'olivo']);
+    await plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52], [O, O + 46, Z0, Z0 + SZ]], ['olivo', 'cedro', 'higuera', 'olivo']);
     W.noahSpot = ark.noahSpot; W.davidSpot = valley.davidSpot; W.davidNPC = valley.davidNPC;
-    // levitas y sacerdotes llevan el arca del pacto caminando por la grama (fuera del tabernáculo)
-    if (W.priests) W.priests.setProcessionPath({ x0: O + Wt / 2 - 34, x1: O + Wt / 2 + 6, z0: Z0 + 40, z1: Z0 + 60 });
-    coinSpots.push([O + Wt / 2 - 40, Z0 + 30, 0], [O + Wt / 2 + 20, Z0 + 30, 0], [O + Wt / 2 - 10, Z0 + 12, 0], [O + Wt - 38 - 14, Z0 + 10, 0], [O + Wt - 38 - 14, Z0 + 38, 0], [O + 20, Z0 + 20, 0], [O + Wt / 2 + 60, Z0 + 40, 0]);
-    npcSpots.push([O + 30, Z0 + 14], [O + Wt / 2 + 30, Z0 + 20]);
+    coinSpots.push([O + Wt / 2 - 40, Z0 + 30, 0], [O + Wt / 2 + 20, Z0 + 30, 0], [O + Wt / 2 - 10, Z0 + 12, 0], [O + Wt - 38 - 14, Z0 + 10, 0], [O + Wt - 38 - 14, Z0 + 38, 0], [O + 6, Z0 + 20, 0], [O + Wt / 2 + 60, Z0 + 40, 0]);
+    npcSpots.push([O + 44, Z0 + 30], [O + Wt / 2 + 30, Z0 + 20]);
   }
 
   await idle();
@@ -1090,6 +1095,7 @@ async function buildWorld(cfg) {
       else if (def.spot === 'noah') sp = W.noahSpot;
       else if (def.spot === 'david') sp = W.davidSpot;
       else if (def.spot === 'aaron') sp = W.aaronSpot;
+      else if (def.spot === 'jordan' && W.johnSpot) sp = W.johnSpot;
       else sp = spots.find(p => used.every(u => Math.hypot(u[0] - p[0], u[1] - p[1]) > 12)) || spots.find(p => !used.includes(p));
       if (!sp) continue; used.push(sp);
       const g = new THREE.Group(); g.position.set(sp[0], 0, sp[1]);
@@ -1552,18 +1558,14 @@ const FP_BASE = -2.35; // brazos hacia abajo (antes apuntaban al frente con las 
 function buildFpArms() {
   fpArms.clear();
   const o = playerOpts(), skinM = new THREE.MeshStandardMaterial({ color: o.skin, roughness: .55 });
-  const sleeveCol = o.outfit === 'robe' ? (o.skins ? o.skin : o.robe) : o.top;
-  const shortS = o.outfit === 'robe' ? !!o.skins : ['camiseta', 'camisa'].includes(o.topStyle);
-  const sleeveM = new THREE.MeshStandardMaterial({ color: sleeveCol, roughness: .85 });
   for (const sx of [-1, 1]) {
     // brazo relajado: la mano cuelga hacia abajo y un poco adelante (en las esquinas de abajo de la pantalla)
     const arm = new THREE.Group(); arm.position.set(sx * .22, -.21, -.3); arm.rotation.set(FP_BASE, 0, sx * .18);
-    const fore = new THREE.Mesh(new THREE.CylinderGeometry(.038, .044, .2, 14), shortS ? skinM : sleeveM); fore.position.y = -.06; arm.add(fore);
+    // solo se ven las manos (sin brazos ni mangas flotando delante de la cámara)
     const hg = new THREE.Group(); hg.rotation.y = -sx * Math.PI / 2; arm.add(hg); // la palma mira hacia el cuerpo, como al caminar
     const hand = new THREE.Mesh(new THREE.SphereGeometry(.05, 16, 12), skinM); hand.scale.set(.8, 1.15, .55); hand.position.y = .09; hg.add(hand);
     for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.CapsuleGeometry(.0105, .045, 3, 6), skinM); f.position.set((k - 1.5) * .019, .16, .008); f.rotation.x = .15; hg.add(f); } // dedos relajados
     const th = new THREE.Mesh(new THREE.CapsuleGeometry(.012, .04, 3, 6), skinM); th.position.set(sx * .045, .1, .02); th.rotation.z = -sx * .7; hg.add(th);
-    if (!shortS) { const cuff = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .03, 14), sleeveM); cuff.position.y = .03; arm.add(cuff); }
     arm.userData.sx = sx; fpArms.add(arm);
   }
   fpArms.traverse(m => { if (m.isMesh) { m.castShadow = false; m.renderOrder = 10; } });
@@ -1992,6 +1994,8 @@ function drawBigMap() {
   label('CIUDAD', W2.O + W2.T / 2, W2.O + W2.T / 2, 16);
   label('DESIERTO · TABERNÁCULO', W2.desert.tcx, W2.O + 8, 13, '#3a2a10');
   label('ARCA DE NOÉ', W2.south.arkX, W2.south.arkZ, 13);
+  if (W2.jordan) { rect(W2.O + 17, W2.south.Z0 + 3, 10, SZ - 6, '#3f8fa8'); label('RÍO JORDÁN', W2.O + 22, W2.south.Z0 + SZ / 2, 11); }
+  label('PROCESIÓN DEL ARCA', W2.desert.tcx, W2.O + 16, 10, '#3a2a10');
   label('VALLE DE ELA · DAVID Y GOLIAT', W2.valley.goliathPos[0] - 6, W2.valley.goliathPos[1] - 18, 12);
   label('MAR', (minX + W2.seaInfo.SX) / 2, W2.O + W2.T / 2, 16);
   label('BARCO', W2.seaInfo.shipX, W2.seaInfo.Zc - 9, 11);
@@ -2552,6 +2556,10 @@ function loop() {
       if (state === 'play' && world.church.inside(P.pos)) { worshipT += dt; if (worshipT > .5) { worshipT = 0; sound.worshipBeat(worshipStep++); } }
     }
     if (world.ark) world.ark.update(t, dt);
+    if (world.jordan) world.jordan.update(t, dt, state === 'play' ? P.pos : camera.position, state === 'play' ? () => {
+      // al acercarte al río Jordán los hombres dicen: ¡Santo, Santo, Santo! (Isaías 6:3; Apocalipsis 4:8)
+      sound.say('¡Santo, Santo, Santo!', { male: true, rate: .8 }); toast('🙌 ¡Santo, Santo, Santo!', '#ffd34d');
+    } : null);
     if (world.life) world.life.update(dt, t, camera.position, P.pos);
     if (world.kids) for (const kd of world.kids) {
       const near = Math.hypot(kd.cx - camera.position.x, kd.cz - camera.position.z) < 120; kd.h.root.visible = near; if (!near) continue;
