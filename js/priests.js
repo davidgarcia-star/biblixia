@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHuman, animateHuman, bakeStatic } from './human.js';
+import { pace } from './pace.js';
 import { makeAnimal } from './scenes.js';
 import { arkContents, arkGlassGold } from './arkcontents.js';
 
@@ -36,7 +37,7 @@ function arkOfCovenant() {
   return g;
 }
 
-export function buildPriests({ group, tab, r, addBox }) {
+export async function buildPriests({ group, tab, r, addBox }) {
   const live = [];
   const b = tab.bounds, [altX, cz, aw] = tab.altar || [(b.x0 + b.x1) / 2 + 8, (b.z0 + b.z1) / 2, 2.4], [lavX] = tab.laver || [altX - 6];
   const place = (look, x, z, ry, y = 0, solid = true) => { const h = createHuman(look); h.root.position.set(x, y, z); h.root.rotation.y = ry; group.add(h.root); if (solid && (x || z)) addBox(x - .3, x + .3, z - .3, z + .3, 1.8); return h; };
@@ -56,7 +57,7 @@ export function buildPriests({ group, tab, r, addBox }) {
   const ax = altX + aw + 1.4;
   live.push({ h: place(priestLook(r, 2), ax, cz - 1.6, -Math.PI / 2), kind: 'idle', ph: 0 });
   still(priestLook(r, 0), ax, cz + 1.8, -Math.PI / 2, 'hold');
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < 3; k++) { await pace();
     const lamb = makeAnimal('oveja', .62); lamb.position.set(ax + 1.6 + (k % 2) * .9, 0, cz - 1 + k * 1); lamb.rotation.y = -Math.PI / 2 + (r() - .5) * .6; group.add(lamb);
     live.push({ o: lamb, kind: 'lamb', ph: k * 1.7 });
   }
@@ -64,11 +65,11 @@ export function buildPriests({ group, tab, r, addBox }) {
   const [gx, gz] = tab.gate || [b.x1, cz];
   for (const sz of [-1, 1]) { still(leviteLook(r, sz > 0 ? 0 : 1), gx + 1.6, gz + sz * 4.4, Math.PI / 2); }
   // Levitas adorando con las manos levantadas cerca del atrio
-  for (let k = 0; k < 3; k++) still(leviteLook(r, k + 2), gx + 3 + (k % 2) * .6, gz - 6.6 - k * 1.1, Math.PI / 2, 'pray');
+  for (let k = 0; k < 3; k++) { await pace(); still(leviteLook(r, k + 2), gx + 3 + (k % 2) * .6, gz - 6.6 - k * 1.1, Math.PI / 2, 'pray'); }
   // Procesión: cuatro levitas llevan el arca del pacto sobre los hombros (rodea el atrio)
   const ark = arkOfCovenant(); group.add(ark);
   const carriers = [];
-  for (let k = 0; k < 4; k++) { const h = place(leviteLook(r, k), 0, 0, 0); carriers.push(h); }
+  for (let k = 0; k < 4; k++) { await pace(); const h = place(leviteLook(r, k), 0, 0, 0); carriers.push(h); }
   const pad = 5.5; let path = { x0: b.x0 - pad, x1: b.x1 + pad, z0: b.z0 - pad, z1: b.z1 + pad };
   let per = 2 * (path.x1 - path.x0) + 2 * (path.z1 - path.z0);
   const at = s => { s = ((s % per) + per) % per; const W = path.x1 - path.x0, H = path.z1 - path.z0;

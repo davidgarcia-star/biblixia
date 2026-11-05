@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHuman, bakeStatic } from './human.js';
+import { pace } from './pace.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { nameSprite } from './characters.js';
 
@@ -158,7 +159,7 @@ function makeFlyer(color, size = 1) {
 }
 
 /* ---------------- EL ARCA DE NOÉ ---------------- */
-export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
+export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
   const L = 300 * C, Wd = 50 * C, H = 30 * C;           // 150 × 25 × 15 m
   const planks = tex(512, 256, (g, W, Hh) => {
     g.fillStyle = '#6a4526'; g.fillRect(0, 0, W, Hh);
@@ -254,15 +255,15 @@ export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
   const seg = []; let total = 0; for (let i = 1; i < path.length; i++) { const l = path[i].distanceTo(path[i - 1]); seg.push(l); total += l; }
   const at = (d, out) => { d = ((d % total) + total) % total; for (let i = 0; i < seg.length; i++) { if (d <= seg[i]) return out.lerpVectors(path[i], path[i + 1], d / seg[i]); d -= seg[i]; } return out.copy(path[path.length - 1]); };
   const animals = [];
-  pairs.forEach((pr, i) => pr.forEach((k, j) => {
+  for (const [i, pr] of pairs.entries()) for (const [j, k] of pr.entries()) { await pace();
     const a = (k === 'gallo' || k === 'gallina') ? makeBird(k) : makeAnimal(k); A.add(a);
     animals.push({ a, d: i * (total / pairs.length), side: j ? 1 : -1, kind: k, small: k === 'gallo' || k === 'gallina' || k === 'mono' || k === 'oveja' });
-  }));
+  }
   // animales ya acomodados dentro del arca
   const inside = [];
-  [['oveja', -30], ['caballo', -40], ['camello', -52], ['cebra', 30], ['jirafa', 42], ['elefante', 55], ['mono', -20], ['oso', 20]].forEach(([k, ox], i) => {
+  for (const [i, [k, ox]] of [['oveja', -30], ['caballo', -40], ['camello', -52], ['cebra', 30], ['jirafa', 42], ['elefante', 55], ['mono', -20], ['oso', 20]].entries()) { await pace();
     for (const sd of [0, 1]) { const a = makeAnimal(k); const ax2 = x + ox + sd * 2.6, az2 = inZ + (i % 2 ? 1 : -1) * (inD / 2 - 2.2); a.position.set(ax2, yA - .2, az2); a.rotation.y = (i % 2 ? Math.PI : 0) + (sd ? .4 : -.3); A.add(a); inside.push(a); const rr = { elefante: 1.6, jirafa: 1, camello: 1.2, caballo: 1, oso: 1, cebra: .9, oveja: .6, mono: .4 }[k] || .8; addBox(ax2 - rr, ax2 + rr, az2 - rr, az2 + rr, yA + 2); }
-  });
+  }
   // estiércol en los establos (de ahí el olor)
   const dung = std({ color: 0x4a3418, roughness: .9 });
   for (let i = 0; i < 22; i++) { const d = new THREE.Mesh(new THREE.SphereGeometry(.22 + Math.random() * .15, 8, 6), dung); d.scale.y = .35; d.position.set(x - 60 + i * 5.6 + Math.random() * 2, yA - .17, inZ + (i % 2 ? 1 : -1) * (inD / 2 - 3.2 + Math.random())); A.add(d); }
@@ -307,7 +308,7 @@ export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
 }
 
 /* ---------------- DAVID Y GOLIAT ---------------- */
-export function buildValley({ group, addBox, blockers, x, z, rnd }) {
+export async function buildValley({ group, addBox, blockers, x, z, rnd }) {
   const bronze = std({ color: 0xb87333, metalness: .85, roughness: .35 });
   const iron = std({ color: 0x55585e, metalness: .8, roughness: .4 });
   const wood = std({ color: 0x6b4a2a, roughness: .8 });

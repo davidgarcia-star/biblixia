@@ -16,6 +16,7 @@ import { Sound } from './audio.js';
 import { buildLife } from './life.js';
 import { buildPriests } from './priests.js';
 import { buildChurch } from './church.js';
+import { idle, pace } from './pace.js';
 
 /* =========================================================
    CONFIGURACIÓN DE NIVELES
@@ -503,8 +504,11 @@ async function warmShadersNow(root, cam) {
     }
   } finally { for (const l of luces) l.layers.disable(2); if (!warmRT) renderer.setViewport(vp); }
 }
+// Mundo en construcción: no se dibuja en pantalla hasta que sus sombreadores estén listos
+// (así la portada y el creador de personaje se ven y responden al instante)
+const pendingGroups = new Set();
 // Pausa breve para que el navegador respire (dibuja la pantalla y atiende los toques) mientras se construye el mundo
-const idle = () => new Promise(r => setTimeout(r, 0));
+// (idle y pace vienen de pace.js: ceden el turno sin la espera mínima de setTimeout)
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), M.asphalt);
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
@@ -512,20 +516,20 @@ async function buildWorld(cfg) {
   if (world) { scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.userData.own) [].concat(o.material).forEach(m => { m.map && m.map.dispose(); m.emissiveMap && m.emissiveMap.dispose(); m.dispose(); }); }); }
   const r = rng(cfg.seed);
   const N = cfg.grid, T = N * PITCH + STREET, O = -T / 2;
-  const group = new THREE.Group(); scene.add(group);
+  const group = new THREE.Group(); scene.add(group); pendingGroups.add(group); // no se dibuja hasta estar listo
   const colliders = [], blockers = [], coinSpots = [], platSpots = [], npcSpots = [];
   const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [], lampPts: [] };
   const addBox = (minX, maxX, minZ, maxZ, top, bottom = 0, tag) => colliders.push({ minX, maxX, minZ, maxZ, top, bottom, tag });
   // Árboles de la Biblia: olivo (Salmo 52:8), higuera (Miqueas 4:4), cedro del Líbano (Salmo 92:12), palmera (Salmo 92:12)
   const treeGroup = new THREE.Group();
-  function plantBiblicalTrees(xa, xb, za, zb, count, avoid, kinds) {
+  async function plantBiblicalTrees(xa, xb, za, zb, count, avoid, kinds) {
     let placed = 0, tries = 0;
     while (placed < count && tries++ < count * 20) {
       const x = xa + r() * (xb - xa), z = za + r() * (zb - za);
       if (avoid.some(([a1, a2, b1, b2]) => x > a1 && x < a2 && z > b1 && z < b2)) continue;
       if (colliders.some(c => c.top > .8 && c.top < 900 && x > c.minX - 2 && x < c.maxX + 2 && z > c.minZ - 2 && z < c.maxZ + 2)) continue;
       const k = kinds[placed % kinds.length], t = makeTree(k, r); t.position.set(x, 0, z); t.rotation.y = r() * 6; treeGroup.add(t);
-      addBox(x - .35, x + .35, z - .35, z + .35, 5); placed++;
+      addBox(x - .35, x + .35, z - .35, z + .35, 5); placed++; await pace();
     }
   }
   const floorAtW = (x, z) => { let f = 0; for (const c of colliders) if (c.top < .6 && !c.ramp && x > c.minX && x < c.maxX && z > c.minZ && z < c.maxZ && c.top > f) f = c.top; return f; };
@@ -573,7 +577,7 @@ async function buildWorld(cfg) {
   types[0] = 'casa'; types[1] = 'oficinas'; types[2] = 'iglesia';
   if (!types.includes('plaza')) types[types.length - 1] = 'plaza';
 
-  for (let bi = 0; bi < N; bi++) { if (bi) await idle(); for (let bj = 0; bj < N; bj++) {
+  for (let bi = 0; bi < N; bi++) { if (bi) await idle(); for (let bj = 0; bj < N; bj++) { await pace();
     const x0 = O + bi * PITCH + STREET, z0 = O + bj * PITCH + STREET, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
     const type = types[bi * N + bj];
     W.blocks = W.blocks || []; W.blocks.push([x0, z0, type]);
@@ -656,7 +660,7 @@ async function buildWorld(cfg) {
 
   await idle();
   // Calles: líneas, pasos de cebra, monedas
-  for (let i = 0; i <= N; i++) {
+  for (let i = 0; i <= N; i++) { await pace();
     const sc = streetCenters[i];
     for (let j = 0; j < N; j++) {
       const a = O + j * PITCH + STREET, b = a + BLOCK, mid = (a + b) / 2;
@@ -769,24 +773,27 @@ async function buildWorld(cfg) {
       for (let k = 0; k < 7; k++) { const lf = new THREE.Mesh(new THREE.PlaneGeometry(.7, 3.2), palmL); lf.position.set(x, 6, z); lf.rotation.set(-1.0, k / 7 * 6.28, 0, 'YXZ'); lf.geometry.translate(0, 1.5, 0); lf.castShadow = true; group.add(lf); }
       addBox(x - .25, x + .25, z - .25, z + .25, 6);
     }
-    const tab = buildTabernacle({ group, addBox, blockers, cx: tcx, cz: tcz });
+    await pace();
+    const tab = await buildTabernacle({ group, addBox, blockers, cx: tcx, cz: tcz });
     W.tab = tab; W.zones = tab.zones;
     const tb = tab.bounds;
-    buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
+    await pace();
+    await buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
     W.desert = { X0, tcx, tcz, tb };
     // sacerdotes, levitas, el arca en procesión y los corderos del sacrificio (desde el nivel Básico)
-    W.priests = buildPriests({ group, tab, r, addBox });
+    await pace();
+    W.priests = await buildPriests({ group, tab, r, addBox });
     // Niños corriendo y jugando en el campamento
     W.kids = [];
     const kidCols = [0xc0392b, 0x2a4a9a, 0xe0a31a, 0x2e7d4f, 0x8a5a9a, 0xd8c6a0];
-    for (let k = 0; k < 6; k++) {
+    for (let k = 0; k < 6; k++) { await pace();
       const girl = k % 2 === 1;
       const kid = createHuman({ detail: .5, gender: girl ? 'f' : 'm', outfit: 'robe', robe: kidCols[k], mantle: null, sash: 0x5a3a1e, hair: girl ? 'long' : 'short', hairColor: [0x2a1a10, 0x4a2a14, 0x1a100a][k % 3], skin: [0xc68e6a, 0xa8714f, 0xb98260][k % 3] });
       kid.root.scale.setScalar(.6); group.add(kid.root);
       const ring = k < 3 ? { cx: tb.x1 + 14, cz: tb.z0 - 6, r: 5 + k * 1.3 } : { cx: tb.x0 - 12, cz: tb.z1 + 6, r: 4 + (k - 3) * 1.5 };
       W.kids.push({ h: kid, ...ring, a: k * 2.1, sp: (k % 2 ? -1 : 1) * (.55 + k * .05), jump: 0 });
     }
-    plantBiblicalTrees(X0 + 6, X0 + DES - 6, O + 8, O + T - 8, 14, [[tb.x0 - 4, tb.x1 + 4, tb.z0 - 4, tb.z1 + 4]], ['olivo', 'palmera', 'higuera']);
+    await plantBiblicalTrees(X0 + 6, X0 + DES - 6, O + 8, O + T - 8, 14, [[tb.x0 - 4, tb.x1 + 4, tb.z0 - 4, tb.z1 + 4]], ['olivo', 'palmera', 'higuera']);
     coinSpots.push([tb.x1 + 8, tcz - 14, 0], [tb.x1 + 8, tcz + 14, 0], [tb.x0 - 8, tcz, 0], [tcx + 24, tcz - 10, 0], [tcx + 24, tcz + 10, 0], [tcx - 8, tcz - 13, 0], [tcx - 8, tcz + 13, 0], [X0 + 8, tcz - 20, 0], [X0 + 8, tcz + 20, 0]);
     npcSpots.push([tb.x1 + 10, tcz - 9], [tb.x1 + 10, tcz + 9], [tb.x0 - 10, tcz - 10], [tcx, tb.z0 - 8], [tcx, tb.z1 + 8], [X0 + 6, tcz]);
     W.mosesSpot = [tb.x1 + 5, tcz + 7]; W.aaronSpot = tab.aaronSpot;
@@ -801,11 +808,13 @@ async function buildWorld(cfg) {
     for (let i = 0; i < 12; i++) { const hl = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.hill); hl.position.set(O + r() * Wt, 0, Z0 + SZ + 20 + r() * 40); hl.scale.set(20 + r() * 25, 6 + r() * 12, 14 + r() * 14); group.add(hl); }
     const ararat = new THREE.Mesh(mountainGeo(170, 210, r), M.rock); ararat.position.set(O + Wt * .3, 100, Z0 + SZ + 320); group.add(ararat);
     const snow = new THREE.Mesh(mountainGeo(54, 66, r, .04), new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: .6 })); snow.position.set(O + Wt * .3, 174, Z0 + SZ + 320); group.add(snow);
-    const ark = buildArk({ group, addBox, addRamp, blockers, x: O + Wt / 2, z: Z0 + SZ - 40, rnd: r });
-    const valley = buildValley({ group, addBox, blockers, x: O + Wt - 38, z: Z0 + 24, rnd: r });
+    await pace();
+    const ark = await buildArk({ group, addBox, addRamp, blockers, x: O + Wt / 2, z: Z0 + SZ - 40, rnd: r });
+    await pace();
+    const valley = await buildValley({ group, addBox, blockers, x: O + Wt - 38, z: Z0 + 24, rnd: r });
     W.ark = ark; W.valley = valley; W.zones.push(...ark.zones, ...valley.zones);
     W.south = { Z0, Wt, arkX: O + Wt / 2, arkZ: Z0 + SZ - 40 };
-    plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52]], ['olivo', 'cedro', 'higuera', 'olivo']);
+    await plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52]], ['olivo', 'cedro', 'higuera', 'olivo']);
     W.noahSpot = ark.noahSpot; W.davidSpot = valley.davidSpot; W.davidNPC = valley.davidNPC;
     // levitas y sacerdotes llevan el arca del pacto caminando por la grama (fuera del tabernáculo)
     if (W.priests) W.priests.setProcessionPath({ x0: O + Wt / 2 - 34, x1: O + Wt / 2 + 6, z0: Z0 + 40, z1: Z0 + 60 });
@@ -860,14 +869,14 @@ async function buildWorld(cfg) {
         }
       });
       // bañistas de pie en la orilla, con el agua a la cintura
-      for (let k = 0; k < 4; k++) {
+      for (let k = 0; k < 4; k++) { await pace();
         const h = person(k + 3); const px = SX - 4 - r() * 2, pz = Zc + (k < 2 ? -30 - k * 9 : 28 + k * 8);
         h.root.position.set(px, -.95, pz); h.root.rotation.y = r() * 6.28; group.add(h.root);
         W.beachFolk.push({ h, x: px, z: pz, female: h.opts.gender === 'f', talk: Math.random() * 4, gesture: Math.random() * 6, water: true });
       }
       // niños jugando y corriendo en la arena (con sus risas y voces)
       const kidC = [0xff5e57, 0x3ec1d3, 0xffd32a, 0x7bed9f, 0xff9ff3, 0x70a1ff];
-      for (let k = 0; k < 6; k++) {
+      for (let k = 0; k < 6; k++) { await pace();
         const girl = k % 2 === 1;
         const kid = createHuman({ detail: .45, gender: girl ? 'f' : 'm', top: kidC[k], topStyle: 'camiseta', pants: shorts[k % shorts.length], hair: girl ? 'ponytail' : 'short', hairColor: [0x2a1a10, 0x4a2a14, 0x1a100a][k % 3], skin: BSK[(k * 2 + 1) % 6] });
         kid.root.scale.setScalar(.6); group.add(kid.root);
@@ -887,6 +896,7 @@ async function buildWorld(cfg) {
     addBox(pierX0 - 1, pierX1 + 2, pz0 - 2.2, pz0 + 2.2, .6);
     addBox(pierX0 - 1, pierX1 - 2, pz0 - 2.6, pz0 - 2.2, 999); addBox(pierX0 - 1, pierX1 - 2, pz0 + 2.2, pz0 + 2.6, 999);
     // barco antiguo de madera (como el de Jonás rumbo a Tarsis)
+    await pace();
     const ship = buildShip(); const shipX = pierX0 - 16, deckY = 1.05;
     ship.position.set(shipX, 0, pz0); group.add(ship); W.ship = ship;
     ship.traverse(m => { if (m.isMesh && m.userData.block) blockers.push(m); });
@@ -911,20 +921,21 @@ async function buildWorld(cfg) {
   await idle();
   // ===== Al norte: lugares bíblicos (algunos se abren al pasar niveles) =====
   {
-    const pl = buildPlaces({ group, addBox, blockers, x0: O, x1: O + T + DES, zN: O - NZ, zS: O, unlocked: save.unlocked, rnd: r, levelNames: LEVELS.map(l => l.name) });
+    await pace();
+    const pl = await buildPlaces({ group, addBox, blockers, x0: O, x1: O + T + DES, zN: O - NZ, zS: O, unlocked: save.unlocked, rnd: r, levelNames: LEVELS.map(l => l.name) });
     W.places = pl.places; W.placeLive = pl.live; W.zones.push(...pl.zones);
     const lockedP = pl.places.filter(p => p.locked);
     pl.coins.filter(c => !lockedP.some(p => c[0] > p.x0 && c[0] < p.x1)).forEach(c => coinSpots.push(c));
     W.treasureSpots = Object.assign(W.treasureSpots || {}, pl.treasures);
     W.north = { zN: O - NZ, zS: O };
-    plantBiblicalTrees(O + 4, O + T + DES - 4, O - NZ + 6, O - NZ + 14, 18, [], ['cedro', 'olivo', 'palmera']);
+    await plantBiblicalTrees(O + 4, O + T + DES - 4, O - NZ + 6, O - NZ + 14, 18, [], ['cedro', 'olivo', 'palmera']);
   }
 
   await idle();
   // Vida en la ciudad: peatones, niños, comerciantes, casa del jugador y oficinas
-  W.life = buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks: W.blocks, playerName: (save.player && save.player.name) || '', npcSpots });
+  W.life = await buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks: W.blocks, playerName: (save.player && save.player.name) || '', npcSpots });
   await idle();
-  { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); } }
+  { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = await buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); } }
 
   await idle();
   // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
@@ -1018,7 +1029,7 @@ async function buildWorld(cfg) {
     const faceG = new THREE.CircleGeometry(.5, 40), rimG = new THREE.TorusGeometry(.52, .07, 10, 40), bellG = new THREE.SphereGeometry(.13, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     const nClocks = 3 + cfg.idx;
     const cpool = coinSpots.filter(p => Math.hypot(p[0] - startX, p[1] - startZ) > 12 && W.coins.every(c => Math.hypot(c.x - p[0], c.z - p[1]) > 5)).sort(() => r() - .5);
-    for (const p of cpool) {
+    for (const p of cpool) { await pace();
       if (W.clocks.length >= nClocks) break;
       if (W.clocks.some(c => Math.hypot(c.x - p[0], c.z - p[1]) < 30)) continue;
       const g = new THREE.Group(), body = new THREE.Group();
@@ -1040,7 +1051,7 @@ async function buildWorld(cfg) {
     const defs = forLevel(cfg.idx + 1);
     const spots = npcSpots.filter(p => Math.hypot(p[0] - startX, p[1] - startZ) > 10 && pick.every(c => Math.hypot(c[0] - p[0], c[1] - p[1]) > 2.2)).sort(() => r() - .5);
     const used = [];
-    for (const def of defs) {
+    for (const def of defs) { await pace();
       let sp;
       if (def.id === 'moises') sp = W.mosesSpot;
       else if (def.spot === 'noah') sp = W.noahSpot;
@@ -1060,7 +1071,7 @@ async function buildWorld(cfg) {
       W.npcs.push({ def, g, body, gift, glow, x: sp[0], z: sp[1], given: false, fixed: def.spot === 'david', gy: 2.75 - lyK });
     }
     // Regalos especiales: Lugar Santo, Lugar Santísimo y el barco
-    for (const def of TREASURES) {
+    for (const def of TREASURES) { await pace();
       const sp = W.treasureSpots && W.treasureSpots[def.spot]; if (!sp) continue;
       const y0 = sp[2] || 0;
       const g = new THREE.Group(); g.position.set(sp[0], y0, sp[1]);
@@ -1076,7 +1087,7 @@ async function buildWorld(cfg) {
   await idle();
   // Autos (solo en calles horizontales para evitar choques entre ellos)
   const carColors = [0xd7261e, 0x1f4fbf, 0xf1f1f1, 0x111215, 0x9aa3ad, 0x0f6d5f, 0xe0a31a];
-  for (let k = 0; k < cfg.cars; k++) {
+  for (let k = 0; k < cfg.cars; k++) { await pace();
     const lane = streetCenters[(r() * streetCenters.length) | 0];
     const dir = r() < .5 ? 1 : -1;
     const car = makeCar(carColors[(r() * carColors.length) | 0]);
@@ -1566,7 +1577,7 @@ async function startLevelNow(i) {
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
   camera.updateMatrixWorld(); updateCull(camera.position);
-  await warmShaders(scene, camera);
+  await warmShaders(scene, camera); pendingGroups.clear();
   lastNow = performance.now();
   state = 'play'; ensureMusic();
 }
@@ -2215,7 +2226,7 @@ function loop() {
   }
   else if (state === 'menu') {
     menuT += dt * .06;
-    const r = 46, mx = world.desert ? world.desert.tcx : P.pos.x, mz = world.desert ? world.desert.tcz : P.pos.z;
+    const r = 46, mx = world && world.desert ? world.desert.tcx : P.pos.x, mz = world && world.desert ? world.desert.tcz : P.pos.z;
     camera.position.set(mx + Math.sin(menuT + 1.2) * r, 15 + Math.sin(menuT * .7) * 3, mz + Math.cos(menuT + 1.2) * r);
     camera.lookAt(mx, 3, mz);
   } else if (world && state !== 'result') updateCamera(dt);
@@ -2236,7 +2247,9 @@ function loop() {
     updateCull(cp);
   }
   if (gradePass) gradePass.uniforms.time.value = (t * 60) % 1000;
+  for (const g of pendingGroups) g.visible = false;
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
+  for (const g of pendingGroups) g.visible = true;
   skyClouds.grp.position.set(camera.position.x * .3, 0, camera.position.z * .3);
   stars.position.copy(camera.position); moon.position.copy(moonDir).multiplyScalar(1400).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500).add(camera.position);
 }
@@ -2415,20 +2428,23 @@ function renderTimeButtons() {
 }
 renderTimeButtons();
 
-// Carga rápida: la portada aparece al instante y el mundo 3D de fondo se construye justo después
+// Carga rápida: la portada y el personaje aparecen al instante; el mundo 3D se construye
+// de a poquitos detrás (sin congelar la pantalla) y aparece cuando ya está listo para dibujarse
 $('loading').classList.add('hidden');
+let looping = false;
+const startLoop = () => { if (looping) return; looping = true; lastNow = performance.now(); loop(); };
 const buildMenuWorld = async () => {
   const w = await buildWorld(LEVELS[0]); world = w; world.key = worldKey(0);
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
-  P.pos.set(world.desert.tcx + 34, 0, world.desert.tcz - 2);
-  P.pos.y = 0; P.heading = -1.2;
-  lodTimer = 1;
-  // Compilar los sombreadores en segundo plano antes del primer cuadro (así la portada no se congela en el celular)
-  camera.position.set(P.pos.x + 20, 15, P.pos.z + 20); camera.lookAt(P.pos.x, 2, P.pos.z); camera.updateMatrixWorld(); updateCull(camera.position);
-  await warmShaders(scene, camera);
-  lastNow = performance.now(); loop();
+  // Compilar los sombreadores en segundo plano antes de mostrarlo (así no se congela en el celular)
+  const cp = new THREE.PerspectiveCamera().copy(camera); const tx = world.desert.tcx + 34, tz = world.desert.tcz - 2;
+  cp.position.set(tx + 20, 15, tz + 20); cp.lookAt(tx, 2, tz); cp.updateMatrixWorld(); updateCull(cp.position);
+  await warmShaders(scene, cp);
+  // listo: el jugador pasa al desierto junto al tabernáculo y el mundo aparece
+  P.pos.set(tx, 0, tz); P.heading = -1.2; lodTimer = 1;
+  pendingGroups.clear();
 };
-// La portada aparece primero; después, paso a paso: cielo y luz, mundo 3D, sombreadores
+// La portada aparece primero; después, paso a paso: cielo y luz, personaje, mundo 3D, sombreadores
 let menuReadyDone;
 const menuReady = new Promise(r => menuReadyDone = r);
 setTimeout(async () => {
@@ -2437,9 +2453,14 @@ setTimeout(async () => {
   await idle();
   try { applyTime(save.time || 'dia'); } catch (e) {}
   await idle();
-  try { await buildMenuWorld(); } catch (e) { console.error(e); try { loop(); } catch (_) {} }
+  // el cielo y el personaje se preparan sin bloquear y empiezan a dibujarse enseguida
+  try { if (renderer.compileAsync) await Promise.race([renderer.compileAsync(scene, camera), new Promise(r => setTimeout(r, 4000))]); } catch (e) {}
+  startLoop();
+  await idle();
+  try { await buildMenuWorld(); } catch (e) { console.error(e); pendingGroups.clear(); }
+  startLoop();
   menuReadyDone();
-}, 60);
+}, 30);
 
 // Acceso para pruebas
 window.__game = { renderer, scene, applyTime, toggleRun, get runToggle() { return runToggle; }, get human() { return human; }, openCreator, camera, THREE, P, cam, LEVELS, startLevel, get world() { return world; }, get state() { return state; }, keys, setJump: () => jumpPressed = true, setTake: () => takePressed = true };

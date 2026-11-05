@@ -634,11 +634,15 @@ export function bakeStatic(obj, skip = []) {
   const skipped = new Set(); skip.forEach(s => s.traverse(o => skipped.add(o)));
   obj.traverse(m => {
     if (!m.isMesh || skipped.has(m) || !m.visible) return;
-    let g = m.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
-    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
-    const groups = Array.isArray(m.material) ? g.groups.slice() : null;
-    if (g.index) g = g.toNonIndexed();
-    if (!g.attributes.uv) return;
+    // (más rápido: no se copia la figura completa, solo posición, normales y uv)
+    const src = m.geometry;
+    if (!src.attributes.uv || !src.attributes.position) return;
+    let g = new THREE.BufferGeometry();
+    for (const k of ['position', 'normal', 'uv']) if (src.attributes[k]) g.setAttribute(k, src.attributes[k]);
+    if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); }
+    else for (const k of Object.keys(g.attributes)) g.setAttribute(k, g.attributes[k].clone());
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    const groups = Array.isArray(m.material) ? src.groups.slice() : null;
     const push = (mat, geo) => { if (!byMat.has(mat)) byMat.set(mat, []); byMat.get(mat).push(geo); };
     if (groups && groups.length) {
       for (const gr of groups) {

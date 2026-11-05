@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHuman, bakeStatic } from './human.js';
+import { pace } from './pace.js';
 
 /* =========================================================
    IGLESIA MIPROAA (en todos los niveles)
@@ -11,7 +12,7 @@ const SKINS = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
 const TOPS = [0x1f5c70, 0x7a3b6e, 0xc0392b, 0x2e2e38, 0xe0a31a, 0x2e7d4f, 0x2a4a9a, 0xe87aa0, 0xf2f0e8, 0x8a5a2a];
 const STYLES = ['camisa', 'camiseta', 'mangalarga', 'traje', 'chaqueta'];
 
-export function buildChurch({ group, addBox, addRamp, blockers, block, CURB, BLOCK, r, acts, fx }) {
+export async function buildChurch({ group, addBox, addRamp, blockers, block, CURB, BLOCK, r, acts, fx }) {
   const [bx0, bz0] = block, cx = bx0 + BLOCK / 2, cz = bz0 + BLOCK / 2, y0 = CURB;
   const HW = 13, HD = 15.5, H = 9, T = .3;
   const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD;
@@ -115,6 +116,7 @@ export function buildChurch({ group, addBox, addRamp, blockers, block, CURB, BLO
   box(2.4, .25, 2, mat(0x2a2430), drumX, yS + .12, drumZ, { cast: false });
   for (const [dx, dz, rr, hh] of [[0, .6, .32, .5], [-.55, .2, .18, .2], [.55, .2, .18, .2], [.9, .5, .22, .35]]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, hh, 20), mat(0xc0392b, { metalness: .3, roughness: .3 })); d.position.set(drumX + dx, yS + .25 + (dz === .6 ? .3 : .75), drumZ - dz); d.rotation.x = dz === .6 ? Math.PI / 2 : .2; group.add(d); }
   for (const cxx of [-1, 1]) { const cy = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .02, 24), mat(0xd4a72c, { metalness: 1, roughness: .2 })); cy.position.set(drumX + cxx * 1, yS + 1.3, drumZ - .1); cy.rotation.x = .2; group.add(cy); }
+  await pace();
   person({ gender: 'm', topStyle: 'camiseta' }, drumX, drumZ + .4, Math.PI, 'drum', { y: yS + .25, anim: 'drum' });
   const gtr = (x, col, gender) => { person({ gender, topStyle: 'camisa' }, x, Z1 - 3.2, Math.PI, 'guitar', { y: yS, anim: 'sway' }); const g = box(.85, .3, .06, mat(col, { roughness: .3 }), x - .1, yS + 1.05, Z1 - 3.5); g.rotation.z = .5; };
   gtr(cx - 3.5, 0xb8742e, 'm'); gtr(cx + 3.5, 0x1a1a1e, 'f');
@@ -124,12 +126,14 @@ export function buildChurch({ group, addBox, addRamp, blockers, block, CURB, BLO
     const st = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.5, 6), metal); st.position.set(x, yS + .75, SZ + 1.4); group.add(st);
     person({ gender: g, topStyle: g === 'f' ? 'chaqueta' : 'camisa' }, x, SZ + 1.9, Math.PI, 'mic', { y: yS, anim: 'sway' });
   }
+  await pace();
   // predicador con su púlpito de cristal
   const pulp = box(.9, 1.15, .6, glass, cx, yS + .58, SZ + .7, { cast: false });
   person({ gender: 'm', topStyle: 'traje', top: 0x15151a, pants: 0x15151a, tie: 0xb3122e, beard: { color: 0x1d130c, len: .04 } }, cx, SZ + 1.2, Math.PI, 'preach', { y: yS, anim: 'preach' });
   // altavoces
   for (const sx of [-1, 1]) box(.9, 2.6, .8, mat(0x0c0c0e), cx + sx * (HW - 1), yS + 1.3, Z1 - 3);
 
+  await pace();
   // --- CONGREGACIÓN: sillas y personas adorando ---
   const chairM = mat(0x2a3a6a, { roughness: .8 });
   for (let row = 0; row < 6; row++) {
@@ -137,7 +141,7 @@ export function buildChurch({ group, addBox, addRamp, blockers, block, CURB, BLO
     if (z > SZ - 3) break;
     for (const side of [-1, 1]) {
       const xa = side < 0 ? X0 + 1.2 : cx + 1.6, xb = side < 0 ? cx - 1.6 : X1 - 1.2;
-      for (let x = xa; x < xb - .3; x += .75) {
+      for (let x = xa; x < xb - .3; x += .75) { await pace();
         box(.55, .08, .5, chairM, x + .27, y0 + .46, z, { cast: false }); box(.55, .5, .06, chairM, x + .27, y0 + .72, z - .25, { cast: false });
         if (r() < .62) {
           const p = r(); const pose = p < .45 ? 'up' : p < .6 ? 'one' : p < .72 ? 'clap' : p < .8 ? 'cry' : p < .86 ? 'kneelUp' : 'up';

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHuman, animateHuman, bakeStatic } from './human.js';
+import { pace } from './pace.js';
 
 /* =========================================================
    VIDA EN LA CIUDAD: peatones, niños, comerciantes,
@@ -19,7 +20,7 @@ function person(r, { kid = false, detail = .45, gender } = {}) {
   return h;
 }
 
-export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks, playerName, npcSpots }) {
+export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks, playerName, npcSpots }) {
   const walkers = [], acts = [], live = [];
   const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, ...o });
   const box = (w, h, d, m, x, y, z, { cast = true, recv = true, parent = group } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; parent.add(b); return b; };
@@ -114,6 +115,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, bañarte, comer, tomar agua o café y descansar en el sofá. «Mas yo y mi casa serviremos al SEÑOR.»', ref: 'Josué 24:15' });
   }
 
+  await pace();
   /* ---------- Edificio de oficinas (3 pisos, escaleras, cafetería y trabajadores) ---------- */
   const of = blocks.find(b => b[2] === 'oficinas');
   if (of) {
@@ -126,7 +128,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     // escaleras: rampa 1→2 a la derecha, 2→3 a la izquierda (a lo largo de z)
     const SZ0 = Z0 + 2.2, SZ1 = Z0 + 11.2, SW = 2.2;
     const stairs = [[X1 - .3 - SW, X1 - .3], [X0 + .3, X0 + .3 + SW]];
-    for (let i = 0; i < FLOORS; i++) {
+    for (let i = 0; i < FLOORS; i++) { await pace();
       const y = fy(i);
       // losa con hueco sobre la escalera que llega a este piso
       const hole = i > 0 ? stairs[(i - 1) % 2] : null;
@@ -182,6 +184,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     W.zones.push({ id: 'oficinas', name: 'Edificio de oficinas', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Sube por las escaleras a los diferentes pisos. Hay oficinas con personas trabajando, agua en cada piso y una cafetería en la planta baja. «Todo lo que hagáis, hacedlo de corazón, como para el Señor.»', ref: 'Colosenses 3:23' });
   }
 
+  await pace();
   /* ---------- Comerciantes en las plazas ---------- */
   const stalls = [
     { name: 'Frutas', emoji: '🍎', col: 0xc0392b, item: 'eat', goods: [0xd23a2a, 0xf0c040, 0x6ab04a, 0xf08a20] },
@@ -193,7 +196,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
   for (const [x0, z0, type] of blocks) {
     if (type !== 'plaza') continue;
     const cx = x0 + BLOCK / 2;
-    for (const [sz, ry] of [[z0 + 2.4, 0], [z0 + BLOCK - 2.4, Math.PI]]) {
+    for (const [sz, ry] of [[z0 + 2.4, 0], [z0 + BLOCK - 2.4, Math.PI]]) { await pace();
       const S = stalls[si++ % stalls.length], g = new THREE.Group(); g.position.set(cx, CURB, sz); g.rotation.y = ry; group.add(g);
       const add = (geo, m, x, y, z) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
       const wood = mat(0x7a5232);
@@ -223,7 +226,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
 
   /* ---------- Peatones en las aceras y niños jugando en las plazas ---------- */
   const nCity = Math.min(26, 6 + blocks.length * 2);
-  for (let k = 0; k < nCity; k++) {
+  for (let k = 0; k < nCity; k++) { await pace();
     const b = blocks[k % blocks.length], [x0, z0, type] = b;
     if (type === 'casa') continue;
     const ins = 1.5 + r() * .6, L = BLOCK - ins * 2, per = L * 4;
@@ -233,7 +236,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
   for (const [x0, z0, type] of blocks) {
     if (type !== 'plaza') continue;
     const cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2;
-    for (let k = 0; k < 3; k++) { const h = person(r, { kid: true }); group.add(h.root); walkers.push({ h, cx, cz, rad: 5.3, a: k * 2.1, sp: (k % 2 ? -1 : 1) * (.55 + k * .08), y: CURB, kind: 'ring', jump: k === 1 }); }
+    for (let k = 0; k < 3; k++) { await pace(); const h = person(r, { kid: true }); group.add(h.root); walkers.push({ h, cx, cz, rad: 5.3, a: k * 2.1, sp: (k % 2 ? -1 : 1) * (.55 + k * .08), y: CURB, kind: 'ring', jump: k === 1 }); }
   }
 
   const tmp = new THREE.Vector3();

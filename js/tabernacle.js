@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { arkContents, arkGlassGold } from './arkcontents.js';
 import { bakeStatic, createHuman } from './human.js';
+import { pace } from './pace.js';
 import { makeAnimal } from './scenes.js';
 
 /* =========================================================
@@ -35,7 +36,7 @@ function embroidered(withCherubim, vertical = true) {
   });
 }
 
-export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
+export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const M = {
     linen: new THREE.MeshStandardMaterial({ map: tex(256, 256, (g, W, H) => { g.fillStyle = '#f3efe4'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(120,110,90,.12)'; for (let i = 0; i < W; i += 3) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, H); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(W, i); g.stroke(); } }, [4, 1]), roughness: .95, side: THREE.DoubleSide }),
     screen: new THREE.MeshStandardMaterial({ map: embroidered(false), roughness: .9, side: THREE.DoubleSide }),
@@ -75,7 +76,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const posts = [];
   for (let i = 0; i <= 20; i++) { posts.push([x0 + i * 5 * C, z0], [x0 + i * 5 * C, z1]); }
   for (let j = 1; j < 10; j++) { posts.push([x0, z0 + j * 5 * C], [x1, z0 + j * 5 * C]); }
-  posts.forEach(([x, z]) => pillar(x, z));               // 42 + 18 = 60 columnas
+  for (const [x, z] of posts) { pillar(x, z); await pace(); }               // 42 + 18 = 60 columnas
   // Cortinas laterales
   const hang = (ax, az, bx, bz, mat = M.linen) => {
     const len = Math.hypot(bx - ax, bz - az);
@@ -142,7 +143,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   cover(M.ram, .65, TH - 1.6, TH + .17);
   cover(M.skins, .72, TH - 1.9, TH + .24);
   // Entrada: 5 columnas cubiertas de oro con basas de bronce y cortina (recogida)
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 5; i++) { await pace();
     const z = tz0 + (i / 4) * (tz1 - tz0);
     box(.3, .18, .3, M.bronze, tx1, .09, z); cyl(.09, TH, M.gold, tx1, TH / 2, z, 12); box(.2, .14, .2, M.gold, tx1, TH, z);
     if (i !== 2) addBox(tx1 - .15, tx1 + .15, z - .15, z + .15, TH);
@@ -183,7 +184,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     text: 'Primera sala de la tienda (20 codos). Al norte, la mesa de los panes de la Presencia con 12 panes en dos hileras de seis; al sur, el candelabro de oro puro con siete lámparas; y delante del velo, el altar de oro del incienso.', ref: 'Éxodo 25:23-40; 26:35; 30:1-8; Levítico 24:5-9' });
 
   /* ---------------- VELO: 4 columnas con basas de plata ---------------- */
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 4; i++) { await pace();
     const z = tz0 + (i + .5) / 4 * (tz1 - tz0);
     box(.28, .16, .28, M.silver, veilX, .08, z); cyl(.08, TH, M.gold, veilX, TH / 2, z, 12);
   }
@@ -232,6 +233,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   }
   zones.push({ id: 'nube', name: 'La columna de nube', minX: -1e9, maxX: -1e9, minZ: 0, maxZ: 0, pri: 0, text: '', ref: '' });
 
+  await pace();
   // Sacerdotes levitas con vestiduras de lino (Éxodo 28:40-42) y ovejas para el sacrificio (Levítico 1:10)
   const priest = (px, pz, ry, pose) => {
     const h = createHuman({ detail: .5, outfit: 'robe', robe: 0xf4f0e6, mantle: null, sash: [0x20408f, 0x5b2a7a, 0xb3122e][(px * 7 | 0) % 3 < 0 ? 0 : (px * 7 | 0) % 3], hair: 'turban', beard: { len: .07 }, hairColor: 0x2a1a10, skin: 0xa8714f });
@@ -264,7 +266,7 @@ export function buildTabernacle({ group, addBox, blockers, cx, cz }) {
 }
 
 /* Tiendas del campamento de Israel alrededor del tabernáculo */
-export function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }) {
+export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }) {
   // Tiendas de pelo de cabra, como las de los patriarcas (Génesis 18:1; Cantares 1:5)
   const hairT = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#2a221c'; x.fillRect(0, 0, 128, 64); for (let i = 0; i < 128; i += 16) { x.fillStyle = 'rgba(200,180,150,.18)'; x.fillRect(i, 0, 3, 64); } for (let i = 0; i < 1500; i++) { x.fillStyle = Math.random() < .5 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.1)'; x.fillRect(Math.random() * 128, Math.random() * 64, 2, 1); } const t = new THREE.CanvasTexture(x.canvas); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
   const sh = new THREE.Shape(); sh.moveTo(-2.6, 0); sh.lineTo(-2.6, .9); sh.quadraticCurveTo(-1.9, 1.9, -1.3, 1.95); sh.quadraticCurveTo(-.65, 1.6, 0, 2.15); sh.quadraticCurveTo(.65, 1.6, 1.3, 1.95); sh.quadraticCurveTo(1.9, 1.9, 2.6, .9); sh.lineTo(2.6, 0); sh.lineTo(-2.6, 0);

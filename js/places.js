@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createHuman, bakeStatic } from './human.js';
+import { pace } from './pace.js';
 import { makeAnimal } from './scenes.js';
 import { nameSprite } from './characters.js';
 
@@ -22,7 +23,7 @@ export const PLACES = [
   { id: 'calvario', name: 'El Calvario', req: 5 },
 ];
 
-export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked, rnd, levelNames }) {
+export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked, rnd, levelNames }) {
   const P = new THREE.Group(); group.add(P);
   const S = new THREE.Group(); // piezas fijas (se unen al final)
   const out = { zones: [], coins: [], treasures: {}, labels: [], places: [], live: [] };
@@ -35,7 +36,7 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
   const stone = std({ map: brickTex('#a89a82', 'rgba(70,60,45,.5)', [4, 1]), roughness: .95 });
   for (let i = 1; i < n; i++) { const sx = x0 + i * w; box(.8, .7, zS - zN - 30, stone, sx, .35, cz + 6); addBox(sx - .4, sx + .4, zN + 15, zS - 3, .7); }
 
-  PLACES.forEach((pl, i) => {
+  for (const [i, pl] of PLACES.entries()) { await pace();
     const px = x0 + w * (i + .5), locked = unlocked < pl.req;
     out.places.push({ ...pl, x: px, z: cz, locked, x0: x0 + w * i, x1: x0 + w * (i + 1) });
     const lab = nameSprite(pl.name, locked ? `🔒 Se abre al completar el nivel ${levelNames[pl.req - 2] || ''}` : 'Lugar bíblico'); lab.position.set(px, 9, zS - 6); lab.scale.set(5, 1.25, 1); P.add(lab);
@@ -47,7 +48,7 @@ export function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked,
     }
     const B = { belen, jerico, babel, marrojo, calvario }[pl.id];
     B(px, cz, w, zN, zS, locked);
-  });
+  }
 
   function belen(px, pz) {
     // Establo con pesebre (Lucas 2:7) y la estrella (Mateo 2:9)
