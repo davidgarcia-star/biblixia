@@ -1101,7 +1101,7 @@ async function buildWorld(cfg) {
   // cuerpos móviles con su tamaño
   const BODY_R = { elefante: 1.5, jirafa: .9, camello: 1.1, caballo: .9, oso: .9, cebra: .8, leon: .8, leona: .75, ciervo: .65, oveja: .55, mono: .35, gallo: .25, gallina: .25 };
   W.dyn = [];
-  if (W.ark) for (const a of W.ark.lodItems) if (a.userData && a.userData.kind) W.dyn.push({ obj: a, r: BODY_R[a.userData.kind] || .6 });
+  if (W.ark) for (const a of W.ark.lodItems) if (a.userData && a.userData.kind) W.dyn.push({ obj: a, r: BODY_R[a.userData.kind] || .6, ark: true });
   if (W.kids) for (const kd of W.kids) W.dyn.push({ obj: kd.h.root, r: .28 });
   if (W.beachFolk) for (const bf of W.beachFolk) W.dyn.push({ obj: bf.h.root, r: .3 });
   if (W.life) for (const w of W.life.walkers) W.dyn.push({ obj: w.h.root, r: .3 });
@@ -1874,8 +1874,11 @@ function update(dt) {
   }
 
   // Cuerpos que se mueven (animales y niños): el jugador no los atraviesa
+  const ps = world.ark && world.ark.passage;
+  const inArkPassage = !!ps && P.pos.x > ps.minX && P.pos.x < ps.maxX && P.pos.z > ps.minZ && P.pos.z < ps.maxZ;
   if (world.dyn) for (const b of world.dyn) {
     if (!b.obj.visible) continue;
+    if (b.ark && inArkPassage) continue;   // en la rampa y la puerta del arca se pasa entre los animales
     b.obj.getWorldPosition(tmpV);
     if (Math.abs(tmpV.y - P.pos.y) > 1.6) continue;
     const dx = P.pos.x - tmpV.x, dz = P.pos.z - tmpV.z, d = Math.hypot(dx, dz), min = b.r + RADIUS;
@@ -1958,7 +1961,7 @@ function update(dt) {
   // Lugares especiales del tabernáculo
   let z = null;
   for (const zz of world.zones) if (P.pos.x > zz.minX && P.pos.x < zz.maxX && P.pos.z > zz.minZ && P.pos.z < zz.maxZ && (!z || zz.pri > z.pri)) z = zz;
-  if (z !== curZone) { curZone = z; if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
+  if (z !== curZone) { curZone = z; $('btnArkExit').classList.toggle('hidden', !(z && z.id === 'arca-dentro')); if (z) showInfo(z); if (z && z.id === 'arca-dentro') { P.smell = 3.2; setTimeout(() => toast('🤢 ¡Uf, qué olor a animales!', '#b8e07a'), 300); sound.say('¡Uf, qué olor!', { male: save.player.gender !== 'f', rate: 1 }); } }
   if (infoTimer > 0 && (infoTimer -= dt) <= 0) $('info').classList.remove('show');
   if (!isFinite(P.pos.x) || !isFinite(P.pos.y) || !isFinite(P.pos.z)) { P.pos.copy(P.safe || world.start); P.vy = 0; P.speed = 0; } else if (P.onGround && !P.driving) (P.safe || (P.safe = new THREE.Vector3())).copy(P.pos);
   updateHUD();
@@ -2371,6 +2374,14 @@ $('btnHome').onclick = goHome; $('btnPauseHome').onclick = goHome;
 $('btnExit').onclick = exitGame; $('btnPauseExit').onclick = exitGame;
 $('btnPause').onclick = () => { sound.click(); pauseGame(); };
 $('btnCam').onclick = () => setCamMode(camMode + 1);
+// Salir del arca de Noé: lleva al jugador al pie de la rampa, mirando hacia afuera
+$('btnArkExit').onclick = e => {
+  e.currentTarget.blur(); if (!world || !world.ark || !world.ark.exitPos) return;
+  sound.click(); const [ex, ez] = world.ark.exitPos;
+  P.pos.set(ex, floorAt(ex, ez, 0), ez); P.vy = 0; P.speed = 0; P.onGround = true; P.climb = null; P.heading = Math.PI;
+  if (P.safe) P.safe.copy(P.pos);
+  $('btnArkExit').classList.add('hidden'); toast('🌈 Saliste del arca', '#9fd8ff');
+};
 function zoomCam(d) {
   if (CAM_MODES[camMode].id === 'fp') { if (d > 0) { setCamMode(1, false); cam.dist = 2.6; } return; }
   if (d < 0 && cam.dist <= 2.6) { setCamMode(3); return; }   // acercando más: primera persona

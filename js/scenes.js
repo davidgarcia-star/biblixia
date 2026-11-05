@@ -280,7 +280,10 @@ export function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) {
       { id: 'arca-dentro', name: 'Dentro del arca', minX: x - L / 2, maxX: x + L / 2, minZ: doorZ + .5, maxZ: z + Wd / 2, pri: 4,
         text: 'El arca tenía tres pisos y compartimientos. Noé guardó en ella toda clase de alimento para su familia y para los animales. Ocho personas se salvaron: Noé, su esposa, sus tres hijos (Sem, Cam y Jafet) y sus esposas. Todo lo hizo Noé conforme a lo que Dios le mandó.',
         ref: 'Génesis 6:14-16, 21-22; 7:13; 1 Pedro 3:20' }],
-    noahSpot: [x + 6, rampZ0 - 2], rainbow, lodItems: animals.map(o => o.a).concat(doves.map(d => d.d)), insideItems: inside, doorPos: [x, doorZ],
+    noahSpot: [x + 6, rampZ0 - 2], rainbow,
+    // pasillo de la rampa y la puerta: ahí los animales de la fila no empujan al jugador (si no, no se podía salir)
+    passage: { minX: x - doorW / 2 - 1.5, maxX: x + doorW / 2 + 1.5, minZ: rampZ0 - 3, maxZ: doorZ + 10 },
+    exitPos: [x - 7, rampZ0 - 1], lodItems: animals.map(o => o.a).concat(doves.map(d => d.d)), insideItems: inside, doorPos: [x, doorZ],
     update(t, dt) {
       for (const o of animals) {
         if (o.skip) continue;
