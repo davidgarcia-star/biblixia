@@ -203,7 +203,8 @@ function applyTime(mode) {
   sunDir.copy(T2.stars ? moonDir : skyDir); if (sunDir.y < .34) sunDir.y = .34; sunDir.normalize(); // el sol de la tarde da sombras visibles (no tan largas)
   sun.color.set(T2.sunC); sun.intensity = T2.sunI; hemi.intensity = T2.hemiI; hemi.color.set(T2.hemiS); hemi.groundColor.set(T2.hemiG);
   renderer.toneMappingExposure = T2.exp; scene.fog.color.set(T2.fog); scene.fog.near = T2.fogN; scene.fog.far = T2.fogF;
-  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: isTouch ? 128 : 256 }); // en el celular, más liviano scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
+  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: isTouch ? 128 : 256 }); // en el celular, más liviano
+  scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
   if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else { scene.background = null; sky.visible = true; }
   if (world && world.ark && world.ark.rainbow) world.ark.rainbow.visible = !T2.stars;
   stars.visible = T2.stars; birds.grp.visible = !T2.stars; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
@@ -2076,6 +2077,37 @@ function drawMinimap() {
    ========================================================= */
 let lastNow = performance.now(), elapsed = 0; const perf = { acc: 0, n: 0, changes: 0, lowered: false };
 let mmTimer = 0, lodTimer = 0, worshipT = 0, worshipStep = 0;
+// Luciérnagas: de noche, unas lucecitas verde‑amarillas flotan y parpadean cerca del jugador (no dentro de los edificios)
+const fireflies = (() => {
+  const n = 46, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), seeds = [];
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c);
+  for (let i = 0; i < n; i++) seeds.push({ a: Math.random() * 6.28, d: 7 + Math.random() * 22, h: .4 + Math.random() * 2.2, ph: Math.random() * 6.28, sp: .15 + Math.random() * .35, bl: 1.2 + Math.random() * 1.8 });
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const p = new THREE.Points(geo, new THREE.PointsMaterial({ size: .26, map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+  p.frustumCulled = false; p.visible = false; scene.add(p);
+  const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo']);
+  let cx = 0, cz = 0, chk = 0, inside = false;
+  return {
+    update(dt, t, cp) {
+      if (!stars.visible || !world) { p.visible = false; return; }
+      if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ); }
+      p.visible = !inside; if (inside) return;
+      if (Math.hypot(cp.x - cx, cp.z - cz) > 18) { cx = cp.x; cz = cp.z; }
+      const gy = P.pos.y;
+      for (let i = 0; i < n; i++) {
+        const s2 = seeds[i], a = s2.a + t * s2.sp * .2;
+        pos[i * 3] = cx + Math.cos(a) * s2.d + Math.sin(t * s2.sp + s2.ph) * 1.2;
+        pos[i * 3 + 1] = gy + s2.h + Math.sin(t * s2.sp * 2 + s2.ph) * .35;
+        pos[i * 3 + 2] = cz + Math.sin(a) * s2.d + Math.cos(t * s2.sp * 1.3 + s2.ph) * 1.2;
+        const k = Math.max(0, Math.sin(t * s2.bl + s2.ph)); const b = k * k;
+        col[i * 3] = .75 * b; col[i * 3 + 1] = 1 * b; col[i * 3 + 2] = .3 * b;
+      }
+      geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
+    }
+  };
+})();
 function loop() {
   requestAnimationFrame(loop);
   if (building) { lastNow = performance.now(); return; }
@@ -2095,6 +2127,7 @@ function loop() {
   }
   if (state === 'play') update(dt);
   birds.update(dt, elapsed, camera.position);
+  fireflies.update(dt, elapsed, camera.position);
 
   if (world) {
     followShip();
