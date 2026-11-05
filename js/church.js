@@ -159,8 +159,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   acts.push({ x: cx, z: SZ - 4.5, y: y0, label: '🙌 Adorar a Dios', fn: () => fx('worship'), r: 2.5 });
 
   const zones = [
-    { id: 'iglesia', name: 'MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios! El grupo de alabanza dirige la adoración, el predicador comparte la Palabra y la congregación adora con todo el corazón. «Venid, adoremos y postrémonos; doblemos la rodilla delante del SEÑOR, nuestro Hacedor.»', ref: 'Salmo 95:6' },
-    { id: 'iglesia-lobby', name: 'Lobby de MIPROAA', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros. «Yo me alegré con los que me decían: A la casa del SEÑOR iremos.»', ref: 'Salmo 122:1' },
+    { id: 'iglesia', name: 'MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios! El grupo de alabanza dirige la adoración, el predicador comparte la Palabra y la congregación adora con todo el corazón. «Venid, adoremos y postrémonos; doblemos la rodilla ante el SEÑOR nuestro Hacedor.»', ref: 'Salmo 95:6' },
+    { id: 'iglesia-lobby', name: 'Lobby de MIPROAA', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros. «Yo me alegré cuando me dijeron: Vamos a la casa del SEÑOR.»', ref: 'Salmo 122:1' },
   ];
   let li = 0, lt = 0;
   return {

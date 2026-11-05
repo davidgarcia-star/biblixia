@@ -168,6 +168,12 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) { const b = add(new THREE.CylinderGeometry(.16, .17, .05, 18), M.bread, tbX + sx * .24, 1.5 * C + .06 + k * .055, tbZ); b.scale.set(1, 1, .75); }
   addBox(tbX - .55, tbX + .55, tbZ - .3, tbZ + .3, .8);
   // Candelabro de oro puro (lado sur): 7 lámparas
+  const lampGlowMat = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,220,140,.7)'); gr.addColorStop(.35, 'rgba(255,170,60,.25)'); gr.addColorStop(1, 'rgba(255,140,40,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    return new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  })();
   const mnX = veilX + 4.5, mnZ = tz1 - 1.1, mH = 1.55;
   add(new THREE.CylinderGeometry(.12, .2, .12, 20), M.gold, mnX, .06, mnZ);
   cyl(.035, mH, M.gold, mnX, mH / 2, mnZ, 12);
@@ -179,6 +185,8 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   lamps.forEach(([dz]) => {
     add(new THREE.CylinderGeometry(.04, .025, .07, 10), M.gold, mnX, lampY + .02, mnZ + dz);
     const f = add(new THREE.ConeGeometry(.018, .07, 8), M.flame, mnX, lampY + .1, mnZ + dz, { cast: false, live: true }); f.userData.flame = true;
+    // halo cálido alrededor de cada llama: las lámparas alumbraban el Lugar Santo (Éxodo 25:37)
+    const h = new THREE.Sprite(lampGlowMat); h.position.set(mnX, lampY + .11, mnZ + dz); h.scale.setScalar(.2); h.renderOrder = 2; h.userData.halo = true; T.add(h);
   });
   addBox(mnX - .3, mnX + .3, mnZ - .6, mnZ + .6, 1.7);
   // Altar del incienso de oro: 1 × 1 × 2 codos con cuernos, delante del velo
@@ -257,7 +265,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   [[altX + 5, cz + 4], [altX + 6.5, cz + 5.2], [altX + 4.2, cz + 6.2], [x1 - 7, cz - 4]].forEach(([sx2, sz2], i) => { const o = makeAnimal('oveja', .95); o.position.set(sx2, 0, sz2); o.rotation.y = i * 1.7; T.add(o); sheep.push(o); addBox(sx2 - .5, sx2 + .5, sz2 - .5, sz2 + .5, 1); });
   S.updateMatrixWorld(true);
   T.add(bakeStatic(S));
-  const flames = []; T.traverse(m => { if (m.userData.flame) flames.push(m); });
+  const flames = [], halos = []; T.traverse(m => { if (m.userData.flame) flames.push(m); if (m.userData.halo) halos.push(m); });
   return {
     zones: zones.filter(z => z.text),
     bounds: { x0, x1, z0, z1 }, gate: [x1, cz],
@@ -266,6 +274,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     entrance: new THREE.Vector3(x1 + 4, 0, cz),
     update(t) {
       for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
+      for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
       for (let i = 0; i < tongues.length; i++) { const f = tongues[i]; f.scale.set(1, .7 + Math.abs(Math.sin(t * 11 + i * 1.9)) * .7 + Math.sin(t * 23 + i) * .12, 1); f.rotation.z = Math.sin(t * 6 + i) * .12; }
