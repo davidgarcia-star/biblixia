@@ -419,7 +419,9 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
   .hint{top:72px;left:max(12px,env(safe-area-inset-left));font-size:12px;padding:6px 10px}
   .timer{top:max(12px,env(safe-area-inset-top));min-width:96px;padding:7px 12px}
   #prompt{bottom:230px;font-size:14px;max-width:90vw;white-space:normal;text-align:center}
-  #info{top:auto;bottom:240px;left:12px;right:12px;width:auto;max-height:30vh;overflow:auto}
+  #info{top:auto;bottom:240px;left:12px;right:12px;width:auto;max-height:34vh;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:12px 14px}
+  #info h3{font-size:17px;margin:2px 0 4px}
+  #info p{font-size:12.5px;line-height:1.42}
 }
 /* Pantallas con desplazamiento (que no se oculte el primer nivel) */
 #levelsel,#help,#collection{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;padding-top:84px;padding-bottom:40px}

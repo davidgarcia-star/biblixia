@@ -793,6 +793,19 @@ async function buildWorld(cfg) {
     W.priests = await buildPriests({ group, tab, r, addBox });
     // los levitas llevan el arca del pacto por el desierto, al norte del campamento (lejos del arca de Noé, que está al sur)
     W.zones.push(W.priests.setProcessionPath({ x0: X0 + 16, x1: X0 + DES - 16, z0: O + 5, z1: O + 12 }));
+    { // la procesión camina por una franja de grama verde (un oasis en el desierto) con bordes irregulares que se mezclan con la arena
+      const gw = DES - 26, gd = 15, gx = X0 + DES / 2, gz = O + 8.5;
+      const gtex = valleyTex.clone(); gtex.repeat.set(gw / 4, gd / 4); gtex.needsUpdate = true;
+      const mc = document.createElement('canvas'); mc.width = 512; mc.height = 64; const mg = mc.getContext('2d');
+      mg.fillStyle = '#000'; mg.fillRect(0, 0, 512, 64); mg.fillStyle = '#fff';
+      for (let i = 0; i < 2600; i++) { const u = Math.random(), v = Math.random(), ex = Math.min(u, 1 - u) * gw, ez = Math.min(v, 1 - v) * gd;
+        if (Math.min(ex, ez) > 1.2 + Math.random() * 1.6) { mg.beginPath(); mg.arc(u * 512, v * 64, 1.5 + Math.random() * 3, 0, 6.29); mg.fill(); } }
+      mg.fillRect(512 * 2.6 / gw, 64 * 2.6 / gd, 512 * (1 - 5.2 / gw), 64 * (1 - 5.2 / gd));
+      const amap = new THREE.CanvasTexture(mc);
+      const meadow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gd), new THREE.MeshStandardMaterial({ map: gtex, alphaMap: amap, alphaTest: .5, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
+      meadow.rotation.x = -Math.PI / 2; meadow.position.set(gx, .07, gz); meadow.receiveShadow = true; group.add(meadow);
+      W.meadow = { x0: gx - gw / 2 + 2, x1: gx + gw / 2 - 2, z0: gz - gd / 2 + 2, z1: gz + gd / 2 - 2 };
+    }
     // Niños corriendo y jugando en el campamento
     W.kids = [];
     const kidCols = [0xc0392b, 0x2a4a9a, 0xe0a31a, 0x2e7d4f, 0x8a5a9a, 0xd8c6a0];
@@ -1639,7 +1652,7 @@ tap('tSwap', () => { if (state === 'play') swapPair(); });
 addEventListener('touchstart', e => {
   if (state !== 'play') return;
   for (const t of e.changedTouches) {
-    if (t.target.closest && (t.target.closest('#touch button') || t.target.closest('#joy') || t.target.closest('.topright') || t.target.closest('#minimap'))) continue;
+    if (t.target.closest && (t.target.closest('#touch button') || t.target.closest('#joy') || t.target.closest('.topright') || t.target.closest('#minimap') || t.target.closest('#info'))) continue; // deslizar sobre el cartel del lugar lo desplaza sin girar la cámara
     if (look.id === null) { look.id = t.identifier; look.x = t.clientX; look.y = t.clientY; }
   }
 }, { passive: true });
@@ -2183,7 +2196,8 @@ function update(dt) {
       const d = world.desert, sth = world.south, si = world.seaInfo;
       const onWood = si && P.pos.x < si.SX + 2.5 && P.pos.y > .3 && P.pos.y < 1.6;          // muelle o cubierta del barco
       const onBeach = si && P.pos.x < world.O && P.pos.x > si.SX - .5 && P.pos.y < .3;        // arena de la playa
-      const surface = onWood ? 'wood' : onBeach ? 'sand' : (d && P.pos.x > d.X0 && P.pos.y < .3) ? 'sand' : (sth && P.pos.z > sth.Z0 && P.pos.y < .3) ? 'grass' : 'hard';
+      const mw = world.meadow, onMeadow = mw && P.pos.y < .3 && P.pos.x > mw.x0 && P.pos.x < mw.x1 && P.pos.z > mw.z0 && P.pos.z < mw.z1;
+      const surface = onWood ? 'wood' : onBeach ? 'sand' : onMeadow ? 'grass' : (d && P.pos.x > d.X0 && P.pos.y < .3) ? 'sand' : (sth && P.pos.z > sth.Z0 && P.pos.y < .3) ? 'grass' : 'hard';
       sound.step(surface, P.speed > 6.2);
     }
   } else P.lastStep = Math.floor(human.phase / Math.PI);
@@ -2388,6 +2402,7 @@ function drawMinimap() {
   }
   if (world.desert) {
     const d = world.desert; mg.fillStyle = 'rgba(216,185,138,.45)'; mg.fillRect(d.X0, world.O, DES, world.T);
+    if (world.meadow) { const m = world.meadow; mg.fillStyle = 'rgba(122,170,80,.55)'; mg.fillRect(m.x0, m.z0, m.x1 - m.x0, m.z1 - m.z0); }
     mg.strokeStyle = 'rgba(255,255,255,.8)'; mg.lineWidth = 1.2; mg.strokeRect(d.tcx - 25, d.tcz - 12.5, 50, 25);
     mg.fillStyle = 'rgba(245,197,66,.9)'; mg.fillRect(d.tcx - 15, d.tcz - 2.5, 15, 5);
   }
