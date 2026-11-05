@@ -2222,7 +2222,10 @@ function update(dt) {
     }
   }
   if (near) {
-    pr.innerHTML = near.given ? `<kbd>T</kbd> Hablar con <b>${near.def.name}</b>` : `<kbd>T</kbd> Tomar el regalo de <b>${near.def.name}</b>`;
+    // los tesoros ya se llaman «Regalo del …»: no repetir la palabra regalo
+    const nm = near.def.name, esRegalo = /^regalo\b/i.test(nm);
+    pr.innerHTML = near.given ? (near.treasure ? `<b>${nm}</b> ✓` : `<kbd>T</kbd> Hablar con <b>${nm}</b>`)
+      : esRegalo ? `<kbd>T</kbd> Tomar el <b>${'r' + nm.slice(1)}</b>` : `<kbd>T</kbd> Tomar el regalo de <b>${nm}</b>`;
     pr.classList.add('show'); $('tTake').classList.add('ready');
     if (takePressed) { takePressed = false; openTalk(near); return; }
   } else { pr.classList.remove('show'); $('tTake').classList.remove('ready'); }
