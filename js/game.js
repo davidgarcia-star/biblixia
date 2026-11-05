@@ -385,7 +385,6 @@ const M = {
   concrete: new THREE.MeshStandardMaterial({ color: 0xc8c3ba, roughness: .75 }),
   darkMetal: new THREE.MeshStandardMaterial({ color: 0x2a2e35, metalness: .8, roughness: .35 }),
   steel: new THREE.MeshStandardMaterial({ color: 0xaab2bb, metalness: .9, roughness: .25 }),
-  wood: new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: .7 }),
   led: new THREE.MeshStandardMaterial({ color: 0x66e0ff, emissive: 0x33ccff, emissiveIntensity: 2.2 }),
   lamp: new THREE.MeshStandardMaterial({ color: 0xfff1d0, emissive: 0xffd9a0, emissiveIntensity: 3 }),
   water: new THREE.MeshStandardMaterial({ color: 0x3f8fb5, metalness: .9, roughness: .05, transparent: true, opacity: .9 }),

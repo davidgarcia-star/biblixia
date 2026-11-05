@@ -26,6 +26,14 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
   const cyl = (rt, rb, h, m, x, y, z, seg = 16) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); c.position.set(x, y, z); c.castShadow = true; c.receiveShadow = true; group.add(c); return c; };
   const solid = (minX, maxX, minZ, maxZ, top, bottom = 0) => addBox(minX, maxX, minZ, maxZ, top, bottom);
   const act = (x, z, y, label, fn, rad = 1.6) => acts.push({ x, z, y, label, fn, r: rad });
+  // vapor suave que sube de las cafeteras (se anima solo cuando el jugador está cerca)
+  const steams = []; let steamTex = null;
+  const steam = (x, y, z) => {
+    if (!steamTex) { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); steamTex = new THREE.CanvasTexture(c); }
+    const puffs = [];
+    for (let k = 0; k < 4; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex, transparent: true, depthWrite: false, opacity: 0 })); sp.scale.setScalar(.12); sp.position.set(x, y, z); sp.renderOrder = 3; group.add(sp); puffs.push({ sp, ph: k / 4 }); }
+    steams.push({ x, y, z, puffs });
+  };
   const sign = (text, sub, x, y, z, ry = 0) => {
     const c = document.createElement('canvas'); c.width = 512; c.height = 128; const g = c.getContext('2d');
     g.fillStyle = '#1a1206'; g.fillRect(0, 0, 512, 128); g.strokeStyle = '#f5c542'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
@@ -82,7 +90,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     box(.5, .1, .6, mat(0x9aa4ae, { metalness: .8, roughness: .2 }), X0 + .45, fy + .93, cz + 2.2);          // fregadero
     cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
-    const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false;
+    const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false; steam(X0 + .45, fy + 1.3, cz + .4);
     box(1.4, .06, .9, trimM, cx - 1.8, fy + .76, cz - 1.6); for (const [a, b] of [[-.6, -.35], [.6, -.35], [-.6, .35], [.6, .35]]) box(.06, .74, .06, trimM, cx - 1.8 + a, fy + .37, cz - 1.6 + b); solid(cx - 2.5, cx - 1.1, cz - 2.05, cz - 1.15, fy + .78);
     for (const [fx, fz, c] of [[-.3, -.1, 0xd23a2a], [0, .1, 0xf0c040], [.3, -.05, 0x6ab04a]]) { const fr = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), mat(c)); fr.position.set(cx - 1.8 + fx, fy + .85, cz - 1.6 + fz); group.add(fr); }
     // --- Dormitorio y baño (lado derecho) ---
@@ -154,7 +162,7 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     // planta baja: cafetería con barista
     const y0 = fy(0);
     box(4, 1.05, .8, mat(0x6a4a2a), cx - 4, y0 + .52, Z1 - 2); box(4.1, .06, .9, mat(0x2a2420, { roughness: .3 }), cx - 4, y0 + 1.07, Z1 - 2); solid(cx - 6, cx - 2, Z1 - 2.45, Z1 - 1.55, y0 + 1.1, y0);
-    box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2);
+    box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
     act(cx - 4, Z1 - 3.1, y0, '☕ Comprar un café', () => life.fx('coffee'));
     act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
@@ -233,6 +241,15 @@ export function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLO
     acts, walkers,
     fx: () => {},                 // lo conecta el juego (efectos al comer, dormir, etc.)
     update(dt, t, cam, player) {
+      for (const st of steams) {
+        const near = Math.abs(st.x - player.x) < 14 && Math.abs(st.z - player.z) < 14 && Math.abs(st.y - player.y) < 4;
+        for (const p of st.puffs) {
+          p.sp.visible = near; if (!near) continue;
+          const u = (t * .35 + p.ph) % 1;
+          p.sp.position.set(st.x + Math.sin(t * 1.3 + p.ph * 6) * .05 * u, st.y + u * .55, st.z + Math.cos(t * 1.1 + p.ph * 5) * .04 * u);
+          p.sp.scale.setScalar(.08 + u * .22); p.sp.material.opacity = Math.sin(u * Math.PI) * .45;
+        }
+      }
       for (const w of walkers) {
         const px = w.kind === 'loop' ? w.x0 + w.L / 2 : w.cx, pz = w.kind === 'loop' ? w.z0 + w.L / 2 : w.cz;
         const near = Math.hypot(px - cam.x, pz - cam.z) < 95; w.h.root.visible = near; if (!near) continue;
