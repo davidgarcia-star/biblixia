@@ -53,6 +53,9 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 - **Arca de Noé exacta** (Génesis 6–7): caja rectangular de 300 × 50 × 30 codos, brea por dentro y por fuera, ventana de un codo bajo el techo, puerta al costado, tres pisos, siete parejas de animales limpios y de aves, alimento guardado y las ocho personas (Noé, su esposa, Sem, Cam, Jafet y sus esposas).
 - **Procesión del arca del pacto** (1 Crónicas 15) por el desierto, lejos del arca de Noé: los levitas la llevan con las varas sobre los hombros, siete sacerdotes con trompetas, cantores con címbalos, arpas y liras, cuatro porteros y David danzando con efod de lino.
 - **Río Jordán** (Mateo 3): Juan el Bautista bautiza a la gente; al acercarte, los hombres alaban diciendo «¡Santo, Santo, Santo!».
+- **Juan el Bautista identificado**: el profeta que bautiza en el río Jordán lleva su nombre encima en todos los niveles; en el nivel Básico se le habla desde la orilla y su regalo flota sobre él (ya no hay un segundo Juan en la orilla).
+- **Voces de hombre y de mujer**: las mujeres (Débora, Ana, la servidora, la jugadora) hablan con voz de mujer y los hombres con voz de hombre en Windows, Edge, Chrome, Android, iPhone y Mac.
+- **Servidora de la iglesia** con vestido, aretes y cadena (antes parecía un hombre de esmoquin) y cartel «Recepción · Servidora».
 - Primera persona: solo se ve la cámara (sin manos ni brazos). La jugadora también lleva su nombre en la espalda.
 
 ## Compilación (carga rápida)

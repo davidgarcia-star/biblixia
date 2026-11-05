@@ -839,7 +839,7 @@ async function buildWorld(cfg) {
     await pace();
     const jordan = await buildJordan({ group, addBox, x: O + 22, z0: Z0 + 3, z1: Z0 + SZ - 3, rnd: r });
     W.ark = ark; W.valley = valley; W.jordan = jordan; W.zones.push(...ark.zones, ...valley.zones, ...jordan.zones);
-    W.johnSpot = jordan.johnSpot;
+    W.johnSpot = jordan.johnSpot; W.johnPos = jordan.johnPos;
     W.south = { Z0, Wt, arkX: O + Wt / 2, arkZ: Z0 + SZ - 40 };
     await plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52], [O, O + 46, Z0, Z0 + SZ]], ['olivo', 'cedro', 'higuera', 'olivo']);
     W.noahSpot = ark.noahSpot; W.davidSpot = valley.davidSpot; W.davidNPC = valley.davidNPC;
@@ -1111,16 +1111,18 @@ async function buildWorld(cfg) {
       else if (def.spot === 'jordan' && W.johnSpot) sp = W.johnSpot;
       else sp = spots.find(p => used.every(u => Math.hypot(u[0] - p[0], u[1] - p[1]) > 12)) || spots.find(p => !used.includes(p));
       if (!sp) continue; used.push(sp);
-      const g = new THREE.Group(); g.position.set(sp[0], 0, sp[1]);
-      const body = def.spot === 'david' ? null : createCharacter(def); if (body) g.add(body);
-      const lyK = def.scale ? .5 : 0;
-      const label = nameSprite(def.name, def.kind); label.position.y = 2.25 - lyK; g.add(label);
+      // Juan el Bautista es el que está bautizando en el río (no un segundo Juan en la orilla): el regalo flota sobre él
+      const inRiver = def.spot === 'jordan' && W.johnPos && sp === W.johnSpot;
+      const g = new THREE.Group(); g.position.set(inRiver ? W.johnPos[0] : sp[0], 0, inRiver ? W.johnPos[1] : sp[1]);
+      const body = def.spot === 'david' || inRiver ? null : createCharacter(def); if (body) g.add(body);
+      const lyK = def.scale ? .5 : inRiver ? .55 : 0;
+      if (!inRiver) { const label = nameSprite(def.name, def.kind); label.position.y = 2.25 - lyK; g.add(label); }
       const gift = giftBox(); gift.position.y = 2.75 - lyK; g.add(gift);
       const glow = new THREE.Sprite(M.glow); glow.scale.set(1.4, 1.4, 1); glow.position.y = 2.75 - lyK; g.add(glow);
       g.rotation.y = Math.atan2(startX - sp[0], startZ - sp[1]);
       group.add(g);
-      if (def.spot !== 'david') addBox(sp[0] - .35, sp[0] + .35, sp[1] - .35, sp[1] + .35, 1.8);
-      W.npcs.push({ def, g, body, gift, glow, x: sp[0], z: sp[1], given: false, fixed: def.spot === 'david', gy: 2.75 - lyK });
+      if (def.spot !== 'david' && !inRiver) addBox(sp[0] - .35, sp[0] + .35, sp[1] - .35, sp[1] + .35, 1.8);
+      W.npcs.push({ def, g, body, gift, glow, x: sp[0], z: sp[1], given: false, fixed: def.spot === 'david' || inRiver, gy: 2.75 - lyK });
     }
     // Regalos especiales: Lugar Santo, Lugar Santísimo y el barco
     for (const def of TREASURES) { await pace();

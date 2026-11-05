@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createHuman, bakeStatic } from './human.js';
 import { pace } from './pace.js';
+import { nameSprite } from './characters.js';
 
 /* =========================================================
    IGLESIA MIPROAA (en todos los niveles)
@@ -71,8 +72,11 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   box(6, H - 4, T, wallM, cx, y0 + 4 + (H - 4) / 2, LZ);
   box(4, 1.1, 1, mat(0x6a4a2a), cx, y0 + .55, Z0 + 3.2); box(4.1, .06, 1.1, mat(0x2a2420, { roughness: .3 }), cx, y0 + 1.12, Z0 + 3.2); solid(cx - 2, cx + 2, Z0 + 2.7, Z0 + 3.7, y0 + 1.15);
   // servidora de la recepción: se mueve, saluda con gestos y dice «¡Bendiciones!» cuando llegas
-  const recep = createHuman({ detail: .6, gender: 'f', topStyle: 'traje', top: 0x2e2e38, skin: SKINS[2], legwear: 'falda', skirt: 0x22243a, hair: 'long', hairColor: 0x1d130c, tie: 0x8a1c24, name: '' });
+  // (antes llevaba saco negro con camisa y solapas y parecía un hombre de esmoquin: ahora es claramente una dama)
+  const recep = createHuman({ detail: .6, gender: 'f', topStyle: 'mangalarga', top: 0x9a2a4e, legwear: 'vestido', skin: SKINS[2], hair: 'long', hairColor: 0x1d130c, shoes: 0x1a1214, earrings: true, necklace: true, name: '' });
   recep.root.position.set(cx, y0, Z0 + 4.1); recep.root.rotation.y = Math.PI; group.add(recep.root);
+  // cartel con su cargo para que se sepa quién es (se oculta mientras saluda)
+  const recepTag = nameSprite('Servidora', 'Recepción'); recepTag.scale.set(1.2, .3, 1); recepTag.position.set(cx, y0 + 2.15, Z0 + 4.1); group.add(recepTag);
   const bubble = (() => {
     const c = document.createElement('canvas'); c.width = 512; c.height = 160; const g = c.getContext('2d');
     g.fillStyle = 'rgba(255,255,255,.96)'; g.strokeStyle = '#d4a72c'; g.lineWidth = 8;
@@ -185,7 +189,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       // gestos de la servidora: al saludar levanta la mano y la mueve, abre el otro brazo y asiente; si no, conversa con las manos
       {
         const G = greeter, A = recep.arms, k = Math.min(1, dt * 8), L = THREE.MathUtils.lerp;
-        G.g = Math.max(0, G.g - dt); G.cool = Math.max(0, G.cool - dt); G.bubble.visible = G.g > .2;
+        G.g = Math.max(0, G.g - dt); G.cool = Math.max(0, G.cool - dt); G.bubble.visible = G.g > .2; recepTag.visible = !G.bubble.visible;
         const S = (o, p, v) => { o[p] = L(o[p], v, k); };
         if (G.g > 0) {
           S(A[1].shoulder.rotation, 'x', -2.55); S(A[1].shoulder.rotation, 'z', .3 + Math.sin(t * 10) * .28); S(A[1].elbow.rotation, 'x', -.55 + Math.sin(t * 10) * .25);

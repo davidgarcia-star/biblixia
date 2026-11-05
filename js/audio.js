@@ -1,4 +1,15 @@
 const THREE_clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+// Nombres y códigos de voces en español de cada sistema, separados por género
+const VOICE_F = new Set(('female mujer femenina femenino monica paulina helena laura sabina elvira lucia ximena marisol angelica francisca dalia soledad isabela isabel elena ' +
+  'carmen sofia valentina paloma marta teresa ramona andrea catalina salome maria belkys karla yolanda margarita camila karina tania lorena paola irene triana ' +
+  'abril estrella laia lia vera beatriz candela carlota larissa marina nuria renata flo sandy shelley grandma abuela esperanza penelope luciana ana rosa silvia ' +
+  'julia sara violeta alba noelia gabriela victoria amalia eva conchita lupe mia montserrat ' +
+  'eea eec esc sfb').split(' '));
+const VOICE_M = new Set(('male hombre masculino jorge diego pablo carlos juan enrique alvaro raul alonso gonzalo jose tomas andres manuel antonio miguel federico ' +
+  'alejandro eduardo dario gerardo lorenzo emilio marcelo luis javier roberto alex victor mario rodrigo sebastian mateo arnau elias gil teo nil saul cecilio ' +
+  'liberto luciano pelayo yago eddy reed rocko grandpa abuelo ricardo sergio hugo pedro david daniel felipe fernando rafael francisco gabriel ivan oscar ' +
+  'jordi santiago ramon ' +
+  'eed eef esd esf').split(' '));
 // Música instrumental, efectos, pasos y voces (sin archivos externos)
 export class Sound {
   constructor() {
@@ -206,14 +217,15 @@ export class Sound {
   // Personas conversando a lo lejos (sílabas de voz adulta, sin palabras)
   chatter(vol, pan, female = false) {
     const a = this.unlock(); if (!a || !this.sfxOn || vol < .01) return;
-    const bus = this._bus(vol * .8, pan), t0 = a.currentTime, base = (female ? 200 : 115) * (.9 + Math.random() * .2);
+    const bus = this._bus(vol * .8, pan), t0 = a.currentTime, base = (female ? 215 : 105) * (.9 + Math.random() * .2);
     const n = 3 + (Math.random() * 4 | 0);
     for (let i = 0; i < n; i++) {
       const t = t0 + i * (.14 + Math.random() * .08), o = a.createOscillator(), g = a.createGain(), f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter();
       o.type = 'sawtooth'; const p0 = base * (1 + (Math.random() - .5) * .25);
       o.frequency.setValueAtTime(p0, t); o.frequency.linearRampToValueAtTime(p0 * (i === n - 1 ? .85 : 1.05), t + .12);
-      f1.type = 'bandpass'; f1.frequency.value = 500 + Math.random() * 400; f1.Q.value = 5;
-      f2.type = 'bandpass'; f2.frequency.value = 1200 + Math.random() * 900; f2.Q.value = 7;
+      const fk = female ? 1.18 : .92;   // las voces de mujer resuenan más agudo que las de hombre
+      f1.type = 'bandpass'; f1.frequency.value = (500 + Math.random() * 400) * fk; f1.Q.value = 5;
+      f2.type = 'bandpass'; f2.frequency.value = (1200 + Math.random() * 900) * fk; f2.Q.value = 7;
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.13, t + .025); g.gain.exponentialRampToValueAtTime(.0001, t + .13);
       o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(bus); o.start(t); o.stop(t + .16);
     }
@@ -353,23 +365,50 @@ export class Sound {
   win() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.note(f, .9, { type: 'triangle', vol: .1, when: i * .12 })); }
   lose() { [392, 349, 311, 262].forEach((f, i) => this.note(f, .7, { type: 'sine', vol: .12, when: i * .22 })); }
 
-  // Voz del navegador en español (Hola, Shalom)
+  // Voz del navegador en español (Hola, Shalom).
+  // Las mujeres hablan con voz de mujer y los hombres con voz de hombre: se reconoce el género de cada voz
+  // instalada (Windows, Edge, Chrome, Android, iPhone y Mac) por su nombre o su código; si el equipo
+  // no tiene una voz del género pedido, se usa otra y se cambia bastante el tono para que se note.
+  _voiceFor(male) {
+    let all = [];
+    try { all = speechSynthesis.getVoices(); } catch (e) {}
+    if (!all.length) all = this.voices || [];
+    const es = all.filter(v => /^es/i.test(v.lang));
+    const key = es.map(v => v.name).join('|');
+    if (this._vKey !== key) {
+      this._vKey = key;
+      const words = v => (v.name + ' ' + (v.voiceURI || '')).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/);
+      const gen = v => {
+        const w = words(v), txt = w.join(' ');
+        if (w.some(x => VOICE_F.has(x)) || /google espa/.test(txt)) return 'f';
+        if (w.some(x => VOICE_M.has(x))) return 'm';
+        return '';
+      };
+      // preferir acento latinoamericano (República Dominicana, EE. UU., México…), voces naturales y no las de broma
+      const rank = v => { const l = v.lang.toLowerCase().replace('_', '-'), n = v.name.toLowerCase(); let k = 0;
+        if (l === 'es-do') k += 6; else if (l === 'es-us' || l === 'es-419') k += 5; else if (l === 'es-mx') k += 4; else if (l !== 'es-es') k += 3; else k += 2;
+        if (/natural|neural|premium|enhanced|mejorad/.test(n)) k += 3; if (/grandma|grandpa|abuel|eddy|flo\b|reed|rocko|sandy|shelley/.test(n)) k -= 4; return k; };
+      const by = g => es.filter(v => gen(v) === g).sort((x, y) => rank(y) - rank(x));
+      this._vF = by('f')[0] || null; this._vM = by('m')[0] || null;
+      this._vAny = es.filter(v => !gen(v)).sort((x, y) => rank(y) - rank(x))[0] || es[0] || null;
+      this._vGen = v => (v === this._vF ? 'f' : v === this._vM ? 'm' : gen(v));
+    }
+    const want = male ? this._vM : this._vF;
+    if (want) return { voice: want, pitch: male ? .9 : 1.08 };
+    // no hay voz del género pedido: se usa la otra con un tono muy distinto
+    const other = this._vAny || (male ? this._vF : this._vM);
+    const g = other ? this._vGen(other) : '';
+    if (male) return { voice: other, pitch: g === 'f' ? .5 : .7 };
+    return { voice: other, pitch: g === 'm' ? 1.45 : 1.2 };
+  }
   say(text, { male = true, rate = .95, pitch } = {}) {
     if (!this.sfxOn || !('speechSynthesis' in window)) return;
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text); u.lang = 'es-ES'; u.rate = rate; u.volume = 1;
-      const all = speechSynthesis.getVoices(), es = all.filter(v => /^es/i.test(v.lang));
-      const nm = v => (v.name + ' ' + (v.voiceURI || '')).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      const M = /(male|hombre|masculin|jorge|diego|pablo|carlos|juan|enrique|alvaro|raul|alonso|gonzalo|jose|tomas|andres|manuel|antonio|miguel|federico|alejandro|eduardo|dario|gerardo|lorenzo|esd|eef|eem|esa)/;
-      const F = /(female|mujer|femen|monica|paulina|helena|laura|sabina|elvira|lucia|ximena|marisol|angelica|francisca|dalia|soledad|isabela|isabel|elena|carmen|sofia|valentina|paloma|marta|teresa|esc|eea|eec)/;
-      const isF = v => F.test(nm(v)) || /google espa/.test(nm(v)), isM = v => M.test(nm(v)) && !F.test(nm(v));
-      let pick = male ? es.find(isM) : es.find(isF);
-      // si no hay una voz del género pedido, se usa otra y se ajusta el tono (más grave para hombres, más agudo para mujeres)
-      let adj = 0;
-      if (!pick) { pick = male ? (es.find(v => !isF(v)) || es[0]) : (es.find(v => !isM(v)) || es[0]); adj = male ? -.3 : .3; if (pick && male && isF(pick)) adj = -.55; if (pick && !male && isM(pick)) adj = .55; }
-      if (pick) u.voice = pick;
-      u.pitch = THREE_clamp(pitch ?? ((male ? .82 : 1.12) + adj), .1, 2);
+      const { voice, pitch: p0 } = this._voiceFor(male);
+      if (voice) { u.voice = voice; u.lang = voice.lang; }
+      u.pitch = THREE_clamp(pitch ?? p0, .1, 2);
       speechSynthesis.speak(u);
     } catch (e) {}
   }

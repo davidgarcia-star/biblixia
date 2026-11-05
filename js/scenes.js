@@ -505,6 +505,8 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
   const cx0 = mx(zc), wy = -.82;                                   // el agua le llega a la cintura
   const john = createHuman({ detail: .6, outfit: 'robe', robe: 0x9a7a4a, mantle: 0x7a5a32, sash: 0x3a2412, hair: 'long', hairColor: 0x2a1c12, beard: { color: 0x2a1c12, len: .13 }, skin: 0xa8714f });
   john.root.position.set(cx0 + .55, wy, zc); john.root.rotation.y = -Math.PI / 2; J.add(john.root);
+  // cartel con su nombre sobre la cabeza, para identificarlo (en todos los niveles)
+  const johnTag = nameSprite('Juan el Bautista', 'Profeta'); johnTag.scale.set(2.4, .6, 1); johnTag.position.set(cx0 + .55, 1.6, zc); johnTag.renderOrder = 15; J.add(johnTag);
   // la persona que está siendo bautizada
   const conv = createHuman({ detail: .55, outfit: 'robe', robe: 0xe6dcc6, mantle: null, sash: 0x6a4a2a, hair: 'short', hairColor: 0x1a100a, beard: { color: 0x1a100a, len: .05 }, skin: 0xc68e6a });
   conv.root.position.set(cx0 - .45, wy, zc); conv.root.rotation.y = Math.PI / 2; J.add(conv.root);
@@ -540,7 +542,8 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
     zones: [{ id: 'jordan', name: 'El río Jordán', minX: x - HW - 10, maxX: x + HW + 12, minZ: z0, maxZ: z1, pri: 3,
       text: 'Juan el Bautista predicaba en el desierto de Judea: «Arrepentíos, porque el reino de los cielos se ha acercado». Vestía ropa de pelo de camello con un cinto de cuero, y comía langostas y miel silvestre. La gente de Jerusalén, de toda Judea y de la región del Jordán iba a él, y confesando sus pecados, eran bautizados por él en el río Jordán.',
       ref: 'Mateo 3:1-6; Marcos 1:4-6' }],
-    johnSpot: [eastX + .8, zc + 1.2],
+    // se le habla desde la orilla oriental, frente a él (el agua es honda); el regalo flota sobre Juan en el río
+    johnSpot: [cx0 + HW - .15, zc], johnPos: [cx0 + .55, zc],
     menPos: menC,
     // onSanto: se llama cuando el jugador se acerca a los hombres (para la voz)
     update(t, dt, pp, onSanto) {

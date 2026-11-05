@@ -385,6 +385,10 @@ export function createHuman(opt = {}) {
   }
   // Cuello y cabeza
   const neck = grp(chest, 0, .05, 0);
+  if (F && o.necklace) {   // cadena fina con un dije
+    const nk = mesh(new THREE.TorusGeometry(.056, .0028, 6, 36), gold, chest, 0, .045, .012); nk.rotation.x = Math.PI / 2 - .55; nk.scale.set(1, 1.05, 1);
+    mesh(SG(.008, 10, 8), gold, chest, 0, .005, .066);
+  }
   mesh(new THREE.CylinderGeometry(F ? .039 : .044, F ? .045 : .05, .14, 16), skin, neck, 0, .04, 0);
   const head = grp(neck, 0, .16, .012);
   if (F) head.scale.setScalar(.95);
@@ -414,6 +418,7 @@ export function createHuman(opt = {}) {
     const rim = mesh(new THREE.TorusGeometry(.021, .0045, 8, 22, Math.PI * 1.45), skin, ear, s * .006, .004, 0); rim.rotation.set(0, s * Math.PI / 2, Math.PI * .55); rim.scale.set(1, 1.3, 1);
     const lobe = mesh(SG(.0085, 12, 10), skin, ear, s * .002, -.026, .004); lobe.scale.set(.6, 1, .9);
     const con = mesh(SG(.012, 12, 10), earIn, ear, s * .0055, -.002, .003); con.scale.set(.25, 1.2, .9);
+    if (F && o.earrings) mesh(SG(.0075, 10, 8), gold, ear, s * .004, -.037, .004);   // aretes
   }
 
   // Pelo
