@@ -2124,6 +2124,40 @@ const fireflies = (() => {
     }
   };
 })();
+// Mariposas: de día, unas mariposas de colores revolotean cerca del jugador (no dentro de los edificios ni de noche)
+const butterflies = (() => {
+  const grp = new THREE.Group(), list = [], n = 9;
+  const COLS = [0xffb020, 0xf5f5f0, 0x4aa8ff, 0xff6a3d, 0xffe14d, 0xc77dff];
+  const wingGeo = s => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, .03, s * .13, 0, .1, s * .15, 0, -.01, 0, 0, .03, s * .15, 0, -.01, 0, 0, -.02, 0, 0, -.02, s * .14, 0, -.02, s * .08, 0, -.12], 3)); g.computeVertexNormals(); return g; };
+  const gL = wingGeo(-1), gR = wingGeo(1), gB = new THREE.CylinderGeometry(.008, .006, .1, 4).rotateX(Math.PI / 2);
+  const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1a1410 });
+  for (let i = 0; i < n; i++) {
+    const mat = new THREE.MeshLambertMaterial({ color: COLS[i % COLS.length], side: THREE.DoubleSide });
+    const b = new THREE.Group(), L = new THREE.Mesh(gL, mat), R = new THREE.Mesh(gR, mat); b.add(new THREE.Mesh(gB, bodyMat), L, R);
+    b.scale.setScalar(1.5 + Math.random() * .6); b.traverse(m => { m.frustumCulled = false; m.castShadow = false; });
+    list.push({ b, L, R, a: Math.random() * 6.28, d: 3 + Math.random() * 9, h: .7 + Math.random() * 1.2, ph: Math.random() * 6.28, sp: .25 + Math.random() * .35, fs: 16 + Math.random() * 8, dir: Math.random() < .5 ? 1 : -1 });
+    grp.add(b);
+  }
+  grp.visible = false; scene.add(grp);
+  const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo', 'mar']);
+  let cx = 0, cz = 0, chk = 0, inside = false;
+  return {
+    update(dt, t, cp) {
+      if (!world || stars.visible || save.time === 'atardecer' || state !== 'play') { grp.visible = false; return; }
+      if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ) || (P.pos.y > 3); }
+      grp.visible = !inside; if (inside) return;
+      if (Math.hypot(P.pos.x - cx, P.pos.z - cz) > 14) { cx = P.pos.x; cz = P.pos.z; }
+      for (const k of list) {
+        const a = k.a + t * k.sp * .25 * k.dir, wob = Math.sin(t * k.sp * 3 + k.ph);
+        const x = cx + Math.cos(a) * k.d + wob * .8, z = cz + Math.sin(a) * k.d + Math.cos(t * k.sp * 2.3 + k.ph) * .8;
+        const y = P.pos.y + k.h + Math.sin(t * 2.2 + k.ph) * .18 + Math.abs(Math.sin(t * k.fs * .5 + k.ph)) * .05;
+        const vx = -Math.sin(a) * k.dir, vz = Math.cos(a) * k.dir; // tangente: miran hacia donde vuelan
+        k.b.position.set(x, y, z); k.b.rotation.set(-.15, Math.atan2(vx, vz), 0);
+        const f = Math.sin(t * k.fs + k.ph) * 1.1 + .25; k.L.rotation.z = -f; k.R.rotation.z = f;
+      }
+    }
+  };
+})();
 // Estrellas fugaces: de noche, de vez en cuando cruza el cielo una estela brillante (Salmo 19:1)
 const shootingStar = (() => {
   const pos = new Float32Array(6), col = new Float32Array([1, 1, .95, 0, 0, 0]);
@@ -2171,6 +2205,7 @@ function loop() {
   if (state === 'play') update(dt);
   birds.update(dt, elapsed, camera.position);
   fireflies.update(dt, elapsed, camera.position);
+  butterflies.update(dt, elapsed, camera.position);
   shootingStar.update(dt, camera.position);
 
   if (world) {
