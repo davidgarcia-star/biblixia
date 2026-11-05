@@ -99,6 +99,72 @@ export class Sound {
     });
     for (let i = 0; i < 3; i++) this.note(500 + Math.random() * 500, .05, { type: 'sine', vol: .025 * vol, when: .1 + i * .05 + Math.random() * .04, slide: 300, wet: false });
   }
+  // Agua que se mueve alrededor mientras nadas (bucle suave; vol 0 lo apaga)
+  swimLoop(vol = 0) {
+    const a = this.ctx; if (!a || !this.noise) return;
+    if (!this._swim) {
+      if (vol <= 0) return;
+      const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; src.playbackRate.value = .45;
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+      const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = 1.1; lg.gain.value = 350; lfo.connect(lg).connect(lp.frequency); lfo.start();
+      const g = a.createGain(); g.gain.value = 0; src.connect(lp).connect(g).connect(this.sfx); src.start();
+      this._swim = { src, g, lfo };
+    }
+    const sw = this._swim; sw.g.gain.setTargetAtTime(this.sfxOn ? vol * .16 : 0, a.currentTime, .25);
+    if (vol <= 0) { if (!sw.off) sw.off = setTimeout(() => { if (this._swim === sw && sw.off) { try { sw.src.stop(); sw.lfo.stop(); } catch (e) {} this._swim = null; } }, 1500); }
+    else { clearTimeout(sw.off); sw.off = null; }
+  }
+  // Al subir al barco: campana del barco, crujido de madera y olas
+  boatBoard() {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    [0, .55].forEach(w => { this.note(1046, 1.4, { type: 'sine', vol: .09, when: w }); this.note(2093, .9, { type: 'sine', vol: .03, when: w }); this.note(1568, 1.1, { type: 'triangle', vol: .025, when: w }); });
+    this.note(98, 1.6, { type: 'sawtooth', vol: .05, when: 1.2, filter: 400 }); this.note(147, 1.6, { type: 'sawtooth', vol: .035, when: 1.2, filter: 500 }); // bocina grave
+    if (!this.noise) return;
+    const t = a.currentTime;
+    for (let i = 0; i < 3; i++) { // crujidos de la madera
+      const o = a.createOscillator(), g = a.createGain(), w = .25 + i * .3; o.type = 'sawtooth'; o.frequency.setValueAtTime(70 + i * 15, t + w); o.frequency.linearRampToValueAtTime(55, t + w + .25);
+      g.gain.setValueAtTime(.0001, t + w); g.gain.exponentialRampToValueAtTime(.03, t + w + .05); g.gain.exponentialRampToValueAtTime(.0001, t + w + .3); o.connect(g).connect(this.sfx); o.start(t + w); o.stop(t + w + .35);
+    }
+    this.splash(.5);
+  }
+  // Olas contra el casco mientras se navega (bucle; vol 0 lo apaga)
+  boatLoop(vol = 0) {
+    const a = this.ctx; if (!a || !this.noise) return;
+    if (!this._boat) {
+      if (vol <= 0) return;
+      const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; src.playbackRate.value = .35;
+      const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 600;
+      const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = .35; lg.gain.value = 260; lfo.connect(lg).connect(lp.frequency); lfo.start();
+      const g = a.createGain(); g.gain.value = 0; src.connect(lp).connect(g).connect(this.sfx); src.start();
+      this._boat = { src, g, lfo };
+    }
+    const b = this._boat; b.g.gain.setTargetAtTime(this.sfxOn ? vol * .22 : 0, a.currentTime, .4);
+    if (vol <= 0) { if (!b.off) b.off = setTimeout(() => { if (this._boat === b && b.off) { try { b.src.stop(); b.lfo.stop(); } catch (e) {} this._boat = null; } }, 2500); }
+    else { clearTimeout(b.off); b.off = null; }
+  }
+  // Auto de lujo: arranque del motor
+  carStart() {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    for (let i = 0; i < 3; i++) this.note(55 + i * 4, .12, { type: 'sawtooth', vol: .07, when: i * .13, filter: 600, wet: false });
+    this.note(60, .9, { type: 'sawtooth', vol: .09, when: .42, slide: 140, filter: 900 });
+    this.note(1200, .05, { type: 'square', vol: .02, when: 0, wet: false }); // pitido de la llave
+  }
+  // Motor mientras se maneja (vol 0 lo apaga); rpm de 0 a 1
+  carLoop(vol = 0, rpm = 0) {
+    const a = this.ctx; if (!a) return;
+    if (!this._car) {
+      if (vol <= 0) return;
+      const o1 = a.createOscillator(), o2 = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain();
+      o1.type = 'sawtooth'; o2.type = 'square'; lp.type = 'lowpass'; lp.frequency.value = 700; g.gain.value = 0;
+      o1.connect(lp); o2.connect(lp); lp.connect(g).connect(this.sfx); o1.start(); o2.start();
+      this._car = { o1, o2, lp, g };
+    }
+    const c = this._car, t = a.currentTime, f = 42 + rpm * 120;
+    c.o1.frequency.setTargetAtTime(f, t, .12); c.o2.frequency.setTargetAtTime(f * .5, t, .12); c.lp.frequency.setTargetAtTime(500 + rpm * 1400, t, .15);
+    c.g.gain.setTargetAtTime(this.sfxOn ? vol * .05 : 0, t, .2);
+    if (vol <= 0) { if (!c.off) c.off = setTimeout(() => { if (this._car === c && c.off) { try { c.o1.stop(); c.o2.stop(); } catch (e) {} this._car = null; } }, 1200); }
+    else { clearTimeout(c.off); c.off = null; }
+  }
   // Zambullida al entrar al agua
   splash(vol = 1) {
     const a = this.unlock(); if (!a || !this.sfxOn || !this.noise) return;
@@ -258,7 +324,9 @@ export class Sound {
     const t = a.currentTime;
     const nz = (when, dur, f, q, gain, type = 'bandpass') => { const src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; const bp = a.createBiquadFilter(); bp.type = type; bp.frequency.value = f; bp.Q.value = q; const g = a.createGain(); g.gain.setValueAtTime(.0001, t + when); g.gain.exponentialRampToValueAtTime(gain, t + when + .02); g.gain.exponentialRampToValueAtTime(.0001, t + when + dur); src.connect(bp).connect(g).connect(this.sfx); src.start(t + when); src.stop(t + when + dur + .05); };
     if (kind === 'eat') for (let i = 0; i < 5; i++) nz(i * .22, .12, 1800 + Math.random() * 800, 1.5, .5);
-    else if (kind === 'water' || kind === 'coffee') for (let i = 0; i < 3; i++) { this.note(320 - i * 30, .16, { type: 'sine', vol: .14, when: i * .3, slide: 180 }); nz(i * .3, .1, 600, 3, .2); }
+    else if (kind === 'water' || kind === 'coffee' || kind === 'wash') for (let i = 0; i < 3; i++) { this.note(320 - i * 30, .16, { type: 'sine', vol: .14, when: i * .3, slide: 180 }); nz(i * .3, .1, 600, 3, .2); }
+    else if (kind === 'tvon' || kind === 'tvoff') { this.note(kind === 'tvon' ? 880 : 440, .08, { type: 'square', vol: .05 }); nz(.05, .25, 3000, .5, .06, 'highpass'); }
+    else if (kind === 'bath') { nz(0, 1.6, 900, .6, .18); for (let i = 0; i < 6; i++) this.note(500 + Math.random() * 500, .06, { type: 'sine', vol: .06, when: .2 + i * .22, slide: 900 }); }
     else if (kind === 'shower') { nz(0, 1.4, 5000, .4, .25, 'highpass'); nz(0, 1.4, 1800, .7, .12); }
     else if (kind === 'worship') [[262, 330, 392], [349, 440, 523], [392, 494, 587]].forEach((ch, i) => ch.forEach(f => this.note(f, 1.2, { type: 'triangle', vol: .05, when: i * .5 })));
     else if (kind === 'sleep' || kind === 'rest') [523, 440, 349, 262].forEach((f, i) => this.note(f, .9, { type: 'sine', vol: .07, when: i * .35 }));

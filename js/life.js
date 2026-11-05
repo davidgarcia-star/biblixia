@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createHuman, animateHuman, bakeStatic } from './human.js';
 import { pace } from './pace.js';
+import { buildFood, buildChairs, buildBedroomTV, buildBathroom } from './hogar.js';
 
 /* =========================================================
    VIDA EN LA CIUDAD: peatones, niños, comerciantes,
@@ -21,7 +22,7 @@ function person(r, { kid = false, detail = .45, gender } = {}) {
 }
 
 export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CURB, BLOCK, blocks, playerName, npcSpots }) {
-  const walkers = [], acts = [], live = [];
+  const walkers = [], acts = [], live = [], houseUpd = [];
   const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: .7, ...o });
   const box = (w, h, d, m, x, y, z, { cast = true, recv = true, parent = group } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; parent.add(b); return b; };
   const cyl = (rt, rb, h, m, x, y, z, seg = 16) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); c.position.set(x, y, z); c.castShadow = true; c.receiveShadow = true; group.add(c); return c; };
@@ -58,33 +59,73 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
   const casa = blocks.find(b => b[2] === 'casa');
   if (casa) {
     const [x0, z0] = casa, cx = x0 + BLOCK / 2, cz = z0 + BLOCK / 2, fy = CURB;
-    const HW = 7, HD = 5.5, H = 3, T = .22;                 // medio ancho, media profundidad, alto, grosor de pared
-    const wallM = mat(0xefe4cf, { roughness: .9 }), trimM = mat(0x8a5a36), roofM = mat(0x8a3a24, { roughness: .8 }), floorM = mat(0xb98a5a, { roughness: .6 });
-    // jardín y camino
+    const HW = 7, HD = 5.5, H = 3.3, T = .22;               // medio ancho, media profundidad, alto, grosor de pared
+    // casa moderna: paredes blancas, piso de porcelanato claro, techo plano con alero y detalles negros y de madera
+    const wallM = mat(0xf6f5f2, { roughness: .75 }), trimM = mat(0x6b4a32, { roughness: .55 }), floorM = mat(0xdcd8d0, { roughness: .3 });
+    const darkM = mat(0x24272c, { roughness: .45, metalness: .3 }), woodM = mat(0xa8743f, { roughness: .55 }), frameM = mat(0x111214, { roughness: .35, metalness: .5 });
+    // jardín, camino de losas y luces bajas
     box(BLOCK - 2, .04, BLOCK - 2, mat(0x5f8f3e, { roughness: 1 }), cx, fy + .02, cz, { cast: false });
-    box(1.8, .1, BLOCK / 2 - HD - 1, mat(0xc9b89a), cx, fy + .05, z0 + (BLOCK / 2 - HD - 1) / 2 + 1, { cast: false });
+    const pathL = BLOCK / 2 - HD - 1;
+    for (let k = 0; k < 6; k++) box(1.6, .08, pathL / 6 - .25, mat(0xcfccc6, { roughness: .6 }), cx, fy + .05, z0 + 1 + (k + .5) * pathL / 6, { cast: false });
+    const ledM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0c8, emissiveIntensity: 2 });
+    for (let k = 0; k < 3; k++) for (const sx of [-1, 1]) { box(.1, .45, .1, darkM, cx + sx * 1.15, fy + .22, z0 + 2 + k * pathL / 3, { cast: false }); box(.11, .06, .11, ledM, cx + sx * 1.15, fy + .42, z0 + 2 + k * pathL / 3, { cast: false }); }
     box(HW * 2, .14, HD * 2, floorM, cx, fy + .07, cz, { cast: false });
     const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD, DW = 1.4;
-    const wall = (ax, az, bx, bz) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const m = box(w, H, d, wallM, (ax + bx) / 2, fy + H / 2, (az + bz) / 2); blockers.push(m); solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H); };
-    wall(X0, Z1, X1, Z1); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1);
-    wall(X0, Z0, cx - DW / 2, Z0); wall(cx + DW / 2, Z0, X1, Z0);                       // puerta al frente
-    box(DW + .3, .35, T + .05, wallM, cx, fy + H - .17, Z0);                            // dintel
+    const wall = (ax, az, bx, bz, m = wallM) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const mm = box(w, H, d, m, (ax + bx) / 2, fy + H / 2, (az + bz) / 2); blockers.push(mm); solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H); };
+    // ventanal de piso a techo (vidrio de verdad: se ve hacia dentro y hacia fuera)
+    const winGlass = new THREE.MeshStandardMaterial({ color: 0x9cc4d4, metalness: .2, roughness: .03, transparent: true, opacity: .3, depthWrite: false, side: THREE.DoubleSide });
+    const glassWall = (ax, az, bx, bz, panels = 3) => {
+      const alongX = Math.abs(bx - ax) > Math.abs(bz - az), L = alongX ? bx - ax : bz - az;
+      box(alongX ? Math.abs(L) : .04, H - .1, alongX ? .04 : Math.abs(L), winGlass, (ax + bx) / 2, fy + H / 2, (az + bz) / 2, { cast: false, recv: false });
+      for (let k = 0; k <= panels; k++) { const t = k / panels, px = ax + (bx - ax) * t, pz = az + (bz - az) * t; box(.07, H, .07, frameM, px, fy + H / 2, pz, { cast: false }); }
+      box(alongX ? Math.abs(L) : .08, .08, alongX ? .08 : Math.abs(L), frameM, (ax + bx) / 2, fy + .18, (az + bz) / 2, { cast: false });
+      solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H);
+    };
+    // fondo: ventanal hacia el patio y la piscina en la sala; pared en el dormitorio
+    glassWall(X0 + .5, Z1, cx + 1.4, Z1, 4); wall(X0, Z1, X0 + .5, Z1); wall(cx + 1.4, Z1, X1, Z1);
+    wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1);
+    // frente: ventanal en la sala, puerta pivotante y pared del baño (con ventanita alta)
+    wall(X0, Z0, X0 + .5, Z0); glassWall(X0 + .5, Z0, cx - 1.6, Z0, 3); wall(cx - 1.6, Z0, cx - DW / 2, Z0, darkM); wall(cx + DW / 2, Z0, X1, Z0);
+    box(DW + .3, .5, T + .05, darkM, cx, fy + H - .25, Z0);                            // dintel
+    const door = box(.08, H - .55, DW - .2, woodM, cx - DW / 2 + .2, fy + (H - .55) / 2 + .14, Z0 - .4, { cast: true }); door.rotation.y = Math.PI / 2 - 1.1; // puerta de madera abierta
+    box(.03, .9, .04, frameM, cx - DW / 2 + .55, fy + 1.1, Z0 - .9, { cast: false });
+    box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
+    // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
+    for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
+    box(.9, H, .06, darkM, X1 - .45, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
     // pared interior entre la sala y el dormitorio/baño (con paso)
     wall(cx + 1.5, Z0 + 4.2, cx + 1.5, Z1);
-    const roof = box(HW * 2 + 1, .25, HD * 2 + 1, roofM, cx, fy + H + .12, cz, { cast: false }); blockers.push(roof);
-    for (const sz of [-1, 1]) { const rf = box(HW * 2 + 1.2, .18, HD + .9, roofM, cx, fy + H + .9, cz + sz * (HD / 2 + .2), { cast: true }); rf.rotation.x = sz * .42; }
+    // techo plano con alero grueso, franja de luz LED y alero sobre la entrada
+    const roof = box(HW * 2 + 1.4, .3, HD * 2 + 1.4, mat(0xf2f1ee, { roughness: .7 }), cx, fy + H + .15, cz, { cast: false }); blockers.push(roof);
+    box(HW * 2 + 1.5, .32, .06, darkM, cx, fy + H + .15, Z0 - .72, { cast: false }); box(HW * 2 + 1.5, .32, .06, darkM, cx, fy + H + .15, Z1 + .72, { cast: false });
+    box(.06, .32, HD * 2 + 1.5, darkM, X0 - .72, fy + H + .15, cz, { cast: false }); box(.06, .32, HD * 2 + 1.5, darkM, X1 + .72, fy + H + .15, cz, { cast: false });
+    box(HW * 2 + 1.2, .03, .05, ledM, cx, fy + H - .02, Z0 - .6, { cast: false });
+    box(3.4, .18, 1.8, darkM, cx, fy + H - .35, Z0 - 1, { cast: false });                    // alero de la entrada
+    for (const sx of [-1, 1]) box(.12, H - .35, .12, frameM, cx + sx * 1.6, fy + (H - .35) / 2, Z0 - 1.8, { cast: false });
+    // segundo volumen en la azotea (estudio) para darle forma moderna
+    box(5.5, 1.8, 4.2, wallM, cx - 3.5, fy + H + 1.2, cz + 1.4, { cast: true });
+    box(5.5, 1.8, .05, winGlass, cx - 3.5, fy + H + 1.2, cz - .72, { cast: false });
+    box(5.9, .2, 4.6, darkM, cx - 3.5, fy + H + 2.2, cz + 1.4, { cast: false });
     const lampM = new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 2 });
-    for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) box(.6, .05, .6, lampM, lx, fy + H - .05, lz, { cast: false });
+    for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
     sign('Casa de ' + (playerName || 'mi personaje'), '🏠 Tu casa', cx, fy + H - .25, Z0 - .14, Math.PI);
-    // ventanas
-    const glass = new THREE.MeshStandardMaterial({ color: 0x9fd0e8, metalness: .1, roughness: .05, transparent: true, opacity: .45 });
-    for (const wx of [cx - 4.2, cx + 4.2]) box(1.6, 1.1, .06, glass, wx, fy + 1.6, Z0 - .12, { cast: false });
+    const glass = winGlass;
+    // patio trasero: terraza de madera y piscina (no se puede caminar dentro)
+    const pX = cx - 2, pZ = Z1 + 5, pW = 8, pD = 3.6;
+    box(pW + 2.4, .1, pD + 2.4, woodM, pX, fy + .06, pZ, { cast: false });
+    box(pW + .4, .14, pD + .4, mat(0xe9e6df, { roughness: .5 }), pX, fy + .1, pZ, { cast: false });
+    box(pW, .02, pD, new THREE.MeshStandardMaterial({ color: 0x29a8d8, roughness: .05, metalness: .1, emissive: 0x0a3a50, emissiveIntensity: .4, transparent: true, opacity: .9 }), pX, fy + .17, pZ, { cast: false });
+    solid(pX - pW / 2, pX + pW / 2, pZ - pD / 2, pZ + pD / 2, fy + 1.4);
+    for (const sx of [-1.6, 0, 1.6]) { const t = box(.7, .12, 1.9, mat(0xf2f2f0), pX + 6.3, fy + .35, pZ + sx * .7 - .3); t.rotation.x = -.05; box(.7, .5, .12, mat(0xf2f2f0), pX + 6.3, fy + .55, pZ + sx * .7 + .6); }
     // --- Sala y cocina (lado izquierdo) ---
-    const sofaM = mat(0x2a4a7a, { roughness: .9 });
+    const sofaM = mat(0x8c8a86, { roughness: .95 });
     box(2.4, .45, .9, sofaM, cx - 4, fy + .23, Z1 - .8); box(2.4, .7, .25, sofaM, cx - 4, fy + .6, Z1 - .35); solid(cx - 5.2, cx - 2.8, Z1 - 1.3, Z1 - .2, fy + .45);
     box(1.2, .06, .7, trimM, cx - 4, fy + .45, Z1 - 2.1); for (const [a, b] of [[-.5, -.28], [.5, -.28], [-.5, .28], [.5, .28]]) box(.06, .42, .06, trimM, cx - 4 + a, fy + .21, Z1 - 2.1 + b);
     // tele
-    box(1.6, .9, .08, mat(0x101216, { roughness: .3 }), cx - 4, fy + 1.5, Z0 + .2);
+    box(2, 1.1, .06, mat(0x101216, { roughness: .2, metalness: .3 }), cx - 4, fy + 1.45, Z0 + .55);
+    box(2.6, .45, .45, darkM, cx - 4, fy + .36, Z0 + .55); box(2.62, .03, .47, woodM, cx - 4, fy + .6, Z0 + .55); solid(cx - 5.3, cx - 2.7, Z0 + .3, Z0 + .8, fy + .6);
+    // alfombra y planta grande
+    box(3, .015, 2.2, mat(0x8a8f96, { roughness: 1 }), cx - 4, fy + .15, Z1 - 2.2, { cast: false });
     // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
     box(.7, .9, 3.2, cabM, X0 + .45, fy + .45, cz + 1.2); box(.75, .05, 3.25, counterM, X0 + .45, fy + .92, cz + 1.2); solid(X0, X0 + .85, cz - .4, cz + 2.8, fy + .95);
@@ -93,26 +134,36 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
     const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false; steam(X0 + .45, fy + 1.3, cz + .4);
     box(1.4, .06, .9, trimM, cx - 1.8, fy + .76, cz - 1.6); for (const [a, b] of [[-.6, -.35], [.6, -.35], [-.6, .35], [.6, .35]]) box(.06, .74, .06, trimM, cx - 1.8 + a, fy + .37, cz - 1.6 + b); solid(cx - 2.5, cx - 1.1, cz - 2.05, cz - 1.15, fy + .78);
-    for (const [fx, fz, c] of [[-.3, -.1, 0xd23a2a], [0, .1, 0xf0c040], [.3, -.05, 0x6ab04a]]) { const fr = new THREE.Mesh(new THREE.SphereGeometry(.06, 10, 8), mat(c)); fr.position.set(cx - 1.8 + fx, fy + .85, cz - 1.6 + fz); group.add(fr); }
-    // --- Dormitorio y baño (lado derecho) ---
+    // comida servida en la mesa: arroz, habichuelas, pollo, ensalada, jugo, pan y frutas
+    buildFood(group, cx - 1.8, fy + .79, cz - 1.6);
+    buildChairs(group, cx - 1.8, fy + .14, cz - 1.6, [[-.95, 0, -Math.PI / 2], [.95, 0, Math.PI / 2]]);
+    // --- Dormitorio (lado derecho, al fondo) ---
     const bedX = cx + 4.6, bedZ = Z1 - 1.4;
     box(1.8, .4, 2.2, trimM, bedX, fy + .2, bedZ); box(1.7, .22, 2.05, mat(0xf4f2ec, { roughness: .9 }), bedX, fy + .5, bedZ); box(1.72, .1, 1.3, mat(0x7a3b6e, { roughness: .9 }), bedX, fy + .62, bedZ - .3);
     box(1.2, .14, .4, mat(0xffffff, { roughness: .9 }), bedX, fy + .66, bedZ + .75); box(1.8, .9, .1, trimM, bedX, fy + .65, bedZ + 1.1); solid(bedX - .95, bedX + .95, bedZ - 1.1, bedZ + 1.15, fy + .62);
-    const shX = X1 - .75, shZ = cz - 2.6;
-    box(1.3, .08, 1.3, mat(0xe8eef2, { roughness: .2 }), shX, fy + .04, shZ, { cast: false });
-    for (const [a, b, w, d] of [[-.65, 0, .04, 1.3], [0, .65, 1.3, .04]]) box(w, 2.1, d, glass, shX + a, fy + 1.05, shZ + b, { cast: false });
-    cyl(.12, .12, .03, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), shX + .3, fy + 2.2, shZ - .3, 16);
-    box(.5, .45, .6, mat(0xffffff, { roughness: .2 }), X1 - .45, fy + .23, cz - .6);                       // inodoro
-    box(.6, .2, .45, mat(0xffffff, { roughness: .2 }), X1 - .35, fy + .85, cz + .5);                        // lavamanos
+    // --- Baño cerrado (esquina del frente a la derecha), con puerta desde el pasillo ---
+    const BX0 = cx + 3.2, BZ1 = Z0 + 4.2, DZ0 = Z0 + 2.5, DZ1 = Z0 + 3.5;
+    wall(BX0, BZ1, X1, BZ1);                                            // separa el baño del dormitorio
+    wall(BX0, Z0, BX0, DZ0); wall(BX0, DZ1, BX0, BZ1);                  // pared con la puerta
+    box(T, .7, DZ1 - DZ0, wallM, BX0, fy + H - .35, (DZ0 + DZ1) / 2);   // dintel
+    box(.06, 2.3, .08, trimM, BX0 - .12, fy + 1.15, DZ0 + .02, { cast: false }); box(.06, 2.3, .08, trimM, BX0 - .12, fy + 1.15, DZ1 - .02, { cast: false });
+    const bath = buildBathroom(group, { bx0: BX0, bx1: X1, bz0: Z0, bz1: BZ1, fy, H, T, solid });
+    // televisor del dormitorio en la pared del baño, mirando a la cama
+    const tv = buildBedroomTV(group, bedX, fy + .14, BZ1 + T / 2); solid(bedX - .86, bedX + .86, BZ1, BZ1 + .5, fy + .74);
+    houseUpd.push(bath.update);
     // acciones
     act(bedX - 1.3, bedZ, fy, '😴 Dormir', () => life.fx('sleep'));
-    act(shX - .1, shZ, fy, '🚿 Bañarse', () => life.fx('shower'), 1.3);
+    act(bedX, BZ1 + 1.3, fy, '📺 Encender / apagar la tele', () => { const on = tv.toggle(); life.fx(on ? 'tvon' : 'tvoff'); }, 1.2);
+    act(bath.shower.x - .2, bath.shower.z, fy, '🚿 Bañarse en la ducha', () => life.fx('shower'), 1.1);
+    act(bath.tub.x, bath.tub.z, fy, '🛁 Darse un baño de espuma', () => life.fx('bath'), 1.1);
+    act(bath.sink.x, bath.sink.z, fy, '🧼 Lavarse las manos y la cara', () => life.fx('wash'), 1);
     act(X0 + 1.3, cz + 2.2, fy, '💧 Tomar agua', () => life.fx('water'));
     act(X0 + 1.3, cz + .4, fy, '☕ Tomar café', () => life.fx('coffee'));
     act(cx - 1.8, cz - 2.6, fy, '🍽 Comer', () => life.fx('eat'));
     act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
     W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
-    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
+    W.zones.push({ id: 'bano', name: 'Baño', minX: BX0, maxX: X1, minZ: Z0, maxZ: BZ1, pri: 6, text: 'Tu baño está preparado: la bañera llena con espuma, la ducha, toallas limpias y el lavamanos. Al entrar te pones la bata de baño. «Lávame, y seré más blanco que la nieve.»', ref: 'Salmo 51:7' });
+    W.zones.push({ id: 'casa', name: 'Tu casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, ver la tele, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
   }
 
   await pace();
@@ -244,6 +295,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     acts, walkers,
     fx: () => {},                 // lo conecta el juego (efectos al comer, dormir, etc.)
     update(dt, t, cam, player) {
+      if (W.house && Math.abs(W.house.cx - player.x) < 16 && Math.abs(W.house.cz - player.z) < 16) for (const f of houseUpd) f(t);
       for (const st of steams) {
         const near = Math.abs(st.x - player.x) < 14 && Math.abs(st.z - player.z) < 14 && Math.abs(st.y - player.y) < 4;
         for (const p of st.puffs) {
