@@ -58,6 +58,8 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 - **Servidora de la iglesia** con vestido, aretes y cadena (antes parecía un hombre de esmoquin) y cartel «Recepción · Servidora».
 - Primera persona: solo se ve la cámara (sin manos ni brazos). La jugadora también lleva su nombre en la espalda.
 
+- **Rendimiento** (evaluación general): las versiones livianas de las personas lejanas se preparan durante la pantalla de carga (antes, los primeros segundos de cada nivel se dibujaban más de 3.000 piezas y el juego daba tirones); las figuras unidas ocupan ~3 veces menos memoria (de ~540 MB a ~170 MB); y al cambiar de nivel se liberan las texturas del nivel anterior (antes se acumulaban ~100 por cada cambio).
+
 ## Compilación (carga rápida)
 El juego se publica empaquetado y comprimido en `js/biblixia.min.js` (un solo archivo, ~3 veces más liviano).
 Después de cambiar cualquier archivo de `js/`, ejecuta `sh build.sh` (necesita [esbuild](https://esbuild.github.io/)) y sube también `js/biblixia.min.js`.

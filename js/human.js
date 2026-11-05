@@ -555,13 +555,17 @@ export function createHuman(opt = {}) {
 }
 
 const _ATTRS = ['position', 'normal', 'uv'];
-function plainGeo(src, matrix) {
-  let g = new THREE.BufferGeometry();
-  for (const k of _ATTRS) g.setAttribute(k, src.attributes[k]);
-  if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); }
-  else for (const k of _ATTRS) g.setAttribute(k, g.attributes[k].clone());
+// Copia de una figura CON su índice. Antes se usaba toNonIndexed(), que repite cada vértice en cada
+// triángulo: las ~270 personas de un nivel ocupaban ~480 MB (y otro tanto en la tarjeta gráfica).
+// Con índice ocupan unas 3 veces menos y se dibujan igual.
+function seqIndex(n) { const I = n > 65535 ? new Uint32Array(n) : new Uint16Array(n); for (let i = 0; i < n; i++) I[i] = i; return new THREE.BufferAttribute(I, 1); }
+function idxGeo(src, keys, matrix) {
+  const g = new THREE.BufferGeometry();
+  for (const k of keys) if (src.attributes[k]) g.setAttribute(k, src.attributes[k].clone());
+  g.setIndex(src.index ? src.index.clone() : seqIndex(src.attributes.position.count));
   g.applyMatrix4(matrix); return g;
 }
+function plainGeo(src, matrix) { return idxGeo(src, _ATTRS, matrix); }
 export function compactParts(root, keep = new Set()) {
   const nodes = []; root.traverse(n => { if (!n.isMesh) nodes.push(n); });
   for (const n of nodes) {
@@ -700,20 +704,23 @@ export function bakeStatic(obj, skip = [], cast = true) {
     // (más rápido: no se copia la figura completa, solo posición, normales y uv)
     const src = m.geometry;
     if (!src.attributes.uv || !src.attributes.position) return;
-    let g = new THREE.BufferGeometry();
-    for (const k of ['position', 'normal', 'uv']) if (src.attributes[k]) g.setAttribute(k, src.attributes[k]);
-    if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); }
-    else for (const k of Object.keys(g.attributes)) g.setAttribute(k, g.attributes[k].clone());
-    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    const mtx = new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld);
     const groups = Array.isArray(m.material) ? src.groups.slice() : null;
     const push = (mat, geo) => { if (!byMat.has(mat)) byMat.set(mat, []); byMat.get(mat).push(geo); };
     if (groups && groups.length) {
+      // figura con varios materiales: se separa por grupos (caso poco común)
+      let g = new THREE.BufferGeometry();
+      for (const k of ['position', 'normal', 'uv']) if (src.attributes[k]) g.setAttribute(k, src.attributes[k]);
+      if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); }
+      else for (const k of Object.keys(g.attributes)) g.setAttribute(k, g.attributes[k].clone());
+      g.applyMatrix4(mtx);
       for (const gr of groups) {
         const sub = new THREE.BufferGeometry();
-        for (const k of ['position', 'normal', 'uv']) { const a = g.attributes[k]; sub.setAttribute(k, new THREE.BufferAttribute(a.array.slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize)); }
+        for (const k of ['position', 'normal', 'uv']) { const a = g.attributes[k]; if (a) sub.setAttribute(k, new THREE.BufferAttribute(a.array.slice(gr.start * a.itemSize, (gr.start + gr.count) * a.itemSize), a.itemSize)); }
+        sub.setIndex(seqIndex(sub.attributes.position.count));
         push(m.material[gr.materialIndex], sub);
       }
-    } else push(m.material, g);
+    } else push(m.material, idxGeo(src, ['position', 'normal', 'uv'], mtx));
   });
   const out = new THREE.Group();
   if (obj.userData.isHuman) out.userData.bakedHum = obj.userData.hum; // para crear su versión lejana
@@ -757,9 +764,7 @@ export function bakeColored(obj) {
   obj.traverse(m => {
     if (!m.isMesh || !m.visible) return;
     const src = m.geometry; if (!src.attributes.position || !src.attributes.normal) return;
-    let g = new THREE.BufferGeometry(); g.setAttribute('position', src.attributes.position); g.setAttribute('normal', src.attributes.normal);
-    if (src.index) { g.setIndex(src.index); g = g.toNonIndexed(); } else { g.setAttribute('position', g.attributes.position.clone()); g.setAttribute('normal', g.attributes.normal.clone()); }
-    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    const g = idxGeo(src, ['position', 'normal'], new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
     const col = avgColor(Array.isArray(m.material) ? m.material[0] : m.material), n = g.attributes.position.count, arr = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { arr[i * 3] = col.r; arr[i * 3 + 1] = col.g; arr[i * 3 + 2] = col.b; }
     g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g);

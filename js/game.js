@@ -520,7 +520,23 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), M.asphalt);
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 
 async function buildWorld(cfg) {
-  if (world) { scene.remove(world.group); world.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.userData.own) [].concat(o.material).forEach(m => { m.map && m.map.dispose(); m.emissiveMap && m.emissiveMap.dispose(); m.dispose(); }); }); }
+  if (world) {
+    scene.remove(world.group);
+    // texturas que se siguen usando fuera de este mundo (jugador, cielo, suelo…): no se liberan
+    const keep = new Set(); scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) if (m) for (const k of TEX_KEYS) if (m[k] && m[k].isTexture) keep.add(m[k]); });
+    const freed = new Set();
+    world.group.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (!o.material) return;
+      for (const m of [].concat(o.material)) {
+        if (!m) continue;
+        // antes solo se liberaban unas pocas: cada cambio de nivel dejaba ~100 texturas más en la memoria
+        // de la tarjeta gráfica y, tras varios niveles, el celular podía ponerse lento o cerrarse
+        for (const k of TEX_KEYS) { const t = m[k]; if (t && t.isTexture && !keep.has(t) && !freed.has(t)) { freed.add(t); t.dispose(); } }
+        if (o.userData.own) m.dispose();
+      }
+    });
+  }
   const r = rng(cfg.seed);
   const N = cfg.grid, T = N * PITCH + STREET, O = -T / 2;
   const group = new THREE.Group(); scene.add(group); pendingGroups.add(group); // no se dibuja hasta estar listo
@@ -1205,7 +1221,8 @@ async function buildHumanLOD(W, fast = false) {
   let t0 = performance.now();
   for (const root of roots) {
     // se trabaja ~6 ms por cuadro y luego se cede el turno (el juego sigue fluido)
-    if (!fast && performance.now() - t0 > 6) { await sleep(state === 'play' ? 8 : 2); await idle(); t0 = performance.now(); }
+    // jugando: ~6 ms por cuadro y luego cede el turno; en la pantalla de carga trabaja más seguido (solo cede para que la animación siga)
+    if (!fast && performance.now() - t0 > (building ? 14 : 6)) { if (!building) await sleep(state === 'play' ? 8 : 2); await idle(); t0 = performance.now(); }
     if (job !== lodJob || world !== W) return;               // cambió el nivel: dejar de preparar este
     const h = root.userData.hum || root.userData.bakedHum, lo = createHuman({ ...h.opts, detail: .22, name: '' });
     for (const k of ['hips', 'spine', 'chest', 'neck', 'head']) cp(h[k], lo[k]);
@@ -1717,8 +1734,11 @@ async function startLevelNow(i) {
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
   camera.updateMatrixWorld(); updateCull(camera.position);
+  // Las versiones lejanas (livianas) de las personas se preparan AQUÍ, durante la pantalla de carga.
+  // Antes se preparaban ya jugando: los primeros segundos se dibujaban ~270 personas completas
+  // (más de 3.000 llamadas de dibujo) y el juego daba tirones al empezar, sobre todo en el celular.
+  await buildHumanLOD(world);
   await warmShaders(scene, camera); pendingGroups.clear();
-  buildHumanLOD(world);
   lastNow = performance.now();
   state = 'play'; ensureMusic();
 }
