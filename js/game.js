@@ -1740,7 +1740,7 @@ async function startLevelNow(i) {
   await buildHumanLOD(world);
   await warmShaders(scene, camera); pendingGroups.clear();
   lastNow = performance.now();
-  state = 'play'; ensureMusic();
+  state = 'play'; sound.duck(1); sound.mode = 'play'; ensureMusic(); sound.setMusicMode('play'); // música más activa al entrar al juego
 }
 
 const SCREENS = ['splash', 'help', 'levelsel', 'collection', 'pause', 'result', 'creator'];
@@ -1765,7 +1765,7 @@ function closeVerse() {
   state = 'play';
 }
 function endLevel(won) {
-  state = 'result';
+  state = 'result'; sound.setMusicMode('menu');
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
   let stars = 0;
   if (won) {
@@ -2590,7 +2590,9 @@ function loop() {
     if (world.church) {
       world.church.update(dt, t, camera.position);
       // música de alabanza mientras estás dentro de la iglesia
-      if (state === 'play' && world.church.inside(P.pos)) { worshipT += dt; if (worshipT > .5) { worshipT = 0; sound.worshipBeat(worshipStep++); } }
+      const inChurch = state === 'play' && world.church.inside(P.pos);
+      sound.duck(inChurch ? .2 : 1); // la música del juego baja para que se oiga la alabanza
+      if (inChurch) { worshipT += dt; if (worshipT > .5) { worshipT = 0; sound.worshipBeat(worshipStep++); } }
     }
     if (world.ark) world.ark.update(t, dt);
     if (world.jordan) world.jordan.update(t, dt, state === 'play' ? P.pos : camera.position, state === 'play' ? () => {
@@ -2738,7 +2740,7 @@ function renderCollection() {
   });
 }
 function toMenu(screen = 'levelsel') {
-  state = 'menu';
+  state = 'menu'; sound.setMusicMode('menu');
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); $('verse').classList.add('hidden'); $('talk').classList.add('hidden');
   if (screen === 'levelsel') renderLevels();
   if (screen === 'collection') renderCollection();

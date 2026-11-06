@@ -60,6 +60,8 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 
 - **Rendimiento** (evaluación general): las versiones livianas de las personas lejanas se preparan durante la pantalla de carga (antes, los primeros segundos de cada nivel se dibujaban más de 3.000 piezas y el juego daba tirones); las figuras unidas ocupan ~3 veces menos memoria (de ~540 MB a ~170 MB); y al cambiar de nivel se liberan las texturas del nivel anterior (antes se acumulaban ~100 por cada cambio).
 
+- **Música más activa al jugar**: en el menú suena la música tranquila y, al entrar al juego, cambia con un fundido a una pista instrumental más animada (batería suave, bajo, acordes y melodía a 104 pulsos por minuto) con volumen cómodo. Dentro de la iglesia baja para que se oiga la alabanza. Se apaga con el botón 🎵.
+
 ## Compilación (carga rápida)
 El juego se publica empaquetado y comprimido en `js/biblixia.min.js` (un solo archivo, ~3 veces más liviano).
 Después de cambiar cualquier archivo de `js/`, ejecuta `sh build.sh` (necesita [esbuild](https://esbuild.github.io/)) y sube también `js/biblixia.min.js`.

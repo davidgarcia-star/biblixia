@@ -26,7 +26,9 @@ export class Sound {
       try {
         const a = this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.master = a.createGain(); this.master.connect(a.destination);
-        this.music = a.createGain(); this.music.gain.value = this.musicOn ? 1 : 0; this.music.connect(this.master);
+        // music → fade (fundido entre pistas y bajada dentro de la iglesia) → master
+        this.fade = a.createGain(); this.fade.gain.value = 1; this.fade.connect(this.master);
+        this.music = a.createGain(); this.music.gain.value = this.musicOn ? 1 : 0; this.music.connect(this.fade);
         this.sfx = a.createGain(); this.sfx.gain.value = this.sfxOn ? 1 : 0; this.sfx.connect(this.master);
         const len = a.sampleRate * 2.2, buf = a.createBuffer(2, len, a.sampleRate);
         for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
@@ -414,9 +416,35 @@ export class Sound {
   }
 
 
-  // Música instrumental: acordes suaves (pad) + arpegio, progresión I–V–vi–IV en Re
-  startMusic() {
+  // Música instrumental con dos pistas:
+  //  'menu' – tranquila: acordes suaves (pad) + arpegio, progresión I–V–vi–IV en Re
+  //  'play' – más activa al entrar al juego: batería suave, bajo, acordes a contratiempo y melodía,
+  //           a 104 pulsos por minuto, con sonidos redondeados (sin agudos molestos) y volumen cómodo
+  startMusic(mode = this.mode || 'menu') {
     this.stopMusic(); if (!this.unlock()) return;
+    this.mode = mode;
+    if (mode === 'play') this._startPlay(); else this._startMenu();
+  }
+  // Cambia de pista con un fundido corto (no se corta de golpe)
+  setMusicMode(mode) {
+    if (mode === this.mode && this.timer) return;
+    const a = this.unlock(); if (!a) { this.mode = mode; return; }
+    if (!this.timer) { this.startMusic(mode); return; }
+    const t = a.currentTime;
+    this.fade.gain.cancelScheduledValues(t); this.fade.gain.setValueAtTime(this.fade.gain.value, t); this.fade.gain.linearRampToValueAtTime(0, t + .6);
+    clearTimeout(this._swap);
+    this._swap = setTimeout(() => {
+      this.startMusic(mode);
+      const t2 = a.currentTime; this.fade.gain.cancelScheduledValues(t2); this.fade.gain.setValueAtTime(0, t2); this.fade.gain.linearRampToValueAtTime(this._duck ?? 1, t2 + 1.2);
+    }, 650);
+  }
+  // Baja la música (por ejemplo dentro de la iglesia, donde suena la alabanza); 1 = volumen normal
+  duck(level = 1) {
+    if (this._duck === level) return; this._duck = level;
+    const a = this.ctx; if (!a || !this.fade) return;
+    this.fade.gain.setTargetAtTime(level, a.currentTime, .4);
+  }
+  _startMenu() {
     const chords = [[146.8, 185, 220, 293.7], [110, 164.8, 220, 277.2], [123.5, 185, 246.9, 293.7], [98, 146.8, 196, 246.9]];
     let step = 0;
     const tick = () => {
@@ -431,6 +459,55 @@ export class Sound {
       step++;
     };
     tick(); this.timer = setInterval(tick, 400);
+  }
+  _startPlay() {
+    const a = this.ctx, E = 60 / 104 / 2; // duración de una corchea a 104 pulsos por minuto
+    // Re – La – Si menor – Sol (una progresión alegre y conocida), un compás por acorde
+    const chords = [[146.8, 185, 220], [110, 138.6, 164.8], [123.5, 146.8, 185], [98, 123.5, 146.8]];
+    const roots = [73.4, 55, 61.7, 49];
+    // melodía en escala pentatónica de Re (siempre suena bien sobre estos acordes); 0 = silencio
+    const D5 = 587.3, E5 = 659.3, F5 = 740, A5 = 880, B5 = 987.8, A4 = 440, B4 = 493.9;
+    const melA = [F5, 0, E5, D5, 0, A4, 0, 0, E5, 0, F5, E5, 0, A4, 0, 0, F5, 0, A5, F5, 0, E5, D5, 0, B4, 0, D5, 0, 0, 0, 0, 0];
+    const melB = [A5, 0, B5, A5, 0, F5, 0, 0, E5, 0, F5, A5, 0, E5, 0, 0, D5, 0, E5, F5, 0, D5, B4, 0, A4, 0, B4, 0, D5, 0, 0, 0];
+    const at = t => Math.max(0, t - a.currentTime);
+    const m = { bus: 'music' };
+    const hit = (t, dur, type, freq, q, vol) => { // golpe de ruido filtrado (platillo, palmas, maraca)
+      if (!this.noise) return;
+      const src = a.createBufferSource(); src.buffer = this.noise; const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = a.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      src.connect(f).connect(g).connect(this.music); src.start(t); src.stop(t + dur + .03);
+    };
+    const kick = (t, vol) => {
+      const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(45, t + .16);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + .22); o.connect(g).connect(this.music); o.start(t); o.stop(t + .25);
+    };
+    let step = 0, next = a.currentTime + .1;
+    const schedule = () => {
+      if (!this.musicOn) { next = Math.max(next, a.currentTime + .05); return; }
+      while (next < a.currentTime + .25) {   // se programan las notas un poco antes para que el ritmo sea exacto
+        const t = next, s = step % 8, bar = Math.floor(step / 8), c = bar % 4, ch = chords[c], w = at(t);
+        const phrase = Math.floor(bar / 4) % 4; // cada 4 compases cambia un poco: intro, melodía A, melodía B, descanso
+        // batería suave
+        if (s === 0 || s === 4 || (s === 5 && bar % 2 === 1)) kick(t, s === 5 ? .13 : .2);
+        if (s === 2 || s === 6) hit(t, .13, 'bandpass', 1500, .9, .07);                 // palmas
+        hit(t, .04, 'highpass', 6500, .7, s % 2 ? .035 : .018);                         // maraca a contratiempo
+        if (s === 0 && c === 0 && phrase !== 0) hit(t, .9, 'highpass', 5000, .4, .03);  // platillo suave al empezar cada vuelta
+        // bajo saltarín
+        const bassPat = [1, 0, 1, 2, 0, 1, 2, 1.5][s];
+        if (bassPat) this.note(roots[c] * (bassPat === 2 ? 2 : bassPat === 1.5 ? 1.5 : 1), E * .9, { ...m, type: 'triangle', vol: .09, attack: .005, filter: 700, wet: false, when: w });
+        // acordes a contratiempo (rasgueo corto)
+        if (s % 2 === 1) ch.forEach(f => this.note(f * 2, E * .8, { ...m, type: 'triangle', vol: .018, attack: .004, filter: 1800, when: w }));
+        // colchón suave al empezar cada compás
+        if (s === 0) ch.forEach(f => this.note(f, E * 8, { ...m, type: 'sine', vol: .022, attack: .3, filter: 1100, when: w }));
+        // melodía (campanita) en las frases A y B
+        if (phrase === 1 || phrase === 2) {
+          const f = (phrase === 1 ? melA : melB)[(bar % 4) * 8 + s];
+          if (f) { this.note(f, E * 2.2, { ...m, type: 'sine', vol: .045, attack: .006, when: w }); this.note(f * 2, E * 1.2, { ...m, type: 'sine', vol: .008, attack: .004, when: w }); }
+        } else if (s % 2 === 0) this.note(ch[[0, 1, 2, 1][s / 2]] * 4, E * 1.5, { ...m, type: 'sine', vol: .016, attack: .005, when: w }); // arpegio suave
+        step++; next += E;
+      }
+    };
+    schedule(); this.timer = setInterval(schedule, 60);
   }
   stopMusic() { if (this.timer) clearInterval(this.timer); this.timer = null; }
 }
