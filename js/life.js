@@ -253,6 +253,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       box(.4, 1.0, .4, mat(0xf2f2f0, { roughness: .3 }), wx, y + .5, wz); cyl(.16, .16, .45, new THREE.MeshStandardMaterial({ color: 0x7fc4ff, transparent: true, opacity: .6, roughness: .05 }), wx, y + 1.23, wz);
       solid(wx - .25, wx + .25, wz - .25, wz + .25, y + 1.5, y);
       act(wx - .9, wz, y, '💧 Tomar agua', () => life.fx('water'));
+      // planta de lengua de suegra (sansevieria) en maceta, en la esquina opuesta de cada piso
+      { const px = X0 + 1, pz = Z1 - 1, pH = .42;
+        cyl(.22, .17, pH, mat(0xe8e4dc, { roughness: .35 }), px, y + pH / 2, pz, 18);
+        cyl(.2, .2, .03, mat(0x3a2a1c, { roughness: 1 }), px, y + pH - .03, pz, 14);
+        const bladeG = new THREE.ConeGeometry(.045, 1, 4); bladeG.scale(1, 1, .3); bladeG.translate(0, .5, 0);
+        const bM = [mat(0x2e5e2a, { roughness: .55 }), mat(0x4a7a34, { roughness: .55 }), mat(0x3c6b2e, { roughness: .55 })];
+        for (let k = 0; k < 11; k++) {
+          const a = k * 2.39, rr = .03 + (k % 4) * .03, h = .55 + ((k * 7) % 5) * .09;
+          const bl = new THREE.Mesh(bladeG, bM[k % 3]); bl.scale.set(1, h, 1);
+          bl.position.set(px + Math.cos(a) * rr, y + pH - .03, pz + Math.sin(a) * rr);
+          bl.rotation.set(0, -a, 0, 'YXZ'); bl.rotateX(.06 + rr * 1.6);
+          bl.castShadow = true; group.add(bl);
+        }
+        solid(px - .25, px + .25, pz - .25, pz + .25, y + pH + .5, y); }
       // rampa / escalera hacia el piso de arriba
       if (i < FLOORS - 1) {
         const [sa, sb] = stairs[i % 2], st = 14;
