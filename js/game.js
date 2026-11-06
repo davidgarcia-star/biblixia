@@ -958,6 +958,18 @@ async function buildWorld(cfg) {
     for (let i = 0; i < 5; i++) { const sb = buildShip(.35); bakeInPlace(sb, [], false); sb.position.set(SX - 150 - r() * 300, 0, O + r() * (T + SZ)); sb.rotation.y = r() * 6; sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: r() * 6, r: 30 + r() * 40, cx: sb.position.x, cz: sb.position.z }); }
     { const sb = buildShip(.8); bakeInPlace(sb, [], true); sb.userData.live = true; group.add(sb); W.sails.push({ obj: sb, a: 0, r: 70, cx: SX - 140, cz: Zc + 40, speed: .05, near: true }); }
     W.seaInfo = { SX, Zc, shipX, deckY };
+    // gaviotas que planean en círculos sobre el muelle y el mar, aleteando de vez en cuando
+    W.gulls = [];
+    { const gW = new THREE.MeshStandardMaterial({ color: 0xf4f6f8, roughness: .8 }), gG = new THREE.MeshStandardMaterial({ color: 0x8a9099, roughness: .8 }), gB = new THREE.MeshStandardMaterial({ color: 0xf2b134, roughness: .6 });
+      const bodyGeo = new THREE.SphereGeometry(.13, 8, 6).scale(1, .8, 2.3), wingGeo = new THREE.BoxGeometry(.62, .02, .22).translate(.31, 0, 0), tipGeo = new THREE.BoxGeometry(.28, .018, .16).translate(.14, 0, 0), beakGeo = new THREE.ConeGeometry(.03, .12, 5).rotateX(Math.PI / 2);
+      for (let i = 0; i < 7; i++) {
+        const g = new THREE.Group(); g.userData.live = true;
+        g.add(new THREE.Mesh(bodyGeo, gW)); const bk = new THREE.Mesh(beakGeo, gB); bk.position.set(0, .02, .34); g.add(bk);
+        const wings = [];
+        for (const sd of [-1, 1]) { const w = new THREE.Group(); w.position.set(sd * .08, .04, 0); w.scale.x = sd; const wm = new THREE.Mesh(wingGeo, gW); w.add(wm); const tp = new THREE.Mesh(tipGeo, gG); tp.position.x = .6; w.add(tp); g.add(w); w.userData.sd = sd; wings.push(w); }
+        group.add(g);
+        W.gulls.push({ obj: g, wings, cx: (i < 4 ? pierX0 + 10 : SX - 60 - Math.random() * 60) + (Math.random() - .5) * 20, cz: pz0 + (Math.random() - .5) * 30, rad: 9 + Math.random() * 14, y: 7 + Math.random() * 8, a: Math.random() * 6.28, sp: (Math.random() < .5 ? -1 : 1) * (.25 + Math.random() * .2), ph: Math.random() * 10 });
+      } }
     W.zones.push({ id: 'mar', name: 'El mar y el barco', minX: shipX - 18, maxX: SX + 4, minZ: pz0 - 6, maxZ: pz0 + 6, pri: 3,
       text: 'Jonás huyó de Dios en un barco rumbo a Tarsis, pero el SEÑOR envió una gran tormenta. Siglos después, Jesús calmó el viento y el mar con su palabra, y el apóstol Pablo, en medio de un naufragio, animó a todos porque Dios había prometido salvarlos.',
       ref: 'Jonás 1:3-4; Marcos 4:35-41; Hechos 27:22-25' });
@@ -2687,6 +2699,7 @@ function loop() {
     seaNormal.offset.set(t * .012, t * .008);
     if (world.placeLive) for (const it of world.placeLive) { if (it.kind === 'spin') it.obj.rotation.y = t * .8; else if (it.kind === 'barrier') it.obj.material.opacity = .2 + Math.sin(t * 2) * .08; else if (it.kind === 'wave') it.obj.position.y = it.base + Math.sin(t * 1.3) * .15; }
     if (world.ship) { world.ship.rotation.x = Math.sin(t * .7) * .035; world.ship.rotation.z = Math.sin(t * .5) * .012; world.ship.position.y = Math.sin(t * .9) * .14; const sl = world.ship.userData.sail; if (sl) sl.scale.z = 1 + Math.sin(t * 2.2) * .12; const ud = world.ship.userData; if (ud.radar) ud.radar.rotation.y = t * 2.5; if (ud.flag) ud.flag.rotation.x = Math.sin(t * 3) * .25; }
+    if (world.gulls) for (const gl of world.gulls) { gl.a += dt * gl.sp; const cx = gl.cx + Math.cos(gl.a) * gl.rad, cz = gl.cz + Math.sin(gl.a) * gl.rad; gl.obj.position.set(cx, gl.y + Math.sin(t * .6 + gl.ph) * 1.2, cz); gl.obj.rotation.set(0, Math.atan2(-Math.sin(gl.a) * gl.sp, Math.cos(gl.a) * gl.sp), -Math.sign(gl.sp) * .3); const flap = Math.sin(t * .35 + gl.ph) > .3 ? Math.sin(t * 9 + gl.ph) * .55 : .12 + Math.sin(t * 1.5 + gl.ph) * .05; for (const w of gl.wings) w.rotation.z = flap * w.userData.sd; }
     if (world.foam) world.foam.material.opacity = .45 + Math.sin(t * 1.4) * .2;
     if (world.sails) for (const sb of world.sails) { sb.a += dt * (sb.speed || .02); sb.obj.position.set(sb.cx + Math.cos(sb.a) * sb.r * 1.4, Math.sin(t + sb.a) * .15, sb.cz + Math.sin(sb.a) * sb.r); sb.obj.rotation.y = -sb.a; sb.obj.rotation.x = Math.sin(t * .8 + sb.a) * .03; }
     for (let i = flying.length - 1; i >= 0; i--) {
