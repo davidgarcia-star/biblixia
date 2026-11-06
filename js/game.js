@@ -1448,7 +1448,7 @@ const isPair = () => outfitOK(save.player.outfit) && save.player.outfit === 'ada
 let human = createHuman(playerOpts());
 scene.add(human.root);
 let mate = null; // el compañero (Adán o Eva) que sigue al jugador
-const MT = { pos: new THREE.Vector3(), vy: 0, heading: 0, speed: 0, onGround: true, stuck: 0 };
+const MT = { pos: new THREE.Vector3(), vy: 0, heading: 0, speed: 0, onGround: true, stuck: 0, swim: false, sit: null };
 function disposeH(h) { scene.remove(h.root); h.root.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
 function rebuildPlayer() {
   const rot = human.root.rotation.y;
@@ -1474,7 +1474,7 @@ function placeMate() {
   if (!mate) return;
   const back = P.heading + Math.PI;
   MT.pos.set(P.pos.x + Math.sin(back) * 1.8 + Math.cos(back) * .6, P.pos.y, P.pos.z + Math.cos(back) * 1.8 - Math.sin(back) * .6);
-  MT.vy = 0; MT.speed = 0; MT.heading = P.heading; MT.stuck = 0;
+  MT.vy = 0; MT.speed = 0; MT.heading = P.heading; MT.stuck = 0; MT.sit = null; MT.swim = false;
 }
 // Cambiar en vivo entre Adán y Eva: el otro sigue al que manejas
 function swapPair() {
@@ -1488,34 +1488,66 @@ function swapPair() {
 }
 function updateMate(dt, t) {
   if (!mate) return;
+  let mSwim = 0, mKneel = -1, mPraise = -1, mSit = 0;
   if (P.driving && world.ship) {
     const b = world.boat, sh = world.ship, lx = -7, lz = 1.3;
     MT.pos.set(sh.position.x + Math.cos(b.heading) * lx + Math.sin(b.heading) * lz, b.deckY + sh.position.y, sh.position.z - Math.sin(b.heading) * lx + Math.cos(b.heading) * lz);
-    MT.heading = P.heading; MT.speed = 0; MT.onGround = true;
+    MT.heading = P.heading; MT.speed = 0; MT.onGround = true; MT.swim = false; MT.sit = null;
+  } else if (P.sit) {
+    // el jugador se sentó en la iglesia: el compañero se sienta en la silla libre más cercana (o a su lado)
+    if (!MT.sit) {
+      const ps = P.sit, seats = (world.church && world.church.seats) || [];
+      let best = null, bd = 3.2;
+      for (const st of seats) { const d = Math.hypot(st.x - ps.x, (st.z - .06) - ps.z); if (d > .3 && d < bd && Math.abs(st.y - ps.y) < .5) { bd = d; best = st; } }
+      MT.sit = best ? { x: best.x, y: best.y, z: best.z - .06, chair: true, back: MT.pos.clone() } : { x: MT.pos.x, y: MT.pos.y, z: MT.pos.z, chair: false, back: MT.pos.clone() };
+    }
+    MT.pos.set(MT.sit.x, MT.sit.y, MT.sit.z); MT.heading = MT.sit.chair ? P.sit.ry : P.heading; MT.speed = 0; MT.vy = 0; MT.onGround = true; MT.swim = false;
+    mSit = MT.sit.chair ? 1 : 0;
   } else {
+    if (MT.sit) { MT.pos.copy(MT.sit.back); MT.sit = null; MT.vy = 0; MT.onGround = true; }
     const dx = P.pos.x - MT.pos.x, dz = P.pos.z - MT.pos.z, d = Math.hypot(dx, dz);
     if (!isFinite(d) || d > 16 || Math.abs(P.pos.y - MT.pos.y) > 6 || MT.stuck > 1.5) placeMate();
     else {
+      // ¿El compañero está en el agua? (misma regla que el jugador): flota y nada igual que él
+      let inWater = false, waterY = 0;
+      if (canSwim() && MT.pos.x < world.seaInfo.SX && floorAt(MT.pos.x, MT.pos.z, MT.pos.y) < .3) {
+        inWater = true; waterY = -1.2 * THREE.MathUtils.clamp((world.seaInfo.SX - MT.pos.x) / 4, 0, 1) - (MT.swim && MT.speed > .5 ? .14 : 0);
+        const ih = islandH(MT.pos.x, MT.pos.z); if (ih > waterY) waterY = ih;
+      }
+      // mientras el jugador alaba o se arrodilla, el compañero se queda quieto haciendo lo mismo
+      const busy = !!(P.praise || P.kneel);
       let sp = 0;
-      if (d > 1.9) {
-        sp = Math.min(d > 7 ? (P.turbo ? TURBO : RUN) : d > 3.5 ? RUN * .9 : WALK, (d - 1.6) * 3.2);
+      if (d > 1.9 && !busy) {
+        const swimSp = P.turbo ? 5.6 : 4.3;
+        sp = Math.min(MT.swim ? swimSp : d > 7 ? (P.turbo ? TURBO : RUN) : d > 3.5 ? RUN * .9 : WALK, (d - 1.6) * 3.2);
+        if (inWater && !MT.swim) sp *= .6;
         const ux = dx / d, uz = dz / d, nx = MT.pos.x + ux * sp * dt, nz = MT.pos.z + uz * sp * dt;
-        if (!blocked(nx, nz, MT.pos.y)) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
-        else if (!blocked(nx, MT.pos.z, MT.pos.y)) MT.pos.x = nx;
-        else if (!blocked(MT.pos.x, nz, MT.pos.y)) MT.pos.z = nz;
+        if (!blocked(nx, nz, MT.pos.y, true)) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
+        else if (!blocked(nx, MT.pos.z, MT.pos.y, true)) MT.pos.x = nx;
+        else if (!blocked(MT.pos.x, nz, MT.pos.y, true)) MT.pos.z = nz;
         else { MT.stuck += dt; sp = 0; }
         let df = Math.atan2(ux, uz) - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 8);
       } else { let df = P.heading - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 2); }
       MT.speed += (sp - MT.speed) * Math.min(1, dt * 10);
-      const fl = floorAt(MT.pos.x, MT.pos.z, MT.pos.y);
-      if (MT.onGround && P.vy > 4 && d < 4) { MT.vy = JUMP_V * .95; MT.onGround = false; }
-      if (!MT.onGround || MT.pos.y > fl + .02) { MT.vy -= GRAV * dt; MT.pos.y += MT.vy * dt; MT.onGround = false; if (MT.pos.y <= fl) { MT.pos.y = fl; MT.vy = 0; MT.onGround = true; } }
-      else { MT.pos.y = fl; MT.vy = 0; }
-      if (MT.speed > 1 && MT.onGround && Math.random() < dt * MT.speed * .35) sound.stepAt(.25, 0);
+      if (inWater) {
+        if (MT.onGround && !MT.swim && P.vy > 4 && d < 4) { MT.vy = JUMP_V * .6; MT.onGround = false; }
+        if (!MT.onGround) { MT.vy -= GRAV * dt; MT.pos.y += MT.vy * dt; if (MT.pos.y <= waterY && MT.vy <= 0) { MT.pos.y = waterY; MT.vy = 0; MT.onGround = true; } }
+        else MT.pos.y += (waterY - MT.pos.y) * Math.min(1, dt * 5);
+        MT.swim = MT.onGround && waterY < -.75 && MT.pos.y < -.6;
+      } else {
+        MT.swim = false;
+        const fl = floorAt(MT.pos.x, MT.pos.z, MT.pos.y);
+        if (MT.onGround && P.vy > 4 && d < 4) { MT.vy = JUMP_V * .95; MT.onGround = false; }
+        if (!MT.onGround || MT.pos.y > fl + .02) { MT.vy -= GRAV * dt; MT.pos.y += MT.vy * dt; MT.onGround = false; if (MT.pos.y <= fl) { MT.pos.y = fl; MT.vy = 0; MT.onGround = true; } }
+        else { MT.pos.y = fl; MT.vy = 0; }
+        if (MT.speed > 1 && MT.onGround && Math.random() < dt * MT.speed * .35) sound.stepAt(.25, 0);
+      }
+      mSwim = MT.swim ? 1 : 0;
+      if (d < 6) { if (P.kneel) mKneel = P.kneel.t / P.kneel.dur; if (P.praise) mPraise = P.praise.t; }
     }
   }
   mate.root.position.copy(MT.pos); mate.root.rotation.y = MT.heading;
-  animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t });
+  animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t, swim: mSwim, kneel: mKneel, praise: mPraise, sit: mSit, gesture: P.smell > 0 ? 1 : 0 });
 }
 const P = { holdFwd: 0, pos: new THREE.Vector3(), vy: 0, onGround: true, heading: 0, speed: 0, inv: 0, phase: 0, land: 0 };
 const RADIUS = .32, STEP = .22, JUMP_V = 7.2, GRAV = 20, WALK = 4.3, RUN = 9.2, TURBO = 12.5;
