@@ -1715,8 +1715,13 @@ async function startLevelNow(i) {
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
-  const nuevos = VERSES.map((_, k) => k).filter(k => !save.verses.includes(k)).sort(() => Math.random() - .5);
-  const viejos = VERSES.map((_, k) => k).filter(k => save.verses.includes(k)).sort(() => Math.random() - .5);
+  // Orden de los versículos de las monedas, para que no se repitan:
+  // primero los que nunca has visto (al azar) y después los que hace más tiempo que no salen.
+  const hist = Array.isArray(save.vHist) ? save.vHist : [], lastSeen = new Map(hist.map((k, n) => [k, n]));
+  const mezclar = arr => { for (let n = arr.length - 1; n > 0; n--) { const j = Math.random() * (n + 1) | 0; [arr[n], arr[j]] = [arr[j], arr[n]]; } return arr; };
+  const todos = VERSES.map((_, k) => k);
+  const nuevos = mezclar(todos.filter(k => !save.verses.includes(k)));
+  const viejos = mezclar(todos.filter(k => save.verses.includes(k))).sort((a, b) => (lastSeen.get(a) ?? -1) - (lastSeen.get(b) ?? -1));
   verseOrder = nuevos.concat(viejos); verseCursor = 0;
   hideScreens(); $('verse').classList.add('hidden'); $('talk').classList.add('hidden'); $('info').classList.remove('show'); curZone = null; talkNPC = null; if (enBata) ponerBata(false);
   human.root.rotation.y = 0;
@@ -1752,7 +1757,9 @@ function resumeGame() { hideScreens(); state = 'play'; }
 
 function openVerse() {
   const k = verseOrder[verseCursor % verseOrder.length]; verseCursor++;
-  if (!save.verses.includes(k)) { save.verses.push(k); persist(); }
+  if (!save.verses.includes(k)) save.verses.push(k);
+  // historial de los versículos que han salido (el último al final) para no repetirlos pronto
+  save.vHist = (Array.isArray(save.vHist) ? save.vHist : []).filter(x => x !== k).concat(k).slice(-VERSES.length); persist();
   $('vText').textContent = '«' + VERSES[k][0] + '»';
   $('vRef').textContent = VERSES[k][1] + ' · LBLA';
   $('vNum').textContent = `${collected} DE ${goal}`;
