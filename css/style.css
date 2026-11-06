@@ -366,6 +366,8 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #splash .btn-paypal{width:min(320px,100%);font-size:12.5px;letter-spacing:.5px;text-decoration:none}
 
 .ib.off,.chip.off{opacity:.55}
+/* el emoji 🎥 sale casi negro en Android/Chrome: se aclara para que se vea como los demás íconos */
+#btnCam .ib-ico{display:inline-block;filter:grayscale(1) brightness(2.6) drop-shadow(0 0 1px rgba(0,0,0,.35));pointer-events:none}
 .topbar{flex-wrap:wrap}
 @media (max-width:640px){.topbar .chip-lbl{display:none}}
 
