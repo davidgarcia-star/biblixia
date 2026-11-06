@@ -193,7 +193,7 @@ const birds = (() => {
   };
 })();
 const TIMES = {
-  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.1, hemiI: .34, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .4, win: .04, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
+  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.5, hemiI: .3, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .55, win: .04, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
@@ -232,7 +232,7 @@ const GradeShader = {
       c = mix(vec3(l), c, sat);                                   // color más vivo
       c = (c - .5) * contrast + .5;                               // contraste de cine
       c += vec3(warm, warm * .4, -warm) * smoothstep(.45, 1., l); // luces cálidas
-      c += vec3(-warm * .5, 0., warm * .6) * (1. - smoothstep(0., .35, l)); // sombras frías
+      c += vec3(-warm * .2, 0., warm * .25) * (1. - smoothstep(0., .35, l)); // sombras apenas frías (el asfalto se ve gris, no azul)
       vec2 q = vUv - .5; c *= 1. - vig * dot(q, q) * 1.6;          // viñeta
       c += (h(vUv * 1000. + time) - .5) * .018;                    // grano de película
       gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
@@ -315,7 +315,7 @@ const facades = FACADE_STYLES.map(st => {
 const facadeMats = facades.map(f => new THREE.MeshStandardMaterial({ map: f.map, emissiveMap: f.emis, emissive: 0xffffff, emissiveIntensity: .55, metalness: f.st.metal, roughness: f.st.rough }));
 const asphaltTex = canvasTex(512, 512, g => {
   // asfalto real: grava fina de varios tonos, manchas suaves y pequeñas grietas
-  g.fillStyle = '#3b3e43'; g.fillRect(0, 0, 512, 512);
+  g.fillStyle = '#4a4d52'; g.fillRect(0, 0, 512, 512);
   for (let i = 0; i < 14; i++) { const x = Math.random() * 512, y = Math.random() * 512, r = 40 + Math.random() * 110, gr = g.createRadialGradient(x, y, 0, x, y, r); const d = Math.random() < .5; gr.addColorStop(0, d ? 'rgba(20,22,26,.18)' : 'rgba(90,92,96,.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
   for (let i = 0; i < 26000; i++) { const v = Math.random(); g.fillStyle = v < .45 ? `rgba(20,20,22,${.25 + Math.random() * .3})` : v < .9 ? `rgba(110,112,116,${.15 + Math.random() * .25})` : `rgba(170,165,155,${.25 + Math.random() * .3})`; const sz = Math.random() < .85 ? 1 + Math.random() * 1.2 : 2 + Math.random() * 1.5; g.fillRect(Math.random() * 512, Math.random() * 512, sz, sz); }
   g.strokeStyle = 'rgba(18,18,20,.45)'; g.lineWidth = 1.2;

@@ -775,6 +775,40 @@ function avgColor(mat) {
   return c;
 }
 export const FAR_MAT = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .78 });
+// Simplifica una figura lejana: junta los vértices que caen en la misma celdita (de "cell" metros)
+// y quita los triángulos que quedan aplastados. De ~7000 triángulos queda en ~1000 y de lejos se ve igual.
+function clusterSimplify(g, cell) {
+  const pos = g.attributes.position, nor = g.attributes.normal, col = g.attributes.color, idx = g.index;
+  const map = new Map(), sum = [], ids = new Int32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const nx = nor.getX(i), ny = nor.getY(i), nz = nor.getZ(i);
+    // la dirección de la cara también cuenta, así no se mezclan el frente y la espalda de una pieza delgada
+    const key = Math.floor(pos.getX(i) / cell) + ',' + Math.floor(pos.getY(i) / cell) + ',' + Math.floor(pos.getZ(i) / cell) + ',' + (nx > .35 ? 1 : nx < -.35 ? 2 : 0) + (ny > .35 ? 1 : ny < -.35 ? 2 : 0) + (nz > .35 ? 1 : nz < -.35 ? 2 : 0) + (col ? ',' + Math.round(col.getX(i) * 6) + Math.round(col.getY(i) * 6) + Math.round(col.getZ(i) * 6) : '');
+    let k = map.get(key);
+    if (k === undefined) { k = sum.length; map.set(key, k); sum.push([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); }
+    const s = sum[k]; s[0] += pos.getX(i); s[1] += pos.getY(i); s[2] += pos.getZ(i); s[3] += nx; s[4] += ny; s[5] += nz;
+    if (col) { s[6] += col.getX(i); s[7] += col.getY(i); s[8] += col.getZ(i); } s[9]++;
+    ids[i] = k;
+  }
+  const n = sum.length, P = new Float32Array(n * 3), N = new Float32Array(n * 3), C = new Float32Array(n * 3);
+  sum.forEach((s, k) => {
+    const c = s[9], l = Math.hypot(s[3], s[4], s[5]) || 1;
+    P.set([s[0] / c, s[1] / c, s[2] / c], k * 3); N.set([s[3] / l, s[4] / l, s[5] / l], k * 3); C.set([s[6] / c, s[7] / c, s[8] / c], k * 3);
+  });
+  const tri = [], seen = new Set(), count = idx ? idx.count : pos.count;
+  for (let i = 0; i < count; i += 3) {
+    const a = ids[idx ? idx.getX(i) : i], b = ids[idx ? idx.getX(i + 1) : i + 1], c = ids[idx ? idx.getX(i + 2) : i + 2];
+    if (a === b || b === c || a === c) continue;
+    const m = Math.min(a, b, c), M = Math.max(a, b, c), key = m * 1e10 + (a + b + c - m - M) * 1e5 + M; // sin triángulos repetidos
+    if (seen.has(key)) continue; seen.add(key); tri.push(a, b, c);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+  if (col) out.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  out.setIndex(tri); out.computeBoundingSphere(); out.computeBoundingBox();
+  g.dispose(); return out;
+}
 export function bakeColored(obj) {
   obj.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(obj.matrixWorld).invert(), geos = [];
@@ -786,7 +820,8 @@ export function bakeColored(obj) {
     for (let i = 0; i < n; i++) { arr[i * 3] = col.r; arr[i * 3 + 1] = col.g; arr[i * 3 + 2] = col.b; }
     g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); geos.push(g);
   });
-  const merged = geos.length ? mergeGeometries(geos, false) : null;
+  let merged = geos.length ? mergeGeometries(geos, false) : null;
+  if (merged) merged = clusterSimplify(merged, .075);
   const out = new THREE.Group();
   if (merged) { const mm = new THREE.Mesh(merged, FAR_MAT); mm.castShadow = false; mm.receiveShadow = true; out.add(mm); }
   return out;
