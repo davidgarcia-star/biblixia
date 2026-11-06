@@ -1522,9 +1522,9 @@ function updateMate(dt, t) {
         sp = Math.min(MT.swim ? swimSp : d > 7 ? (P.turbo ? TURBO : RUN) : d > 3.5 ? RUN * .9 : WALK, (d - 1.6) * 3.2);
         if (inWater && !MT.swim) sp *= .6;
         const ux = dx / d, uz = dz / d, nx = MT.pos.x + ux * sp * dt, nz = MT.pos.z + uz * sp * dt;
-        if (!blocked(nx, nz, MT.pos.y, true)) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
-        else if (!blocked(nx, MT.pos.z, MT.pos.y, true)) MT.pos.x = nx;
-        else if (!blocked(MT.pos.x, nz, MT.pos.y, true)) MT.pos.z = nz;
+        if (!blocked(nx, nz, MT.pos.y, true, mateGender())) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
+        else if (!blocked(nx, MT.pos.z, MT.pos.y, true, mateGender())) MT.pos.x = nx;
+        else if (!blocked(MT.pos.x, nz, MT.pos.y, true, mateGender())) MT.pos.z = nz;
         else { MT.stuck += dt; sp = 0; }
         let df = Math.atan2(ux, uz) - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 8);
       } else { let df = P.heading - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 2); }
@@ -1607,15 +1607,25 @@ function climbStep(dt) {
 }
 // Se puede nadar en el mar en todos los niveles, hasta las islas
 const canSwim = () => !!world.seaInfo;
-function blocked(x, z, y, swimmer = false) {
+// baños de la iglesia: el de damas solo deja pasar mujeres y el de caballeros solo hombres
+let avisoBanoT = 0;
+const mateGender = () => (save.player && save.player.gender === 'f') ? 'm' : 'f';
+function avisoBano(tag) {
+  const now = performance.now(); if (now - avisoBanoT < 2500) return; avisoBanoT = now;
+  sound.hurt(); toast(tag === 'bano-f' ? '🚺 Este baño es solo para damas' : '🚹 Este baño es solo para caballeros', '#ffd34d');
+}
+function blocked(x, z, y, swimmer = false, gender = null) {
   const sw = swimmer && canSwim();
+  const g = gender || (save.player && save.player.gender) || 'm';
   if (world.npcs && y < 2) for (const n of world.npcs) if (!n.treasure && !n.ship && Math.hypot(x - n.x, z - n.z) < RADIUS + .28) return true;
   if (world.lux && y < 1.6) for (const c of world.lux) if (c !== P.car) { const dx = x - c.obj.position.x, dz = z - c.obj.position.z, cs = Math.cos(c.heading), sn = Math.sin(c.heading), lx = dx * cs - dz * sn, lz = dx * sn + dz * cs; if (Math.abs(lx) < c.wid / 2 + RADIUS - .1 && Math.abs(lz) < c.len / 2 + RADIUS - .1) return true; }
   if (sw && world.boat && (x < world.boat.minX + 5 || z < world.boat.minZ + 5 || z > world.boat.maxZ - 5)) return true;
   for (const c of world.colliders) {
     if (c.tag === 'ship' && world.boat && world.boat.away) continue;
     if (sw && c.tag === 'sea') continue;
-    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) return true; }
+    const bano = c.tag === 'bano-f' || c.tag === 'bano-m';
+    if (bano && (c.tag === 'bano-f') === (g === 'f')) continue;
+    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) { if (bano && !gender) avisoBano(c.tag); return true; } }
   }
   return false;
 }
@@ -1683,10 +1693,14 @@ const lookAcc = { x: 0, y: 0 };
 const addLook = (dx, dy, kx, ky) => { lookAcc.x += dx * kx; lookAcc.y += dy * ky; };
 function applyLook() {
   if (!lookAcc.x && !lookAcc.y) return;
-  const mx = .35; // giro máximo por cuadro (radianes)
-  cam.yaw -= THREE.MathUtils.clamp(lookAcc.x, -mx, mx);
-  cam.pitch = THREE.MathUtils.clamp(cam.pitch + THREE.MathUtils.clamp(lookAcc.y, -mx, mx), -.2, 1.1);
-  lookAcc.x = lookAcc.y = 0;
+  // Antes todo lo que pasaba de 0,35 por cuadro se perdía: en celulares lentos el giro "fallaba" o se quedaba corto.
+  // Ahora se aplica hasta 0,6 por cuadro y lo que sobra pasa al cuadro siguiente (sin vueltas locas: lo que sobra se limita).
+  const mx = .6, C = THREE.MathUtils.clamp;
+  const ax = C(lookAcc.x, -mx, mx), ay = C(lookAcc.y, -mx, mx);
+  cam.yaw -= ax;
+  cam.pitch = C(cam.pitch + ay, -.2, 1.1);
+  lookAcc.x = C(lookAcc.x - ax, -1.2, 1.2); lookAcc.y = C(lookAcc.y - ay, -.6, .6);
+  if (Math.abs(lookAcc.x) < 1e-4) lookAcc.x = 0; if (Math.abs(lookAcc.y) < 1e-4) lookAcc.y = 0;
 }
 // zonas de la interfaz donde arrastrar NO gira la cámara (botones, joystick, mapa, carteles que se desplazan)
 const uiTarget = el => !!(el && el.closest && (el.closest('button') || el.closest('a') || el.closest('input') || el.closest('#joy') || el.closest('.topright') || el.closest('#minimap') || el.closest('#info') || el.closest('.screen:not(.hidden)')));
@@ -1757,8 +1771,21 @@ const endTouch = e => { if (look.id !== null && (!touchAlive(e.touches, look.id)
 addEventListener('touchend', endTouch); addEventListener('touchcancel', endTouch);
 // al cambiar de pestaña, bloquear la pantalla o perder el foco: soltar todo
 const releaseLook = () => { look.id = null; drag = null; lookAcc.x = lookAcc.y = 0; };
-addEventListener('blur', releaseLook);
-document.addEventListener('visibilitychange', () => { if (document.hidden) releaseLook(); });
+// soltar también el joystick y los botones táctiles: si el celular pierde un "touchend" (notificación, llamada,
+// gesto del sistema) el personaje ya no se queda caminando solo ni la cámara trabada
+const releaseTouchControls = () => {
+  if (joy.active) joyEnd();
+  document.querySelectorAll('#touch [data-key].on').forEach(b => { keys[b.dataset.key] = false; b.classList.remove('on'); });
+};
+const releaseAll = () => { releaseLook(); releaseTouchControls(); for (const k in keys) keys[k] = false; };
+addEventListener('blur', releaseAll);
+addEventListener('pagehide', releaseAll);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+// cuando ya no queda ningún dedo en la pantalla, nada puede seguir "apretado"
+const allUp = e => { if (!e.touches || e.touches.length) { if (joy.active && joy.id !== null && !touchAlive(e.touches, joy.id)) joyEnd(); return; } releaseLook(); releaseTouchControls(); };
+addEventListener('touchend', allUp, { passive: true }); addEventListener('touchcancel', allUp, { passive: true });
+// un toque nuevo revisa si el joystick quedó trabado con un dedo que ya no existe
+addEventListener('touchstart', e => { if (joy.active && joy.id !== null && !touchAlive(e.touches, joy.id)) joyEnd(); }, { passive: true, capture: true });
 
 /* =========================================================
    ESTADO DEL JUEGO
@@ -2640,8 +2667,17 @@ const shootingStar = (() => {
     }
   };
 })();
+// Si algo falla en un cuadro, se registra y el juego sigue dibujando (antes un error repetido dejaba la imagen congelada)
+let loopErrs = 0;
 function loop() {
   requestAnimationFrame(loop);
+  try { loopBody(); } catch (e) {
+    if (loopErrs++ < 5) console.error('BIBLIXIA cuadro:', e);
+    lastNow = performance.now();
+    try { for (const g of pendingGroups) g.visible = true; renderer.render(scene, camera); } catch (_) {}
+  }
+}
+function loopBody() {
   if (state !== 'play' && (sound._car || sound._boat || sound._swim)) { sound.carLoop(0); sound.boatLoop(0); sound.swimLoop(0); }
   if (building) { lastNow = performance.now(); return; }
   const now = performance.now(), raw = (now - lastNow) / 1000, dt = Math.min(raw, .05); lastNow = now; elapsed += dt; const t = elapsed;

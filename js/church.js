@@ -21,7 +21,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const box = (w, h, d, m, x, y, z, { cast = true, recv = true } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; group.add(b); return b; };
   const solid = (a, b, c, d, top, bottom = 0) => addBox(Math.min(a, b), Math.max(a, b), Math.min(c, d), Math.max(c, d), top, bottom);
   const dance = [], seats = [];
-  const person = (opts, x, z, ry, pose, { y = y0, anim = null } = {}) => {
+  const person = (opts, x, z, ry, pose, { y = y0 + .1, anim = null } = {}) => {   // y0 + .1: sobre la alfombra (antes los pies quedaban enterrados)
     const f = opts.gender ? opts.gender === 'f' : r() < .5;
     const h = createHuman({ detail: .45, gender: f ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: [0x22243a, 0x1a1a1e, 0x2b3a57][(r() * 3) | 0],
       skirt: [0x22243a, 0x7a3b6e, 0x2d3a6a][(r() * 3) | 0], legwear: f ? ['falda', 'vestido', 'pantalon'][(r() * 3) | 0] : 'pantalon', topStyle: STYLES[(r() * STYLES.length) | 0],
@@ -74,7 +74,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // servidora de la recepción: se mueve, saluda con gestos y dice «¡Bendiciones!» cuando llegas
   // (antes llevaba saco negro con camisa y solapas y parecía un hombre de esmoquin: ahora es claramente una dama)
   const recep = createHuman({ detail: .6, gender: 'f', topStyle: 'mangalarga', top: 0x9a2a4e, legwear: 'vestido', skin: SKINS[2], hair: 'long', hairColor: 0x1d130c, shoes: 0x1a1214, earrings: true, necklace: true, name: '' });
-  recep.root.position.set(cx, y0, Z0 + 4.1); recep.root.rotation.y = Math.PI; group.add(recep.root);
+  recep.root.position.set(cx, y0 + .1, Z0 + 4.1); recep.root.rotation.y = Math.PI; group.add(recep.root);
   // cartel con su cargo para que se sepa quién es (se oculta mientras saluda)
   const recepTag = nameSprite('Servidora', 'Recepción'); recepTag.scale.set(1.2, .3, 1); recepTag.position.set(cx, y0 + 2.15, Z0 + 4.1); group.add(recepTag);
   const bubble = (() => {
@@ -86,19 +86,21 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true })); sp.scale.set(1.9, .6, 1); sp.position.set(cx, y0 + 2.45, Z0 + 4.1); sp.renderOrder = 20; sp.visible = false; group.add(sp); return sp;
   })();
-  const greeter = { x: cx, z: Z0 + 4.1, y: y0, g: 0, cool: 0, h: recep, bubble };
+  const greeter = { x: cx, z: Z0 + 4.1, y: y0 + .1, g: 0, cool: 0, h: recep, bubble };
   for (const sx of [-1, 1]) { box(2.2, .45, .9, mat(0x2a4a7a, { roughness: .9 }), cx + sx * 6, y0 + .25, Z0 + 1.3); box(2.2, .7, .2, mat(0x2a4a7a, { roughness: .9 }), cx + sx * 6, y0 + .6, Z0 + .9); solid(cx + sx * 6 - 1.1, cx + sx * 6 + 1.1, Z0 + .8, Z0 + 1.8, y0 + .45); }
   // baños
-  const bath = (bx, label) => {
+  const bath = (bx, label, tag) => {
     const w0 = bx - 2.2, w1 = bx + 2.2;
     wall(w0, LZ - 4.2, w0, LZ, 3); wall(w1, LZ - 4.2, w1, LZ, 3); wall(w0, LZ - 4.2, bx - .5, LZ - 4.2, 3); wall(bx + .5, LZ - 4.2, w1, LZ - 4.2, 3);
+    // puerta invisible: el de damas solo deja entrar mujeres y el de caballeros solo hombres
+    addBox(bx - .5, bx + .5, LZ - 4.2 - .35, LZ - 4.2 + .35, 999, 0, tag);
     box(.5, .45, .6, mat(0xffffff, { roughness: .2 }), bx - 1.2, y0 + .23, LZ - .5); box(.5, .45, .6, mat(0xffffff, { roughness: .2 }), bx + 1.2, y0 + .23, LZ - .5);
     box(1.4, .2, .5, mat(0xffffff, { roughness: .2 }), bx, y0 + .85, LZ - .35); box(1.2, .8, .04, mat(0xbfd8e8, { metalness: .9, roughness: .05 }), bx, y0 + 1.6, LZ - .17);
     const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#123'; g.fillRect(0, 0, 256, 64); g.fillStyle = '#fff'; g.font = '700 32px system-ui'; g.textAlign = 'center'; g.fillText(label, 128, 44);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const s = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .3), new THREE.MeshBasicMaterial({ map: t })); s.position.set(bx, y0 + 2.4, LZ - 4.37); s.rotation.y = Math.PI; group.add(s);
     acts.push({ x: bx, z: LZ - 1.4, y: y0, label: '🚻 Usar el baño y lavarse las manos', fn: () => fx('water'), r: 1.6 });
   };
-  bath(X0 + 3, '🚺 Damas'); bath(X1 - 3, '🚹 Caballeros');
+  bath(X0 + 3, '🚺 Damas', 'bano-f'); bath(X1 - 3, '🚹 Caballeros', 'bano-m');
 
   // --- SANTUARIO: tarima, pantalla gigante, luces, banda, predicador ---
   const SZ = Z1 - 6.5, SH = .9;                                   // inicio de la tarima y su altura

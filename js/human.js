@@ -330,9 +330,10 @@ export function createHuman(opt = {}) {
     mesh(SG(wide ? .09 : F ? .05 : .056, 14, 10), legM, knee);
     mesh(wide ? limbGeo(.09, .105, .41, 0) : limbGeo(F ? .052 : .058, F ? .036 : .042, .42, F ? .014 : .012), robe || skirtOn ? skin : pantsM, knee);
     const ankle = grp(knee, 0, -.43, 0);
-    const up = mesh(new THREE.CapsuleGeometry(.05, .15, 6, 14), shoeM, ankle, 0, -.035, .05); up.rotation.x = Math.PI / 2; up.scale.set(F ? 1 : 1.1, 1, .9);
-    mesh(new THREE.BoxGeometry(.105, .025, .26), soleM, ankle, 0, -.075, .05);
-    if (!robe) mesh(new THREE.BoxGeometry(.1, .012, .04), gold, ankle, 0, -.02, -.068);
+    // zapatos 4 cm más arriba: antes la suela quedaba por debajo del piso y los pies se veían enterrados
+    const up = mesh(new THREE.CapsuleGeometry(.05, .15, 6, 14), shoeM, ankle, 0, .005, .05); up.rotation.x = Math.PI / 2; up.scale.set(F ? 1 : 1.1, 1, .9);
+    mesh(new THREE.BoxGeometry(.105, .025, .26), soleM, ankle, 0, -.035, .05);
+    if (!robe) mesh(new THREE.BoxGeometry(.1, .012, .04), gold, ankle, 0, .02, -.068);
     legs.push({ thigh, knee, ankle });
   }
 
@@ -617,7 +618,7 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     const AA = lerp(.4, .7, run) * amp;
     P.s0x = s * AA; P.s1x = -s * AA; P.s0z = -.1; P.s1z = .1;
     P.e0 = -(.3 + run * 1.15) - Math.max(0, -s) * .3 * amp; P.e1 = -(.3 + run * 1.15) - Math.max(0, s) * .3 * amp;
-    P.spineX = .05 * amp + run * .14; P.spineY = s * .14 * amp; P.hipY = .93 - .025 * amp - run * .03 + Math.abs(Math.cos(ph)) * lerp(.035, .07, run) * amp;
+    P.spineX = .05 * amp + run * .14; P.spineY = s * .14 * amp; P.hipY = .93 - run * .03 + Math.abs(Math.cos(ph)) * lerp(.035, .07, run) * amp;
     P.headX = -P.spineX * .6;
   }
   if (land > 0) P.hipY -= land * .5;
