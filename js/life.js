@@ -214,8 +214,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
     act(cx - 3.6, Z1 - 3, fy, '📖 Leer la Biblia', () => life.fx('read'), 1.1);
     W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
-    W.zones.push({ id: 'bano', name: 'Baño', minX: BX0, maxX: X1, minZ: Z0, maxZ: BZ1, pri: 6, text: 'Tu baño está preparado: la bañera llena con espuma, la ducha, toallas limpias y el lavamanos. Al entrar te pones la bata de baño. «Lávame, y seré más blanco que la nieve.»', ref: 'Salmo 51:7' });
-    W.zones.push({ id: 'casa', name: 'Mi casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, ver la tele, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });
+    W.zones.push({ id: 'bano', name: 'Baño', minX: BX0, maxX: X1, minZ: Z0, maxZ: BZ1, pri: 6, text: 'Tu baño está listo: al entrar te pones la bata de baño.', ref: 'Salmo 51:7' });
+    W.zones.push({ id: 'casa', name: 'Mi casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa: aquí puedes dormir, comer, bañarte y descansar.', ref: 'Josué 24:15' });
   }
 
   await pace();
@@ -298,7 +298,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     for (const [px, pz] of [[X0, Z0], [X1, Z0], [X0, Z1], [X1, Z1], [cx - DW / 2, Z0], [cx + DW / 2, Z0]]) box(.25, Htot, .25, frameM, px, base + Htot / 2, pz);
     const roof = box(HW * 2 + .4, .3, HD * 2 + .4, mat(0x4a4f57), cx, base + Htot + .15, cz, { cast: true }); blockers.push(roof); solid(X0, X1, Z0, Z1, base + Htot + .3, base + Htot);
     sign('OFICINAS LUZ', '🏢 3 pisos · Cafetería', cx, base + 3.2, Z0 - .2, Math.PI);
-    W.zones.push({ id: 'oficinas', name: 'Edificio de oficinas', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Sube por las escaleras a los diferentes pisos. Hay oficinas con personas trabajando, agua en cada piso y una cafetería en la planta baja. «Todo lo que hagáis, hacedlo de corazón, como para el Señor.»', ref: 'Colosenses 3:23' });
+    W.zones.push({ id: 'oficinas', name: 'Edificio de oficinas', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Sube por las escaleras para visitar las oficinas y la cafetería de la planta baja.', ref: 'Colosenses 3:23' });
   }
 
   await pace();

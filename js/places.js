@@ -75,7 +75,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
     const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffe9a0 })); sg.scale.set(9, 9, 1); sg.position.set(px, 13, pz); P.add(sg);
     out.zones.push({ id: 'belen', name: 'Belén: el nacimiento de Jesús', minX: px - w / 2, maxX: px + w / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'En Belén de Judea nació Jesús. María lo envolvió en pañales y lo acostó en un pesebre, porque no había lugar para ellos en el mesón. Los ángeles anunciaron a los pastores las buenas nuevas de gran gozo, y la estrella guió a los magos, que le ofrecieron oro, incienso y mirra.',
+      text: 'En Belén nació Jesús y fue acostado en un pesebre.',
       ref: 'Miqueas 5:2; Lucas 2:4-14; Mateo 2:9-11' });
     out.coins.push([px - 8, pz + 10, 0], [px + 8, pz + 3, 0]);
     out.treasures.belen = [px + 2.5, pz + 1.5, 0];
@@ -104,7 +104,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const house = std({ color: 0xc8a878, roughness: .95 });
     for (let k = 0; k < 7; k++) { const a = k * 2.1, rr = 4 + (k % 3) * 3; const hx = px + Math.cos(a) * rr, hz = pz + Math.sin(a) * rr * .7; box(3, 2.4 + (k % 2), 3, house, hx, 1.2, hz); addBox(hx - 1.5, hx + 1.5, hz - 1.5, hz + 1.5, 3); }
     out.zones.push({ id: 'jerico', name: 'Jericó', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'Por la fe cayeron los muros de Jericó después de que el pueblo los rodeó durante siete días. Los sacerdotes tocaron las trompetas, el pueblo gritó y el muro se derrumbó. Rahab, que había escondido a los espías, se salvó con su familia gracias al cordón escarlata atado a su ventana.',
+      text: 'Por la fe cayeron los muros de Jericó después de rodearlos siete días.',
       ref: 'Josué 2:18-21; 6:15-25; Hebreos 11:30-31' });
     out.coins.push([px, pz + 2, 0], [px - 9, pz - 6, 0]);
     out.treasures.jerico = [px + 2, pz - 3, 0];
@@ -125,7 +125,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     for (let k = 0; k < 6; k++) box(.15, 4, .15, scaf, px - 4 + k * 1.6, y + 2, pz - 3);
     box(9, .15, .15, scaf, px, y + 3.6, pz - 3);
     out.zones.push({ id: 'babel', name: 'La torre de Babel', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'Los hombres dijeron: «Edifiquemos una ciudad y una torre cuya cúspide llegue hasta los cielos; hagámonos un nombre». Usaban ladrillo en lugar de piedra y asfalto en lugar de mezcla. El SEÑOR confundió su lengua y los dispersó por toda la tierra, y dejaron de edificar la ciudad.',
+      text: 'En Babel el SEÑOR confundió la lengua de los hombres que querían una torre hasta el cielo.',
       ref: 'Génesis 11:1-9' });
     out.coins.push([px - s0 / 2 - 3, pz + 6, 0], [px + s0 / 2 + 3, pz - 6, 0]);
     out.treasures.babel = [px, pz + s0 * .45 + 2, 0];
@@ -151,7 +151,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const staff = new THREE.Mesh(new THREE.CylinderGeometry(.02, .025, 1.9, 8), std({ color: 0x6b4a2a })); staff.position.set(0, -.3, .1); staff.rotation.x = -.3; mo.arms[1].hand.add(staff);
     const mb = bakeStatic(mo.root); mb.position.set(px, 0, zS - 14); mb.rotation.y = Math.PI; S.add(mb); addBox(px - .4, px + .4, zS - 14.4, zS - 13.6, 1.8);
     out.zones.push({ id: 'marrojo', name: 'El Mar Rojo abierto', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'Moisés extendió su mano sobre el mar, y el SEÑOR hizo soplar toda la noche un fuerte viento del oriente que dividió las aguas. Los hijos de Israel entraron por en medio del mar, en seco, y las aguas les eran como un muro a su derecha y a su izquierda.',
+      text: 'El SEÑOR abrió el Mar Rojo e Israel lo cruzó en seco.',
       ref: 'Éxodo 14:21-22, 29-31' });
     out.coins.push([px, pz - 4, 0], [px, pz + 14, 0]);
     out.treasures.marrojo = [px, pz + 5, 0];
@@ -172,7 +172,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     // huerto
     for (let k = 0; k < 6; k++) { const tr = add(new THREE.IcosahedronGeometry(1.4, 1), std({ color: 0x3f6b2a, roughness: .9 }), px + 3 + k * 2.4, 2.6, pz + 12); add(new THREE.CylinderGeometry(.12, .16, 2, 6), wood, px + 3 + k * 2.4, 1, pz + 12); addBox(px + 2.8 + k * 2.4, px + 3.2 + k * 2.4, pz + 11.8, pz + 12.2, 4); }
     out.zones.push({ id: 'calvario', name: 'El Calvario y la tumba vacía', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'En el lugar llamado Gólgota, Jesús fue crucificado entre dos malhechores y dio su vida por nosotros. Fue sepultado en una tumba nueva cavada en la roca, en un huerto. Al tercer día las mujeres encontraron la piedra removida, y el ángel les dijo: «No está aquí, porque ha resucitado, tal como dijo».',
+      text: 'En el Calvario Jesús dio su vida por nosotros y al tercer día resucitó.',
       ref: 'Juan 19:17-18, 41-42; Mateo 28:1-6' });
     out.coins.push([px - 5, pz - 6, 2.6], [px + 8, pz - 2, 0]);
     out.treasures.calvario = [px + 4, pz + 1, 0];

@@ -971,7 +971,7 @@ async function buildWorld(cfg) {
         W.gulls.push({ obj: g, wings, cx: (i < 4 ? pierX0 + 10 : SX - 60 - Math.random() * 60) + (Math.random() - .5) * 20, cz: pz0 + (Math.random() - .5) * 30, rad: 9 + Math.random() * 14, y: 7 + Math.random() * 8, a: Math.random() * 6.28, sp: (Math.random() < .5 ? -1 : 1) * (.25 + Math.random() * .2), ph: Math.random() * 10 });
       } }
     W.zones.push({ id: 'mar', name: 'El mar y el barco', minX: shipX - 18, maxX: SX + 4, minZ: pz0 - 6, maxZ: pz0 + 6, pri: 3,
-      text: 'Jonás huyó de Dios en un barco rumbo a Tarsis, pero el SEÑOR envió una gran tormenta. Siglos después, Jesús calmó el viento y el mar con su palabra, y el apóstol Pablo, en medio de un naufragio, animó a todos porque Dios había prometido salvarlos.',
+      text: 'Dios tiene poder sobre el mar, como lo vieron Jonás, los discípulos de Jesús y Pablo.',
       ref: 'Jonás 1:3-4; Marcos 4:35-41; Hechos 27:22-25' });
     coinSpots.push([SX - 30, pz0, .6], [O - 20, O + 20, 0], [O - 20, O + T - 20, 0], [O - 12, O + T + 40, 0]);
     npcSpots.push([O - 16, pz0 + 9], [O - 16, O + T + 20]);
@@ -1703,7 +1703,7 @@ function applyLook() {
   if (Math.abs(lookAcc.x) < 1e-4) lookAcc.x = 0; if (Math.abs(lookAcc.y) < 1e-4) lookAcc.y = 0;
 }
 // zonas de la interfaz donde arrastrar NO gira la cámara (botones, joystick, mapa, carteles que se desplazan)
-const uiTarget = el => !!(el && el.closest && (el.closest('button') || el.closest('a') || el.closest('input') || el.closest('#joy') || el.closest('.topright') || el.closest('#minimap') || el.closest('#info') || el.closest('.screen:not(.hidden)')));
+const uiTarget = el => !!(el && el.closest && (el.closest('button') || el.closest('a') || el.closest('input') || el.closest('#joy') || el.closest('#wheel') || el.closest('.topright') || el.closest('#minimap') || el.closest('#info') || el.closest('.screen:not(.hidden)')));
 
 // Ratón: arrastrar en cualquier parte del juego (no solo sobre el lienzo) para girar la cámara
 let drag = null;
@@ -1734,6 +1734,24 @@ joyEl.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e
 joyEl.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === joy.id) joyEnd(); });
 joyEl.addEventListener('touchcancel', joyEnd);
 joyEl.addEventListener('mousedown', e => { joy.active = true; joyEl.classList.add('on'); joyMove(e.clientX, e.clientY); const mv = ev => joyMove(ev.clientX, ev.clientY), up = () => { joyEnd(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); }; addEventListener('mousemove', mv); addEventListener('mouseup', up); });
+// Guía del vehículo (volante): solo izquierda / derecha, giro moderado; vuelve al centro al soltar
+const wheel = { id: null, x: 0, active: false, sx: 0 }, pedal = { gas: false, rev: false };
+const wheelEl = $('wheel'), wheelRim = $('wheelRim');
+const wheelMove = cx => { wheel.x = Math.max(-1, Math.min(1, (cx - wheel.sx) / 70)); wheelRim.style.transform = `rotate(${wheel.x * 90}deg)`; };
+const wheelEnd = () => { wheel.id = null; wheel.active = false; wheel.x = 0; wheelRim.style.transform = ''; wheelEl.classList.remove('on'); };
+wheelEl.addEventListener('touchstart', e => { e.preventDefault(); sound.unlock(); const t = e.changedTouches[0]; wheel.id = t.identifier; wheel.active = true; wheel.sx = t.clientX; wheelEl.classList.add('on'); wheelMove(t.clientX); }, { passive: false });
+wheelEl.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === wheel.id) wheelMove(t.clientX); }, { passive: false });
+wheelEl.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === wheel.id) wheelEnd(); });
+wheelEl.addEventListener('touchcancel', wheelEnd);
+wheelEl.addEventListener('mousedown', e => { wheel.active = true; wheel.sx = e.clientX; wheelEl.classList.add('on'); const mv = ev => wheelMove(ev.clientX), up = () => { wheelEnd(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); }; addEventListener('mousemove', mv); addEventListener('mouseup', up); });
+[['tGas', 'gas'], ['tRev', 'rev']].forEach(([id, k]) => {
+  const b = $(id); if (!b) return;
+  const on = e => { e.preventDefault(); sound.unlock(); pedal[k] = true; b.classList.add('on'); };
+  const off = e => { e.preventDefault(); pedal[k] = false; b.classList.remove('on'); };
+  b.addEventListener('touchstart', on, { passive: false }); b.addEventListener('touchend', off, { passive: false }); b.addEventListener('touchcancel', off, { passive: false });
+  b.addEventListener('mousedown', on); b.addEventListener('mouseup', off); b.addEventListener('mouseleave', off); b.addEventListener('click', e => e.preventDefault());
+});
+function driveUI(on) { $('touch').classList.toggle('drive', on); if (!on) { wheelEnd(); pedal.gas = pedal.rev = false; $('tGas').classList.remove('on'); $('tRev').classList.remove('on'); } else joyEnd(); }
 document.querySelectorAll('#touch [data-key]').forEach(btn => {
   const k = btn.dataset.key;
   const on = e => { e.preventDefault(); sound.unlock(); keys[k] = true; btn.classList.add('on'); };
@@ -1833,7 +1851,7 @@ async function startLevelNow(i) {
   $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER';
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
-  P.driving = false; if (P.car) { P.car = null; sound.carLoop(0); } honkBtns(false);
+  P.driving = false; if (P.car) { P.car = null; sound.carLoop(0); } honkBtns(false); driveUI(false);
   if (mate) { placeMate(); if (isPair()) setTimeout(() => toast('🌿 Adán y Eva van juntos · ' + (isTouch ? 'toca 👫' : 'pulsa Q') + ' para cambiar', '#7ef0a4'), 1800); }
   setTimeout(() => { if (state === 'play') toast('⏰ Toma los relojes azules para ganar +' + CLOCK_SECS + ' s', '#6fd0ff'); }, 3200);
   if (lvlIdx >= 1) setTimeout(() => { if (state === 'play') toast('⛵ ¡El barco ya está habilitado! Ve al muelle (oeste)', '#7ef0a4'); }, lvlIdx === 1 ? 5600 : 99999999);
@@ -1921,12 +1939,12 @@ function pickClock(rad) {
   return false;
 }
 function startDriving() {
-  const b = world.boat; P.driving = true; b.away = true; b.speed = 0; b.heading = Math.PI; world.ship.position.x = b.home.x - 6; // zarpa con la proa hacia mar abierto
+  driveUI(true); const b = world.boat; P.driving = true; b.away = true; b.speed = 0; b.heading = Math.PI; world.ship.position.x = b.home.x - 6; // zarpa con la proa hacia mar abierto
   cam.distSave = cam.dist; cam.dist = 17; cam.pitch = .28;
   $('prompt').classList.remove('show'); toast('⛵ ¡Conduces el barco! · T para bajar', '#7ef0a4'); sound.boatBoard();
 }
 function stopDriving() {
-  const b = world.boat; P.driving = false; b.away = false; b.speed = 0;
+  driveUI(false); const b = world.boat; P.driving = false; b.away = false; b.speed = 0;
   world.ship.position.set(b.home.x, 0, b.home.z); world.ship.rotation.y = 0; b.heading = 0;
   P.pos.set(b.home.x - 4, b.deckY, b.home.z + 1.5); P.vy = 0; P.onGround = true; P.speed = 0;
   cam.dist = cam.distSave || 6.4; toast('⚓ El barco volvió al muelle', '#ffd34d'); sound.boatLoop(0); sound.splash(.4); sound.click();
@@ -1990,13 +2008,13 @@ function carHits(c, x, z, h) {
 function honkBtns(on) { for (const id of ['tHonk', 'btnHonk']) { const b = document.getElementById(id); if (b) b.classList.toggle('hidden', !on); } }
 ['tHonk', 'btnHonk'].forEach(id => { const b = document.getElementById(id); if (b) { const f = e => { e.preventDefault(); honkPressed = true; }; b.addEventListener('pointerdown', f); b.addEventListener('click', e => e.preventDefault()); } });
 function startCar(c) {
-  honkBtns(true);
+  honkBtns(true); driveUI(true);
   P.car = c; c.speed = 0; c.steer = 0; cam.distSave = cam.dist; cam.dist = c.kind === 'pickup' ? 9.5 : 8; cam.pitch = .3;
   $('prompt').classList.remove('show'); sound.carStart(); toast(`🚗 ¡Conduces ${luxName(c)}! · T para bajar · ${isTouch ? 'botón 📯 para pitar' : 'H o Espacio para pitar'}`, '#7ef0a4');
 }
 function stopCar() {
   const c = P.car; if (!c) return;
-  P.car = null; c.speed = 0; sound.carLoop(0); sound.click(); honkBtns(false);
+  P.car = null; c.speed = 0; sound.carLoop(0); sound.click(); honkBtns(false); driveUI(false);
   const h = c.heading, cs = Math.cos(h), sn = Math.sin(h);
   for (const side of [-1, 1, -1.6, 1.6]) { // bajarse por la puerta del conductor (o la del otro lado si está tapada)
     const lx = side * (c.wid / 2 + .7), x = c.obj.position.x + lx * cs, z = c.obj.position.z - lx * sn;
@@ -2010,14 +2028,15 @@ function driveCar(dt) {
   let thr = 0, turn = 0;
   if (keys.KeyW || keys.ArrowUp) thr += 1; if (keys.KeyS || keys.ArrowDown) thr -= 1;
   if (keys.KeyA || keys.ArrowLeft) turn += 1; if (keys.KeyD || keys.ArrowRight) turn -= 1;
-  if (joy.active) { thr = -joy.y; turn = -joy.x; }
+  if (pedal.gas) thr += 1; if (pedal.rev) thr -= 1;
+  if (wheel.active) turn = -wheel.x;
   const top = c.top * (P.turbo ? 1.3 : 1);
   const want = thr > 0 ? thr * top : thr < 0 ? (c.speed > 1 ? 0 : thr * 7) : 0;
   const acc = thr < 0 && c.speed > 1 ? 3.5 : thr === 0 ? .9 : 1.1;              // frena fuerte, acelera suave
   c.speed += (want - c.speed) * Math.min(1, dt * acc);
   // dirección moderada: a más velocidad, menos se puede girar el volante
-  const maxSteer = .34 * (1 - Math.min(.55, Math.abs(c.speed) / top * .6));
-  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 3.5);
+  const maxSteer = .24 * (1 - Math.min(.55, Math.abs(c.speed) / top * .6));
+  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 2.5);
   c.heading += c.steer * dt * c.speed / (c.len * .62);
   const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
   const nx = o.position.x + fx * c.speed * dt, nz = o.position.z + fz * c.speed * dt;
@@ -2062,7 +2081,8 @@ function driveBoat(dt) {
   let thr = 0, turn = 0;
   if (keys.KeyW || keys.ArrowUp) thr += 1; if (keys.KeyS || keys.ArrowDown) thr -= .5;
   if (keys.KeyA || keys.ArrowLeft) turn += 1; if (keys.KeyD || keys.ArrowRight) turn -= 1;
-  if (joy.active) { thr = -joy.y; turn = -joy.x; }
+  if (pedal.gas) thr += 1; if (pedal.rev) thr -= .5;
+  if (wheel.active) turn = -wheel.x * .7;
   b.speed += (thr * 13 - b.speed) * Math.min(1, dt * .5);
   b.heading += turn * dt * (.25 + Math.min(1, Math.abs(b.speed) / 8) * .45) * Math.sign(b.speed || 1);
   const fx = Math.cos(b.heading), fz = -Math.sin(b.heading);

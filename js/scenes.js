@@ -307,10 +307,10 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   return {
     zones: [{ id: 'arca-noe', name: 'El arca de Noé', minX: x - L / 2 - 6, maxX: x + L / 2 + 6, minZ: rampZ0 - 10, maxZ: doorZ, pri: 3,
-      text: 'Dios mandó a Noé hacer un arca de madera de gofer, con compartimientos y cubierta de brea por dentro y por fuera: 300 codos de largo, 50 de ancho y 30 de alto (unos 150 × 25 × 15 metros), con una ventana de un codo debajo del techo, la puerta al costado y tres pisos: bajo, segundo y tercero. De todo animal limpio entraron siete parejas, de los animales que no son limpios una pareja, y de las aves del cielo siete parejas, macho y hembra. Noé tenía 600 años. Entraron ocho personas y Dios cerró la puerta. Después del diluvio puso su arco en las nubes como señal de su pacto.',
+      text: 'Noé construyó el arca como Dios le mandó y se salvó del diluvio con su familia y los animales.',
       ref: 'Génesis 6:14-22; 7:1-16; 9:12-16' },
       { id: 'arca-dentro', name: 'Dentro del arca', minX: x - L / 2, maxX: x + L / 2, minZ: doorZ + .5, maxZ: z + Wd / 2, pri: 4,
-        text: 'El arca tenía tres pisos y compartimientos. Noé guardó en ella toda clase de alimento para su familia y para los animales. Ocho personas se salvaron: Noé, su esposa, sus tres hijos (Sem, Cam y Jafet) y sus esposas. Todo lo hizo Noé conforme a lo que Dios le mandó.',
+        text: 'En el arca de tres pisos se salvaron ocho personas: Noé y su familia.',
         ref: 'Génesis 6:14-16, 21-22; 7:13; 1 Pedro 3:20' }],
     noahSpot: [x + 6, rampZ0 - 2], rainbow,
     // pasillo de la rampa y la puerta: ahí los animales de la fila no empujan al jugador (si no, no se podía salir)
@@ -442,7 +442,7 @@ export async function buildValley({ group, addBox, blockers, x, z, rnd }) {
   return {
     zones: [
       { id: 'goliat', name: 'David y Goliat', minX: x - 16, maxX: x + 24, minZ: z - 22, maxZ: z + 22, pri: 3,
-        text: 'En el valle de Ela, el gigante Goliat de Gat, de seis codos y un palmo de alto, con casco de bronce, cota de malla y una lanza enorme, desafiaba al ejército de Israel. El joven pastor David escogió cinco piedras lisas del arroyo y, con su honda, lo enfrentó en el nombre del SEÑOR de los ejércitos. La batalla es del SEÑOR.',
+        text: 'En el valle de Ela, el joven David venció al gigante Goliat en el nombre del SEÑOR.',
         ref: '1 Samuel 17:4-7, 40-50' },
     ],
     davidSpot: [dx, dz], davidNPC: dv, goliathPos: [gx, gz], group: V,
@@ -540,7 +540,7 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
   const tmp = new THREE.Vector3();
   return {
     zones: [{ id: 'jordan', name: 'El río Jordán', minX: x - HW - 10, maxX: x + HW + 12, minZ: z0, maxZ: z1, pri: 3,
-      text: 'Juan el Bautista predicaba en el desierto de Judea: «Arrepentíos, porque el reino de los cielos se ha acercado». Vestía ropa de pelo de camello con un cinto de cuero, y comía langostas y miel silvestre. La gente de Jerusalén, de toda Judea y de la región del Jordán iba a él, y confesando sus pecados, eran bautizados por él en el río Jordán.',
+      text: 'Juan el Bautista predicaba el arrepentimiento y bautizaba en el río Jordán.',
       ref: 'Mateo 3:1-6; Marcos 1:4-6' }],
     // se le habla desde la orilla oriental, frente a él (el agua es honda); el regalo flota sobre Juan en el río
     johnSpot: [cx0 + HW - .15, zc], johnPos: [cx0 + .55, zc],

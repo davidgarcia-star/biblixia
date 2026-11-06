@@ -117,7 +117,7 @@ export async function buildPriests({ group, tab, r, addBox }) {
     if (s < W) return [path.x0 + s, path.z0, 1, 0]; s -= W; if (s < H) return [path.x1, path.z0 + s, 0, 1]; s -= H; if (s < W) return [path.x1 - s, path.z1, -1, 0]; s -= W; return [path.x0, path.z1 - s, 0, -1]; };
   const proc = { s: 0, sp: .9 };
   const pathZone = () => ({ id: 'procesion-arca', name: 'Los levitas llevan el arca del pacto', minX: path.x0 - 6, maxX: path.x1 + 6, minZ: path.z0 - 6, maxZ: path.z1 + 6, pri: 3,
-    text: 'David reunió a los sacerdotes y a los levitas para subir el arca del pacto. Solo los levitas debían llevarla: los hijos de los levitas la cargaron sobre los hombros con las varas, como Moisés había mandado. Delante iban los cantores con címbalos de bronce, arpas y liras; los porteros Berequías y Elcana delante del arca y Obed-edom y Jehías detrás; siete sacerdotes tocaban las trompetas delante del arca de Dios. David, vestido de lino fino con un efod de lino, danzaba con toda su fuerza delante del SEÑOR. ¡Nadie debía tocar el arca!',
+    text: 'David y los levitas subieron el arca del pacto con cantos, trompetas y danza delante del SEÑOR.',
     ref: '1 Crónicas 15:2-29; 2 Samuel 6:14; Números 4:15' });
 
   const tmp = new THREE.Vector3();

@@ -97,9 +97,9 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     addBox(x1 - .08, x1 + .08, zc - w / 2, zc + w / 2, HH);
   }
   zones.push({ id: 'atrio', name: 'El atrio', minX: x0, maxX: x1, minZ: z0, maxZ: z1, pri: 0,
-    text: 'El atrio medía 100 codos de largo y 50 de ancho. Lo rodeaban cortinas de lino fino torcido de 5 codos de alto, colgadas de 60 columnas con basas de bronce y ganchos y molduras de plata.', ref: 'Éxodo 27:9-18' });
+    text: 'El atrio medía 100 por 50 codos y lo rodeaban cortinas de lino fino.', ref: 'Éxodo 27:9-18' });
   zones.push({ id: 'puerta', name: 'La puerta del atrio', minX: x1 - 2, maxX: x1 + 3, minZ: cz - gateHalf, maxZ: cz + gateHalf, pri: 1,
-    text: 'La única entrada, al oriente: una cortina de 20 codos de azul, púrpura, carmesí y lino fino torcido, obra de recamador, sobre 4 columnas. Hay un solo camino para acercarse a Dios.', ref: 'Éxodo 27:16; Juan 10:9' });
+    text: 'La única entrada, al oriente, muestra que hay un solo camino para acercarse a Dios.', ref: 'Éxodo 27:16; Juan 10:9' });
 
   /* ---------------- ALTAR DE BRONCE: 5 × 5 × 3 codos con cuernos ---------------- */
   const altX = cx + LX / 4, aw = 5 * C, ah = 3 * C;
@@ -117,7 +117,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const tongues = [];
   for (let i = 0; i < 7; i++) { const f = new THREE.Mesh(new THREE.ConeGeometry(.16 + (i % 3) * .05, .7, 6).translate(0, .35, 0), tongueM); f.position.set(altX + Math.sin(i * 2.4) * aw * .3, ah + .04, cz + Math.cos(i * 1.7) * aw * .3); f.castShadow = false; T.add(f); tongues.push(f); }
   zones.push({ id: 'altar', name: 'El altar de bronce', minX: altX - 3, maxX: altX + 3, minZ: cz - 3, maxZ: cz + 3, pri: 2,
-    text: 'Altar de madera de acacia cubierto de bronce, de 5 codos de largo y ancho y 3 de alto, con un cuerno en cada esquina y una rejilla de bronce. Allí se ofrecían los holocaustos. El fuego se mantenía encendido continuamente sobre el altar; no se apagaba. Apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Levítico 6:13; Juan 1:29' });
+    text: 'En el altar de bronce se ofrecían los holocaustos y apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Levítico 6:13; Juan 1:29' });
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
   const lavX = cx + 10 * C;
@@ -128,7 +128,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   // Ondas suaves en el agua donde el sacerdote se lava las manos (Éxodo 30:18-21)
   const ripples = []; for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 28), new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(lavX + .3 - i * .06, 1.088, cz + (i - 1) * .12); r.renderOrder = 2; r.castShadow = r.receiveShadow = false; T.add(r); ripples.push({ r, k: i / 3 }); }
   zones.push({ id: 'fuente', name: 'La fuente de bronce', minX: lavX - 2, maxX: lavX + 2, minZ: cz - 2, maxZ: cz + 2, pri: 2,
-    text: 'Entre la tienda y el altar estaba la fuente de bronce con su base, llena de agua, para que Aarón y sus hijos lavaran sus manos y sus pies antes de ministrar.', ref: 'Éxodo 30:17-21; 38:8' });
+    text: 'En la fuente de bronce los sacerdotes lavaban sus manos y pies antes de ministrar.', ref: 'Éxodo 30:17-21; 38:8' });
 
   /* ---------------- LA TIENDA: 30 × 10 × 10 codos ---------------- */
   const tx0 = cx - 30 * C, tx1 = cx, tz0 = cz - 5 * C, tz1 = cz + 5 * C, TH = 10 * C, wallT = .22;
@@ -202,7 +202,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const incense = [];
   for (let i = 0; i < 7; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0, color: 0xeef0ff })); s.renderOrder = 2; T.add(s); incense.push({ s, k: i / 7 }); }
   zones.push({ id: 'santo', name: 'El Lugar Santo', minX: veilX, maxX: tx1, minZ: tz0, maxZ: tz1, pri: 3,
-    text: 'Primera sala de la tienda (20 codos). Al norte, la mesa de los panes de la Presencia con 12 panes en dos hileras de seis; al sur, el candelabro de oro puro con siete lámparas; y delante del velo, el altar de oro del incienso.', ref: 'Éxodo 25:23-40; 26:35; 30:1-8; Levítico 24:5-9' });
+    text: 'El Lugar Santo tenía la mesa de los panes, el candelabro de oro y el altar del incienso.', ref: 'Éxodo 25:23-40; 26:35; 30:1-8; Levítico 24:5-9' });
 
   /* ---------------- VELO: 4 columnas con basas de plata ---------------- */
   for (let i = 0; i < 4; i++) { await pace();
@@ -212,7 +212,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const vh = 5 * C; for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(vh - .58, TH - .1), M.veil, veilX, (TH - .1) / 2, cz + s * (vh + .58) / 2); p.rotation.y = Math.PI / 2; }
   addBox(veilX - .1, veilX + .1, tz0, cz - .58, TH); addBox(veilX - .1, veilX + .1, cz + .58, tz1, TH);
   zones.push({ id: 'velo', name: 'El velo', minX: veilX - .8, maxX: veilX + .8, minZ: tz0, maxZ: tz1, pri: 4,
-    text: 'Velo de azul, púrpura, carmesí y lino fino torcido con querubines bordados, colgado de 4 columnas cubiertas de oro. Separaba el Lugar Santo del Santísimo. Cuando Jesús murió, el velo del templo se rasgó en dos.', ref: 'Éxodo 26:31-33; Mateo 27:51; Hebreos 10:19-20' });
+    text: 'El velo separaba el Lugar Santo del Santísimo y se rasgó en dos cuando Jesús murió.', ref: 'Éxodo 26:31-33; Mateo 27:51; Hebreos 10:19-20' });
 
   /* ---------------- LUGAR SANTÍSIMO: 10 × 10 × 10 codos ---------------- */
   const hhX = tx0 + 5 * C;
@@ -239,9 +239,9 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const mg = new THREE.Sprite(gs.material); mg.position.set(mnX, lampY + .1, mnZ); mg.scale.set(1.6, 1.2, 1); T.add(mg);
   const fg = new THREE.Sprite(new THREE.SpriteMaterial({ map: gs.material.map, color: 0xff9a40, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); fg.position.set(altX, ah + .5, cz); fg.scale.set(3, 2, 1); T.add(fg);
   zones.push({ id: 'santisimo', name: 'El Lugar Santísimo', minX: tx0, maxX: veilX - .8, minZ: tz0, maxZ: tz1, pri: 5,
-    text: 'Un cubo de 10 codos por lado. Allí solo entraba el sumo sacerdote, una vez al año, en el Día de la Expiación, con la sangre del sacrificio. Ahora, por la sangre de Jesús, tenemos libertad para entrar.', ref: 'Levítico 16; Hebreos 9:7; 10:19' });
+    text: 'Al Lugar Santísimo solo entraba el sumo sacerdote una vez al año con la sangre del sacrificio.', ref: 'Levítico 16; Hebreos 9:7; 10:19' });
   zones.push({ id: 'arca', name: 'El arca del pacto', minX: hhX - 1.6, maxX: hhX + 1.6, minZ: cz - 1.4, maxZ: cz + 1.4, pri: 6,
-    text: 'Arca de madera de acacia cubierta de oro puro: 2½ codos de largo, 1½ de ancho y 1½ de alto, con varas para llevarla. Encima, el propiciatorio con dos querubines de oro. Dentro: las tablas del pacto, la vasija de oro con el maná y la vara de Aarón que retoñó.', ref: 'Éxodo 25:10-22; Hebreos 9:4' });
+    text: 'El arca del pacto, cubierta de oro, guardaba las tablas, el maná y la vara de Aarón.', ref: 'Éxodo 25:10-22; Hebreos 9:4' });
 
   /* ---------------- Columna de nube sobre la tienda ---------------- */
   const cloudTex = tex(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,.85)'); gr.addColorStop(.6, 'rgba(245,245,250,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });

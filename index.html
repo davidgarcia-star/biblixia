@@ -106,8 +106,11 @@
 <!-- Controles táctiles -->
 <div id="touch" class="hidden">
   <div id="joy" aria-label="Joystick para caminar"><div id="joyRing"></div><div id="joyKnob"></div></div>
+  <div id="wheel" aria-label="Guía del vehículo: desliza a la izquierda o a la derecha"><div id="wheelRim"><i class="sp a"></i><i class="sp b"></i><i class="sp c"></i><i class="hub"></i><i class="mark"></i></div><span class="wl">◀</span><span class="wr">▶</span></div>
   <div class="actions">
     <button id="tJump" aria-label="Saltar">SALTAR</button>
+    <button id="tGas" class="pedal" aria-label="Acelerar">⬆<small>ACELERAR</small></button>
+    <button id="tRev" class="pedal" aria-label="Frenar y retroceder">⬇<small>RETROCEDER</small></button>
     <button id="tTake" aria-label="Tomar">TOMAR<small>T</small></button>
     <button id="tRun" class="small" aria-label="Correr">CORRER</button>
     <button id="tTurbo" class="small turbo" aria-label="Turbo">⚡ TURBO</button>
@@ -264,6 +267,6 @@
 <div id="glLost" class="screen hidden"><div class="spinner"></div><p class="sub">Recuperando los gráficos… tu progreso está guardado.</p></div>
 <div id="loading" class="screen"><div class="spinner"></div><p class="sub">Construyendo la ciudad…</p></div>
 
-<script type="module" src="js/biblixia.min.js?v=20261106c"></script>
+<script type="module" src="js/biblixia.min.js?v=20261106d"></script>
 </body>
 </html>

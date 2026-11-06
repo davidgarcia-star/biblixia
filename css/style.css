@@ -589,3 +589,24 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 #tSit{right:100px;bottom:186px;width:110px;height:40px;border-radius:20px;background:linear-gradient(180deg,#bfe6ff,#4fa3d8);color:#06223a;font-weight:900}
 #tSit.hidden,#btnSit.hidden{display:none!important}
 #touch.pc #tSit{right:130px;bottom:58px;width:120px}
+
+/* ===== Conducir en celular: guía (volante) a la izquierda y pedales ACELERAR / RETROCEDER a la derecha ===== */
+#wheel,#tGas,#tRev{display:none!important}
+#touch.drive #joy,#touch.drive #tJump,#touch.drive #tRun,#touch.drive #tTurbo,#touch.drive #tSit,#touch.drive #tSwap{display:none!important}
+#touch.drive:not(.pc) #wheel{display:block!important}
+#touch.drive:not(.pc) #tGas,#touch.drive:not(.pc) #tRev{display:flex!important}
+#wheel{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));width:168px;height:168px;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+#wheelRim{position:absolute;inset:0;border-radius:50%;border:14px solid #2b2b30;box-shadow:0 8px 26px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.18),0 0 0 2px rgba(255,255,255,.25);background:rgba(255,255,255,.06);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);transition:transform .18s ease-out}
+#wheel.on #wheelRim{transition:none}
+#wheelRim .sp{position:absolute;left:50%;top:50%;width:62px;height:12px;margin:-6px 0 0 0;background:#2b2b30;border-radius:6px;transform-origin:0 50%}
+#wheelRim .sp.a{transform:rotate(180deg)}#wheelRim .sp.b{transform:rotate(0deg)}#wheelRim .sp.c{transform:rotate(90deg)}
+#wheelRim .hub{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff7d6,#f5c542 55%,#b8820f);box-shadow:0 3px 8px rgba(0,0,0,.4)}
+#wheelRim .mark{position:absolute;left:50%;top:-14px;width:10px;height:14px;margin-left:-5px;background:#f5c542;border-radius:3px}
+#wheel .wl,#wheel .wr{position:absolute;top:50%;margin-top:-10px;font-size:16px;color:rgba(255,255,255,.75);text-shadow:0 1px 3px #000}
+#wheel .wl{left:-16px}#wheel .wr{right:-16px}
+.actions .pedal{flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:900;line-height:1;border-radius:22px;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.actions .pedal small{font-size:10px;letter-spacing:.5px;margin-top:4px}
+#tGas{right:0;bottom:6px;width:100px;height:100px;background:linear-gradient(180deg,#8ff0a8,#2f9e53);color:#06260f}
+#tRev{right:0;bottom:116px;width:100px;height:60px;background:linear-gradient(180deg,#ffb0a0,#c8452f);color:#2a0700}
+.actions .pedal.on{filter:brightness(1.25);transform:scale(.95)}
+#touch.drive #tHonk{right:112px;bottom:88px}
