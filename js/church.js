@@ -127,6 +127,21 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     const b = new THREE.Mesh(beamGeo, m); b.position.set(cx - 8 + i * 4, y0 + H - .3, SZ - 1); group.add(b); beams.push({ b, ph: i * 1.3 });
     box(.5, .4, .5, mat(0x111111, { metalness: .8 }), cx - 8 + i * 4, y0 + H - .3, SZ - 1, { cast: false });
   });
+  // polvo dorado que flota lentamente dentro de los haces de luz del escenario
+  const MOTES = 90, moteBase = new Float32Array(MOTES * 4), motePos = new Float32Array(MOTES * 3);
+  for (let i = 0; i < MOTES; i++) { moteBase[i * 4] = cx - 8 + (i % 5) * 4 + (r() - .5) * 1.6; moteBase[i * 4 + 1] = r(); moteBase[i * 4 + 2] = SZ - 1 + (r() - .5) * 1.6; moteBase[i * 4 + 3] = r() * 6.28; }
+  const moteGeo = new THREE.BufferGeometry(); moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+  const moteTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'), gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,240,200,1)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
+  const motes = new THREE.Points(moteGeo, new THREE.PointsMaterial({ size: .09, map: moteTex, color: 0xffe6a8, transparent: true, opacity: .7, blending: THREE.AdditiveBlending, depthWrite: false }));
+  motes.frustumCulled = false; group.add(motes);
+  const updMotes = t => {
+    for (let i = 0; i < MOTES; i++) {
+      const b = i * 4, u = (moteBase[b + 1] + t * .025) % 1, ph = moteBase[b + 3];
+      motePos[i * 3] = moteBase[b] + Math.sin(t * .4 + ph) * .3; motePos[i * 3 + 1] = y0 + SH + .4 + u * (H - SH - 1); motePos[i * 3 + 2] = moteBase[b + 2] + Math.cos(t * .33 + ph) * .3;
+    }
+    moteGeo.attributes.position.needsUpdate = true;
+  };
+  updMotes(0);
   // banda: batería, guitarra, bajo, teclado, cantantes con micrófonos
   const yS = y0 + SH, metal = mat(0xc0c8d0, { metalness: .9, roughness: .2 });
   const drumX = cx, drumZ = Z1 - 2.2;
@@ -208,6 +223,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       if ((lt += dt) > 4) { lt = 0; li = (li + 1) % lyrics.length; }
       // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
+      if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
       for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
       for (const d of dance) {
         if (d.kind === 'jump') d.o.position.y = d.y + Math.max(0, Math.sin(t * 6 + d.ph)) * .35;
