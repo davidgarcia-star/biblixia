@@ -66,12 +66,6 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 .coins.done .big{color:#7ef0a4}
 .timer{top:14px;left:50%;transform:translateX(-50%);text-align:center;min-width:120px}
 .timer.low .big{color:#ff6b6b}
-.mission{top:14px;left:50%;transform:translateX(-50%);text-align:center;min-width:220px;max-width:min(360px,64vw)}
-.mission .mtext{font-size:13px;font-weight:600;color:#dfe8f5;margin-top:2px}
-.mission.low .big{color:#ff6b6b}
-.mission .bar i{background:linear-gradient(90deg,#6fd0ff,#ffd34d)}
-#hud.mmode .coins,#hud.mmode .timer{display:none}
-#hud.mmode .hint{top:14px}
 .bar{height:4px;border-radius:4px;background:rgba(255,255,255,.15);margin-top:6px;overflow:hidden}
 .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--gold),#ffe9a8)}
 .topright{position:absolute;top:14px;right:14px;display:flex;gap:8px;pointer-events:auto}
