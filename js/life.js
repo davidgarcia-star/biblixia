@@ -128,6 +128,23 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // alfombra y planta grande
     box(3, .015, 2.2, mat(0x8a8f96, { roughness: 1 }), cx - 4, fy + .15, Z1 - 2.2, { cast: false });
     {
+      // Biblia abierta sobre la mesa de centro: tapa de cuero, páginas con renglones y cinta roja
+      const bb = new THREE.Group(); bb.position.set(cx - 4.15, fy + .48, Z1 - 2.12); bb.rotation.y = .35; group.add(bb);
+      const c = document.createElement('canvas'); c.width = 128; c.height = 160; const g = c.getContext('2d');
+      g.fillStyle = '#f6efdc'; g.fillRect(0, 0, 128, 160); g.fillStyle = '#9a8f7c';
+      for (let y = 14; y < 150; y += 7) g.fillRect(12, y, 104 - ((y * 37) % 23), 2);
+      g.fillStyle = '#a8322c'; g.fillRect(12, 8, 26, 3);
+      const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace;
+      const coverM = mat(0x3a2116, { roughness: .7 }), edgeM = mat(0xece4cf, { roughness: .9 }), pageM = new THREE.MeshStandardMaterial({ map: pt, roughness: .9 });
+      const cover = new THREE.Mesh(new THREE.BoxGeometry(.46, .015, .32), coverM); cover.position.y = .008; bb.add(cover);
+      for (const s of [-1, 1]) {
+        const blockP = new THREE.Mesh(new THREE.BoxGeometry(.21, .03, .29), edgeM); blockP.position.set(s * .112, .03, 0); blockP.rotation.z = s * .06; bb.add(blockP);
+        const page = new THREE.Mesh(new THREE.PlaneGeometry(.2, .28), pageM); page.rotation.set(-Math.PI / 2, -s * .06, 0); page.position.set(s * .112, .049, 0); bb.add(page);
+      }
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(.012, .003, .2), mat(0xb3202a, { roughness: .6 })); rib.position.set(.01, .05, .12); rib.rotation.y = .15; bb.add(rib);
+      bb.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+    }
+    {
       // planta grande en maceta (ficus de hoja de violín) en la esquina, junto al sofá y el ventanal
       const plX = cx - 6.1, plZ = Z1 - .6, potH = .55;
       cyl(.28, .21, potH, mat(0x2b2d31, { roughness: .5, metalness: .2 }), plX, fy + .14 + potH / 2, plZ, 20);
@@ -195,6 +212,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(X0 + 1.3, cz + .4, fy, '☕ Tomar café', () => life.fx('coffee'));
     act(cx - 1.8, cz - 2.6, fy, '🍽 Comer', () => life.fx('eat'));
     act(cx - 4, Z1 - 1.8, fy, '🛋 Descansar en el sofá', () => life.fx('rest'));
+    act(cx - 3.6, Z1 - 3, fy, '📖 Leer la Biblia', () => life.fx('read'), 1.1);
     W.house = { cx, cz, door: [cx, Z0 - 1.5], minX: X0, maxX: X1, minZ: Z0, maxZ: Z1 };
     W.zones.push({ id: 'bano', name: 'Baño', minX: BX0, maxX: X1, minZ: Z0, maxZ: BZ1, pri: 6, text: 'Tu baño está preparado: la bañera llena con espuma, la ducha, toallas limpias y el lavamanos. Al entrar te pones la bata de baño. «Lávame, y seré más blanco que la nieve.»', ref: 'Salmo 51:7' });
     W.zones.push({ id: 'casa', name: 'Mi casa', minX: X0, maxX: X1, minZ: Z0, maxZ: Z1, pri: 5, text: 'Bienvenido a tu casa. Aquí puedes dormir, ver la tele, bañarte, comer, tomar agua o café y descansar en el sofá. «Pero yo y mi casa, serviremos al SEÑOR.»', ref: 'Josué 24:15' });

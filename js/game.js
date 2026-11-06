@@ -2070,9 +2070,10 @@ function driveBoat(dt) {
 /* ---------- Vida diaria: efectos al comer, beber, dormir, bañarse ---------- */
 const lifeUsed = new Set();
 function lifeFx(kind, extra) {
-  const ov = $('lifefx'); const bonus = { sleep: 8, shower: 5, bath: 5, wash: 2, tvon: 2, eat: 4, water: 3, coffee: 3, rest: 3, worship: 6 }[kind] || 0;
+  const ov = $('lifefx'); const bonus = { sleep: 8, shower: 5, bath: 5, wash: 2, tvon: 2, eat: 4, water: 3, coffee: 3, rest: 3, worship: 6, read: 5 }[kind] || 0;
   const first = !lifeUsed.has(kind); lifeUsed.add(kind);
-  const msg = { sleep: '😴 Dormiste un rato… ¡recuperaste fuerzas!', shower: '🚿 ¡Qué baño tan fresco!', bath: '🛁 ¡Qué rico un baño de espuma calientito!', wash: '🧼 Te lavaste las manos y la cara', tvon: '📺 Tele encendida: MIPROAA TV', tvoff: '📺 Tele apagada', eat: extra ? `😋 ¡Qué rico! Compraste en el puesto de ${extra.toLowerCase()}` : '🍽 ¡Buen provecho!', water: '💧 ¡Agua fresca! Te hidrataste', coffee: '☕ ¡Un cafecito calientito!', rest: '🛋 Descansaste en el sofá', worship: '🙌 ¡Gloria a Dios! Adoraste con todo tu corazón' }[kind] || '✨';
+  const msg = { sleep: '😴 Dormiste un rato… ¡recuperaste fuerzas!', shower: '🚿 ¡Qué baño tan fresco!', bath: '🛁 ¡Qué rico un baño de espuma calientito!', wash: '🧼 Te lavaste las manos y la cara', tvon: '📺 Tele encendida: MIPROAA TV', tvoff: '📺 Tele apagada', eat: extra ? `😋 ¡Qué rico! Compraste en el puesto de ${extra.toLowerCase()}` : '🍽 ¡Buen provecho!', water: '💧 ¡Agua fresca! Te hidrataste', coffee: '☕ ¡Un cafecito calientito!', rest: '🛋 Descansaste en el sofá', read: '📖 ¡Alimentaste tu espíritu con la Palabra!', worship: '🙌 ¡Gloria a Dios! Adoraste con todo tu corazón' }[kind] || '✨';
+  if (kind === 'read') { const v = VERSES[Math.random() * VERSES.length | 0]; showInfo({ name: '📖 Leíste la Biblia', text: '«' + v[0] + '»', ref: v[1] + ' · LBLA' }); }
   if (kind === 'worship') setTimeout(() => sound.say('¡Aleluya! ¡Gloria a Dios!', { male: save.player.gender !== 'f', rate: .9 }), 600);
   if (kind !== 'tvon' && kind !== 'tvoff') { ov.className = 'lifefx ' + (kind === 'bath' ? 'shower bath' : kind === 'wash' ? 'water' : kind); void ov.offsetWidth; ov.classList.add('on'); }
   sound.life(kind);

@@ -343,6 +343,7 @@ export class Sound {
     else if (kind === 'bath') { nz(0, 1.6, 900, .6, .18); for (let i = 0; i < 6; i++) this.note(500 + Math.random() * 500, .06, { type: 'sine', vol: .06, when: .2 + i * .22, slide: 900 }); }
     else if (kind === 'shower') { nz(0, 1.4, 5000, .4, .25, 'highpass'); nz(0, 1.4, 1800, .7, .12); }
     else if (kind === 'worship') [[262, 330, 392], [349, 440, 523], [392, 494, 587]].forEach((ch, i) => ch.forEach(f => this.note(f, 1.2, { type: 'triangle', vol: .05, when: i * .5 })));
+    else if (kind === 'read') { nz(0, .18, 4200, .7, .14, 'highpass'); nz(.32, .16, 3800, .7, .1, 'highpass'); [659, 784].forEach((f, i) => this.note(f, .8, { type: 'sine', vol: .05, when: .5 + i * .25 })); }
     else if (kind === 'sleep' || kind === 'rest') [523, 440, 349, 262].forEach((f, i) => this.note(f, .9, { type: 'sine', vol: .07, when: i * .35 }));
   }
   // Ritmo de alabanza (batería, palmas y acordes) mientras estás en la iglesia
