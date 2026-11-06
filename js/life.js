@@ -151,6 +151,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
     const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false; steam(X0 + .45, fy + 1.3, cz + .4);
+    {
+      // reloj de pared sobre el mueble de la cocina: sus manecillas marcan la hora real del dispositivo
+      const ck = new THREE.Group(); ck.position.set(X0 + T / 2 + .035, fy + 2.35, cz + 1.2); ck.rotation.y = Math.PI / 2; group.add(ck);
+      const R = .3, c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+      g.fillStyle = '#fbfaf6'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#1c1d20'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (let k = 0; k < 60; k++) { const a = k / 60 * Math.PI * 2, r0 = k % 5 ? 116 : 106; g.lineWidth = k % 5 ? 2 : 6; g.beginPath(); g.moveTo(128 + Math.sin(a) * r0, 128 - Math.cos(a) * r0); g.lineTo(128 + Math.sin(a) * 122, 128 - Math.cos(a) * 122); g.strokeStyle = '#1c1d20'; g.stroke(); }
+      g.font = '700 26px system-ui, sans-serif'; for (let k = 1; k <= 12; k++) { const a = k / 12 * Math.PI * 2; g.fillText(String(k), 128 + Math.sin(a) * 86, 129 - Math.cos(a) * 86); }
+      const ft = new THREE.CanvasTexture(c); ft.colorSpace = THREE.SRGBColorSpace;
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(R + .03, R + .03, .05, 40), mat(0x1c1d20, { roughness: .35, metalness: .4 })); rim.rotation.x = Math.PI / 2; ck.add(rim);
+      const face = new THREE.Mesh(new THREE.CircleGeometry(R, 40), new THREE.MeshStandardMaterial({ map: ft, roughness: .6 })); face.position.z = .027; ck.add(face);
+      const hand = (len, w, m, z) => { const p = new THREE.Group(); p.position.z = z; const b = new THREE.Mesh(new THREE.BoxGeometry(w, len, .006), m); b.position.y = len / 2 - .03; p.add(b); ck.add(p); return p; };
+      const handM = mat(0x1c1d20, { roughness: .4 }), hH = hand(R * .55, .022, handM, .033), hM = hand(R * .8, .014, handM, .038), hS = hand(R * .88, .006, mat(0xc0282a), .043);
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(.014, .014, .02, 12), mat(0xc0282a)); pin.rotation.x = Math.PI / 2; pin.position.z = .046; ck.add(pin);
+      ck.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+      houseUpd.push(() => { const d = new Date(), s = d.getSeconds() + d.getMilliseconds() / 1000, m = d.getMinutes() + s / 60, h = (d.getHours() % 12) + m / 60; hS.rotation.z = -s / 60 * Math.PI * 2; hM.rotation.z = -m / 60 * Math.PI * 2; hH.rotation.z = -h / 12 * Math.PI * 2; });
+    }
     box(1.4, .06, .9, trimM, cx - 1.8, fy + .76, cz - 1.6); for (const [a, b] of [[-.6, -.35], [.6, -.35], [-.6, .35], [.6, .35]]) box(.06, .74, .06, trimM, cx - 1.8 + a, fy + .37, cz - 1.6 + b); solid(cx - 2.5, cx - 1.1, cz - 2.05, cz - 1.15, fy + .78);
     // comida servida en la mesa: arroz, habichuelas, pollo, ensalada, jugo, pan y frutas
     buildFood(group, cx - 1.8, fy + .79, cz - 1.6);
