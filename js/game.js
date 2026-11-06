@@ -1157,7 +1157,7 @@ async function buildWorld(cfg) {
       const sp = W.treasureSpots && W.treasureSpots[def.spot]; if (!sp) continue;
       const y0 = sp[2] || 0;
       const g = new THREE.Group(); g.position.set(sp[0], y0, sp[1]);
-      const label = nameSprite(def.gift, def.name); label.position.y = 1.75; label.scale.set(1.5, .38, 1); g.add(label);
+      const label = nameSprite(def.gift, def.name); label.position.y = 1.65; label.scale.set(1.1, .28, 1); g.add(label);
       const gift = giftBox(); gift.position.y = 1.0; gift.scale.setScalar(1.3); g.add(gift);
       const glow = new THREE.Sprite(M.glow); glow.scale.set(1.6, 1.6, 1); glow.position.y = 1.0; g.add(glow);
       group.add(g);
@@ -1762,7 +1762,7 @@ document.querySelectorAll('#touch [data-key]').forEach(btn => {
 const tap = (id, fn) => { const b = $(id); b.addEventListener('touchstart', e => { e.preventDefault(); sound.unlock(); fn(); b.classList.add('on'); }, { passive: false }); b.addEventListener('touchend', () => b.classList.remove('on')); b.addEventListener('mousedown', fn); };
 tap('tJump', () => jumpPressed = true);
 tap('tTake', () => { if (state === 'talk') takeGift(); else takePressed = true; });
-function toggleRun() { runToggle = !runToggle; $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER'; toast(runToggle ? '🏃 ¡Corriendo! (toca otra vez para caminar)' : '🚶 Caminando', '#ffd34d'); sound.click(); }
+function toggleRun() { runToggle = !runToggle; $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER'; toast(runToggle ? '🏃 Modo correr' : '🚶 Modo caminar', '#ffd34d', true); sound.click(); }
 tap('tRun', () => { if (state === 'play') toggleRun(); });
 tap('tTurbo', () => toggleTurbo());
 tap('tSwap', () => { if (state === 'play') swapPair(); });
@@ -2131,7 +2131,7 @@ function lifeFx(kind, extra) {
 /* ---------- Turbo (correr ultra rápido) ---------- */
 function toggleTurbo() {
   if (lvlIdx < 1) { P.turbo = false; toast('🔒 El turbo se desbloquea en el nivel Intermedio', '#ffd34d'); sound.hurt(); return; }
-  P.turbo = !P.turbo; $('tTurbo').classList.toggle('active', !!P.turbo); toast(P.turbo ? '⚡ ¡Turbo activado!' : 'Turbo desactivado', '#ffd34d'); sound.click(); }
+  P.turbo = !P.turbo; $('tTurbo').classList.toggle('active', !!P.turbo); toast(P.turbo ? '⚡ Modo turbo' : '🏃 Turbo apagado', '#ffd34d', true); sound.click(); }
 
 /* ---------- Mapa completo ---------- */
 function openMap() { if (state !== 'play') return; state = 'map'; for (const c in keys) keys[c] = false; $('bigmap').classList.remove('hidden'); drawBigMap(); }
@@ -2247,7 +2247,7 @@ function showInfo(z) {
   $('info').classList.add('show'); infoTimer = 12;
 }
 
-function toast(txt, color = '#ff6b6b') { const t = $('toast'); t.style.color = color; t.textContent = txt; t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 1100); }
+function toast(txt, color = '#ff6b6b', mini = false) { const t = $('toast'); t.style.color = color; t.textContent = txt; t.classList.toggle('mini', mini); t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 1100); }
 function toastOld(txt) { const t = $('toast'); t.textContent = txt; t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 900); }
 
 /* =========================================================

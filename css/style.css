@@ -610,3 +610,22 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 #tRev{right:0;bottom:6px;width:100px;height:60px;background:linear-gradient(180deg,#ffb0a0,#c8452f);color:#2a0700}
 .actions .pedal.on{filter:brightness(1.25);transform:scale(.95)}
 #touch.drive #tHonk{right:112px;bottom:88px}
+
+/* ===== Celular: versículos, avisos y diálogos de personajes más compactos ===== */
+#toast.mini{font-size:18px;font-weight:700;top:30%}
+@media (pointer:coarse),(max-width:760px){
+  #toast{font-size:20px;max-width:88vw;text-align:center;top:32%}
+  #toast.mini{font-size:13px;font-weight:700;top:auto;bottom:calc(max(18px,env(safe-area-inset-bottom)) + 168px);left:auto;right:max(14px,env(safe-area-inset-right));transform:none;background:rgba(10,16,30,.6);padding:4px 10px;border-radius:999px;text-shadow:none}
+  #verse{align-items:flex-end;padding:10px 10px max(14px,env(safe-area-inset-bottom));background:rgba(4,8,16,.25);backdrop-filter:none;-webkit-backdrop-filter:none}
+  #verse .card{width:min(440px,100%);padding:12px 14px 10px;border-radius:16px}
+  #verse .tag,#talk .tag{font-size:9.5px;letter-spacing:2px}
+  #verse .vtext{font-size:14px;line-height:1.4;margin:6px 0 4px}
+  #verse .vref{font-size:11.5px;margin-bottom:8px}
+  #verse .btn,#talk .btn{padding:8px 16px;font-size:13px}
+  #talk{padding:10px 10px max(14px,env(safe-area-inset-bottom));background:linear-gradient(0deg,rgba(4,8,16,.5),rgba(4,8,16,0) 55%)}
+  #talk .card.talk{width:min(460px,100%);padding:12px 14px 10px;border-radius:16px}
+  #talk .card.talk h3{font-size:16px;margin:2px 0 4px}
+  #talk .tmsg{font-size:13px;line-height:1.42}
+  #talk .card.talk .vref{font-size:11.5px;margin:5px 0 4px}
+  #talk .tgift{font-size:12.5px;padding:6px 10px;margin-bottom:8px;border-radius:10px}
+}

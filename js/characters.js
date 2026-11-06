@@ -237,7 +237,7 @@ export function nameSprite(text, sub) {
   g.fillText(text, 256, 98);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false }));
-  s.scale.set(1.6, .4, 1);
+  s.scale.set(1.15, .29, 1);
   return s;
 }
 
