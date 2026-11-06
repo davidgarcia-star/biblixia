@@ -1633,15 +1633,37 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-// Ratón: arrastrar para girar la cámara
+// Girar la cámara (panorama): los movimientos del ratón o del dedo se acumulan y se aplican una vez por cuadro.
+// Así nunca se acumula trabajo entre cuadros y un salto grande (por ejemplo tras un tirón) no da vueltas locas.
+const lookAcc = { x: 0, y: 0 };
+const addLook = (dx, dy, kx, ky) => { lookAcc.x += dx * kx; lookAcc.y += dy * ky; };
+function applyLook() {
+  if (!lookAcc.x && !lookAcc.y) return;
+  const mx = .35; // giro máximo por cuadro (radianes)
+  cam.yaw -= THREE.MathUtils.clamp(lookAcc.x, -mx, mx);
+  cam.pitch = THREE.MathUtils.clamp(cam.pitch + THREE.MathUtils.clamp(lookAcc.y, -mx, mx), -.2, 1.1);
+  lookAcc.x = lookAcc.y = 0;
+}
+// zonas de la interfaz donde arrastrar NO gira la cámara (botones, joystick, mapa, carteles que se desplazan)
+const uiTarget = el => !!(el && el.closest && (el.closest('button') || el.closest('a') || el.closest('input') || el.closest('#joy') || el.closest('.topright') || el.closest('#minimap') || el.closest('#info') || el.closest('.screen:not(.hidden)')));
+
+// Ratón: arrastrar en cualquier parte del juego (no solo sobre el lienzo) para girar la cámara
 let drag = null;
-canvas.addEventListener('mousedown', e => { drag = { x: e.clientX, y: e.clientY }; });
-addEventListener('mouseup', () => drag = null);
-addEventListener('mousemove', e => {
-  if (!drag || state !== 'play') return;
-  cam.yaw -= (e.clientX - drag.x) * .005; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (e.clientY - drag.y) * .004, -.2, 1.1);
-  drag = { x: e.clientX, y: e.clientY };
+addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' || state !== 'play' || e.button !== 0 || uiTarget(e.target)) return;
+  drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {} // sigue girando aunque el ratón salga de la ventana
 });
+addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!(e.buttons & 1) || state !== 'play') { drag = null; return; } // se soltó el botón fuera de la ventana: no quedarse pegado
+  addLook(e.clientX - drag.x, e.clientY - drag.y, .005, .004);
+  drag.x = e.clientX; drag.y = e.clientY;
+});
+const endDrag = e => { if (drag && (!e || e.pointerId === drag.id)) drag = null; };
+addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag); canvas.addEventListener('lostpointercapture', endDrag);
+addEventListener('dragstart', e => e.preventDefault()); // que el navegador no "arrastre" imágenes y corte el movimiento
+addEventListener('contextmenu', e => { if (state === 'play') e.preventDefault(); });
 canvas.addEventListener('wheel', e => { cam.dist = THREE.MathUtils.clamp(cam.dist + e.deltaY * .005, 2.6, 13); }, { passive: true });
 
 // Táctil: botones de dirección, saltar, tomar y correr; arrastrar en la pantalla para mirar
@@ -1668,21 +1690,31 @@ function toggleRun() { runToggle = !runToggle; $('tRun').classList.toggle('activ
 tap('tRun', () => { if (state === 'play') toggleRun(); });
 tap('tTurbo', () => toggleTurbo());
 tap('tSwap', () => { if (state === 'play') swapPair(); });
+// Dedo: deslizar en la pantalla (fuera de botones y joystick) para mirar alrededor
+const touchAlive = (list, id) => { for (const t of list) if (t.identifier === id) return true; return false; };
 addEventListener('touchstart', e => {
   if (state !== 'play') return;
+  // si el dedo que miraba ya no está en la pantalla (se perdió su "touchend"), se libera para no quedar congelado
+  if (look.id !== null && !touchAlive(e.touches, look.id)) look.id = null;
   for (const t of e.changedTouches) {
-    if (t.target.closest && (t.target.closest('#touch button') || t.target.closest('#joy') || t.target.closest('.topright') || t.target.closest('#minimap') || t.target.closest('#info'))) continue; // deslizar sobre el cartel del lugar lo desplaza sin girar la cámara
+    if (uiTarget(t.target)) continue; // deslizar sobre el cartel del lugar lo desplaza sin girar la cámara
     if (look.id === null) { look.id = t.identifier; look.x = t.clientX; look.y = t.clientY; }
   }
 }, { passive: true });
 addEventListener('touchmove', e => {
+  if (look.id === null) return;
+  if (state !== 'play') { look.id = null; return; }
   for (const t of e.changedTouches) if (t.identifier === look.id) {
-    cam.yaw -= (t.clientX - look.x) * .008; cam.pitch = THREE.MathUtils.clamp(cam.pitch + (t.clientY - look.y) * .005, -.2, 1.1);
+    addLook(t.clientX - look.x, t.clientY - look.y, .008, .005);
     look.x = t.clientX; look.y = t.clientY;
   }
 }, { passive: true });
-const endTouch = e => { for (const t of e.changedTouches) if (t.identifier === look.id) look.id = null; };
+const endTouch = e => { if (look.id !== null && (!touchAlive(e.touches, look.id) || touchAlive(e.changedTouches, look.id))) look.id = null; };
 addEventListener('touchend', endTouch); addEventListener('touchcancel', endTouch);
+// al cambiar de pestaña, bloquear la pantalla o perder el foco: soltar todo
+const releaseLook = () => { look.id = null; drag = null; lookAcc.x = lookAcc.y = 0; };
+addEventListener('blur', releaseLook);
+document.addEventListener('visibilitychange', () => { if (document.hidden) releaseLook(); });
 
 /* =========================================================
    ESTADO DEL JUEGO
@@ -2581,7 +2613,7 @@ function loop() {
       perf.acc = 0; perf.n = 0;
     }
   }
-  if (state === 'play') update(dt);
+  if (state === 'play') { applyLook(); update(dt); } else lookAcc.x = lookAcc.y = 0;
   birds.update(dt, elapsed, camera.position);
   fireflies.update(dt, elapsed, camera.position);
   butterflies.update(dt, elapsed, camera.position);
