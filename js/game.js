@@ -802,7 +802,7 @@ async function buildWorld(cfg) {
     W.tab = tab; W.zones = tab.zones;
     const tb = tab.bounds;
     await pace();
-    await buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
+    W.camp = await buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
     W.desert = { X0, tcx, tcz, tb };
     // sacerdotes, levitas, el arca en procesión y los corderos del sacrificio (desde el nivel Básico)
     await pace();
@@ -2625,6 +2625,7 @@ function loop() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
+    if (world.camp) world.camp.update(t);
     if (world.priests) {
       world.priests.update(dt, t, camera.position);
       // al acercarte al arca del pacto: música de adoración y los levitas proclaman «¡Kabod! ¡Presencia de Dios!»

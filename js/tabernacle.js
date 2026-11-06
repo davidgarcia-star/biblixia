@@ -318,6 +318,7 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   const stoneM = new THREE.MeshStandardMaterial({ color: 0x6d655b, roughness: 1, flatShading: true }), woodM = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 1 });
   const emberM = new THREE.MeshBasicMaterial({ color: 0xff7a1e }), fireM = new THREE.MeshBasicMaterial({ color: 0xffc04a });
   const stoneG = new THREE.DodecahedronGeometry(.13), logG = new THREE.CylinderGeometry(.045, .055, .8, 6), emberG = new THREE.CylinderGeometry(.24, .28, .06, 10), fireG = new THREE.ConeGeometry(.13, .38, 7);
+  const fireCore = new THREE.MeshBasicMaterial({ color: 0xfff2b0 }), FL = new THREE.Group(), fires = [];
   let nTent = 0;
   const pts = [];
   for (let i = 0; i < 36; i++) {
@@ -339,12 +340,26 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
       for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, st = new THREE.Mesh(stoneG, stoneM); st.position.set(Math.cos(a) * .42, .08, Math.sin(a) * .42); st.rotation.set(k, k * 2, 0); st.scale.y = .7; st.castShadow = true; f.add(st); }
       for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(logG, woodM); l.position.y = .16; l.rotation.set(0, k * 2.09, 1.25); l.translateY(-.05); f.add(l); }
       const em = new THREE.Mesh(emberG, emberM); em.position.y = .04; f.add(em);
-      const fl = new THREE.Mesh(fireG, fireM); fl.position.y = .28; f.add(fl);
       const wx = x + Math.sin(ry) * 4.6, wz = z + Math.cos(ry) * 4.6; addBox(wx - .5, wx + .5, wz - .5, wz + .5, 1);
+      // las llamas quedan fuera de la malla horneada para que puedan chisporrotear (se animan en update)
+      const fl = new THREE.Mesh(fireG, fireM); fl.position.set(wx, .28, wz); fl.userData.k = nTent * 1.7; fl.userData.b = 1; FL.add(fl); fires.push(fl);
+      const fi = new THREE.Mesh(fireG, fireCore); fi.position.set(wx, .22, wz); fi.scale.setScalar(.55); fi.userData.k = nTent * 2.3 + 1; fi.userData.b = .55; FL.add(fi); fires.push(fi);
     }
     S.add(t);
     addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
   }
   S.updateMatrixWorld(true);
   group.add(bakeStatic(S));
+  group.add(FL);
+  return {
+    // las llamas de las fogatas parpadean y se mecen como fuego de verdad
+    update(t) {
+      for (const f of fires) {
+        const k = f.userData.k, b = f.userData.b;
+        const sy = 1 + Math.sin(t * 13 + k) * .18 + Math.sin(t * 29 + k * 3) * .1;
+        f.scale.set(b * (1 - (sy - 1) * .4), b * sy, b * (1 - (sy - 1) * .4));
+        f.rotation.set(Math.sin(t * 5 + k) * .12, t * 2 + k, Math.cos(t * 6 + k) * .12);
+      }
+    },
+  };
 }
