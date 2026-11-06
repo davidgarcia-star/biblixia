@@ -1808,6 +1808,7 @@ addEventListener('touchstart', e => { if (joy.active && joy.id !== null && !touc
 /* =========================================================
    ESTADO DEL JUEGO
    ========================================================= */
+let missionMode = false; // misión aparte: buscar al apóstol Pablo (opción del menú, fuera de los niveles)
 let state = 'menu', L = null, lvlIdx = 0, timeLeft = 0, collected = 0, goal = 0, verseOrder = [], verseCursor = 0, menuT = 0;
 const sound = new Sound();
 try { sound.setMusic(localStorage.getItem(SAVE_KEY + '_music') !== '0'); sound.setSfx(localStorage.getItem(SAVE_KEY + '_sfx') !== '0'); } catch (e) {}
@@ -1831,7 +1832,7 @@ async function startLevelNow(i) {
   const wkey = worldKey(i);
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
-  goal = L.goal; collected = 0; timeLeft = L.time;
+  goal = missionMode ? Infinity : L.goal; collected = 0; timeLeft = L.time;
   P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
@@ -1856,6 +1857,7 @@ async function startLevelNow(i) {
   setTimeout(() => { if (state === 'play') toast('⏰ Toma los relojes azules para ganar +' + CLOCK_SECS + ' s', '#6fd0ff'); }, 3200);
   if (lvlIdx >= 1) setTimeout(() => { if (state === 'play') toast('⛵ ¡El barco ya está habilitado! Ve al muelle (oeste)', '#7ef0a4'); }, lvlIdx === 1 ? 5600 : 99999999);
   P.turbo = false; $('tTurbo').classList.remove('active'); $('tTurbo').textContent = lvlIdx < 1 ? '🔒 TURBO' : '⚡ TURBO'; $('tTurbo').classList.toggle('locked', lvlIdx < 1);
+  $('hud').classList.toggle('mmode', missionMode); setupMission();
   hudCache = {}; updateHUD();
   // precompilar los sombreadores para que no se congele al empezar
   camera.position.copy(cam.cur); camera.lookAt(P.pos.x, 1.5, P.pos.z);
@@ -1892,10 +1894,30 @@ function closeVerse() {
   if (collected >= goal) { endLevel(true); return; }
   state = 'play';
 }
-function endLevel(won) {
+function endLevel(won, why) {
   state = 'result'; sound.setMusicMode('menu');
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
+  if (P.car) { P.car.speed = 0; P.car = null; sound.carLoop(0); honkBtns(false); driveUI(false); }
+  $('btnRetry').textContent = missionMode ? 'Repetir misión' : 'Repetir nivel';
+  $('btnMenu').textContent = missionMode ? 'Menú principal' : 'Menú de niveles';
   let stars = 0;
+  if (missionMode) {
+    if (won) {
+      sound.win(); const f = MS.time / MS.total; stars = f > .4 ? 3 : f > .18 ? 2 : 1;
+      save.missionStars = Math.max(save.missionStars || 0, stars); persist();
+      $('resTitle').textContent = '¡Misión cumplida!';
+      $('resText').textContent = `Llevaste al apóstol Pablo al tabernáculo y te sobraron ${Math.ceil(MS.time)} segundos.`;
+      $('resVerse').textContent = '«¡Cuán hermosos son los pies de los que anuncian el evangelio del bien!» — Romanos 10:15';
+    } else {
+      sound.lose();
+      $('resTitle').textContent = '¡Se acabó el tiempo de la misión!';
+      $('resText').textContent = MS.phase === 'failed' && MS.car ? 'Pablo iba contigo, pero no llegaste al tabernáculo a tiempo. ¡Inténtalo otra vez!' : 'No llevaste al apóstol Pablo al tabernáculo a tiempo. ¡Inténtalo otra vez!';
+      $('resVerse').textContent = '«No nos cansemos, pues, de hacer el bien; porque a su tiempo segaremos, si no nos cansamos.» — Gálatas 6:9';
+    }
+    $('btnNext').classList.add('hidden');
+    $('resStars').textContent = won ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '';
+    show('result'); return;
+  }
   if (won) {
     sound.win(); const f = timeLeft / L.time; stars = f > .4 ? 3 : f > .18 ? 2 : 1;
     save.stars[lvlIdx] = Math.max(save.stars[lvlIdx], stars);
@@ -1932,7 +1954,7 @@ function pickClock(rad) {
   for (const c of world.clocks) {
     if (c.taken) continue;
     if (Math.hypot(P.pos.x - c.x, P.pos.z - c.z) < rad && Math.abs(P.pos.y + 1 - c.y) < 1.6) {
-      c.taken = true; c.g.visible = false; timeLeft += CLOCK_SECS; spawnBurst(c.g.position); sound.gift();
+      c.taken = true; c.g.visible = false; timeLeft += CLOCK_SECS; if (missionMode && MS.phase !== 'off') { MS.time += CLOCK_SECS; MS.total = Math.max(MS.total, MS.time); } spawnBurst(c.g.position); sound.gift();
       toast(`⏰ ¡+${CLOCK_SECS} segundos!`, '#6fd0ff'); updateHUD(); return false;
     }
   }
@@ -2173,9 +2195,127 @@ function drawBigMap() {
   if (W2.house) { g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('Mi casa', X(W2.house.cx), Z(W2.house.cz) + 16); g.font = '18px system-ui'; }
   if (W2.church) { g.fillText('⛪', X(W2.church.cx), Z(W2.church.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('MIPROAA', X(W2.church.cx), Z(W2.church.cz) + 16); }
   for (const n of W2.npcs) { g.fillStyle = n.given ? 'rgba(160,200,255,.5)' : n.treasure ? '#ff7ab6' : '#6fd0ff'; g.beginPath(); g.arc(X(n.x), Z(n.z), 4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); }
+  // misión: ruta hasta Pablo (azul) y de Pablo al tabernáculo (amarilla)
+  if (MS.phase === 'find' || MS.phase === 'carry') {
+    drawRoutes(g, X, Z, 4, [10, 7]);
+    g.font = '22px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (MS.phase === 'find') { g.fillText('🧔', X(MS.pablo.x), Z(MS.pablo.z)); label('APÓSTOL PABLO', MS.pablo.x, MS.pablo.z + 9 / k * 2, 12, '#6fd0ff'); }
+    const tt = tabTarget(); g.font = '22px system-ui'; g.fillText('⛺', X(tt.x), Z(tt.z)); label('LLEVAR A PABLO AQUÍ', tt.x, tt.z + 9 / k * 2, 12, '#ffd34d');
+  }
   // jugador
   g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading + Math.PI); g.fillStyle = '#ff4040'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 9); g.lineTo(0, 4); g.lineTo(-8, 9); g.closePath(); g.fill(); g.stroke(); g.restore();
-  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Mi casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>`;
+  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Mi casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>` + (MS.phase === 'find' || MS.phase === 'carry' ? `<span><i style="background:#6fd0ff"></i>Ruta hacia Pablo</span><span><i style="background:#ffd34d"></i>Ruta al tabernáculo</span>` : '');
+}
+
+/* =========================================================
+   MISIÓN: buscar al apóstol Pablo y llevarlo al tabernáculo en un vehículo (desde el nivel Intermedio)
+   ========================================================= */
+const MS = { phase: 'off', time: 0, total: 0, pablo: null, car: null, beams: [], sayT: 0, panel: null };
+function missionBeam(color) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 70, 16, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .28, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.castShadow = m.receiveShadow = false; m.renderOrder = 5; world.group.add(m); MS.beams.push(m); return m;
+}
+// destino: frente al atrio del tabernáculo, del lado de la ciudad
+const tabTarget = () => { const d = world.desert; return { x: d.tb.x0 - 20, z: d.tcz }; };
+// Ruta por las calles: punto → cruce de calles más cercano → por la calle horizontal y luego la vertical → destino
+function streetRoute(a, b) {
+  const W2 = world, xs = [], zs = [];
+  for (let i = 0; i <= W2.N; i++) { xs.push(W2.O + i * PITCH + STREET / 2); zs.push(W2.O + i * PITCH + STREET / 2); }
+  const near = (arr, v) => arr.reduce((p, c) => Math.abs(c - v) < Math.abs(p - v) ? c : p);
+  const inCity = p => p.x > W2.O && p.x < W2.O + W2.T && p.z > W2.O && p.z < W2.O + W2.T;
+  const ia = { x: near(xs, a.x), z: near(zs, a.z) }, ib = { x: near(xs, b.x), z: near(zs, b.z) };
+  const pts = [[a.x, a.z]];
+  if (inCity(a)) pts.push([ia.x, a.z]);
+  pts.push([ia.x, ia.z], [ib.x, ia.z], [ib.x, ib.z]);
+  if (inCity(b)) pts.push([ib.x, b.z]);
+  pts.push([b.x, b.z]);
+  return pts;
+}
+const routeLen = pts => pts.reduce((s, p, i) => i ? s + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0, 0);
+function setupMission() {
+  MS.phase = 'off'; MS.car = null; MS.beams.forEach(b => b.parent && b.parent.remove(b)); MS.beams = [];
+  if (MS.pablo) { MS.pablo.root.parent && MS.pablo.root.parent.remove(MS.pablo.root); MS.pablo = null; }
+  if (!MS.panel) MS.panel = $('mission');
+  MS.panel.classList.add('hidden');
+  if (!missionMode || !world.lux || !world.lux.length || !world.desert) return;
+  // Pablo espera en el cruce de calles más lejano del tabernáculo (lado oeste de la ciudad)
+  const tt = tabTarget(), W2 = world, spots = [];
+  for (let i = 0; i <= W2.N; i++) for (let j = 0; j <= W2.N; j++) spots.push({ x: W2.O + i * PITCH + STREET / 2 + 3.5, z: W2.O + j * PITCH + STREET / 2 + 3.5 });
+  spots.sort((p, q) => Math.hypot(q.x - tt.x, q.z - tt.z) - Math.hypot(p.x - tt.x, p.z - tt.z));
+  const house = W2.lux[0].obj.position;
+  const spot = spots.find(s => !blocked(s.x, s.z, CURB + .1) && Math.hypot(s.x - house.x, s.z - house.z) > 40) || spots[0];
+  const h = createHuman({ gender: 'm', outfit: 'robe', robe: 0xd9ccb0, mantle: 0x7a3a28, sash: 0x5a3a1e, hair: 'short', hairColor: 0x2a1c12, beard: { color: 0x3a2a1c, len: .1 }, skin: 0xc68e6a, eye: 0x4a3a22, name: 'PABLO', detail: 1 });
+  h.root.position.set(spot.x, floorAt(spot.x, spot.z, CURB + .5), spot.z); h.root.rotation.y = Math.atan2(tt.x - spot.x, tt.z - spot.z);
+  world.group.add(h.root); MS.pablo = h; MS.pablo.x = spot.x; MS.pablo.z = spot.z;
+  MS.beamP = missionBeam(0x6fd0ff); MS.beamP.position.set(spot.x, 35, spot.z);
+  MS.beamT = missionBeam(0xffd34d); MS.beamT.position.set(world.desert.tcx, 35, world.desert.tcz);
+  // tiempo: caminar hasta el carro + manejar hasta Pablo + manejar hasta el tabernáculo + margen
+  const walk = Math.hypot(house.x - world.start.x, house.z - world.start.z) / 4.5;
+  const drive = (routeLen(streetRoute({ x: house.x, z: house.z }, spot)) + routeLen(streetRoute(spot, tt))) / 11;
+  MS.total = MS.time = Math.min(240, Math.max(120, Math.ceil((walk + drive + 40) / 10) * 10));
+  MS.phase = 'find'; MS.sayT = 0;
+  MS.panel.classList.remove('hidden'); missionHUD();
+  setTimeout(() => { if (state === 'play' && MS.phase === 'find') { toast('📜 Misión: busca al apóstol Pablo 🔵 y llévalo en un vehículo al tabernáculo 🟡', '#6fd0ff'); sound.say('¡Misión! Busca al apóstol Pablo y llévalo al tabernáculo.', { male: true, rate: .95 }); } }, 7000);
+}
+function missionHUD() {
+  if (!MS.panel || MS.phase === 'off') return;
+  const t = Math.max(0, Math.ceil(MS.time)), src = MS.car && MS.phase === 'carry' ? MS.car.obj.position : P.pos;
+  const tg = MS.phase === 'find' ? MS.pablo : tabTarget(), d = Math.round(Math.hypot(tg.x - src.x, tg.z - src.z));
+  const txt = MS.phase === 'find' ? (P.car ? `Ir por el Apóstol Pablo · a ${d} m` : `Busca un vehículo para ir por el Apóstol Pablo · a ${d} m`) : MS.phase === 'carry' ? `Lleva a Pablo al tabernáculo · a ${d} m` : '¡Misión cumplida!';
+  const key = t + '|' + txt;
+  if (MS.hudKey === key) return; MS.hudKey = key;
+  $('mText').textContent = txt; $('mTime').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  MS.panel.classList.toggle('low', t <= 20 && MS.phase !== 'done');
+  $('mBar').style.width = Math.max(0, Math.min(100, MS.time / MS.total * 100)) + '%';
+}
+// devuelve true si la misión terminó el nivel (se acabó su tiempo)
+function missionUpdate(dt) {
+  if (MS.phase === 'off' || MS.phase === 'failed') return false;
+  if (MS.phase === 'done') { if ((MS.doneT -= dt) <= 0) { MS.phase = 'off'; endLevel(true, 'mision'); return true; } return false; }
+  MS.time -= dt;
+  if (MS.time <= 0) { MS.time = 0; missionHUD(); MS.phase = 'failed'; endLevel(false, 'mision'); return true; }
+  const h = MS.pablo;
+  if (MS.phase === 'find') {
+    if (Math.hypot(P.pos.x - h.x, P.pos.z - h.z) < 60) animateHuman(h, dt, { speed: 0, onGround: true, vy: 0, land: 0, t: elapsed });
+    const c = P.car;
+    if (c && Math.hypot(c.obj.position.x - h.x, c.obj.position.z - h.z) < 7.5) {
+      if (Math.abs(c.speed) > 4) { if ((MS.sayT -= dt) <= 0) { MS.sayT = 3; toast('🛑 Frena junto a Pablo para que suba', '#ffd34d'); } }
+      else {
+        MS.phase = 'carry'; MS.car = c; h.root.visible = false; MS.beamP.visible = false;
+        sound.gift(); toast('🚗 ¡Pablo subió al vehículo! Llévalo al tabernáculo 🟡', '#7ef0a4');
+        sound.say('¡Gracia y paz! Llévame al tabernáculo, por favor.', { male: true, rate: .95 });
+      }
+    } else if (!c && Math.hypot(P.pos.x - h.x, P.pos.z - h.z) < 4 && (MS.sayT -= dt) <= 0) {
+      MS.sayT = 6; toast('🧔 Pablo: «¡Trae un vehículo para llevarme al tabernáculo!»', '#ffe9a8'); sound.say('¡Trae un vehículo para llevarme al tabernáculo!', { male: true, rate: .95 });
+    }
+  } else if (MS.phase === 'carry') {
+    const q = MS.car.obj.position, tb = world.desert.tb, m = 28;
+    if (q.x > tb.x0 - m && q.x < tb.x1 + m && q.z > tb.z0 - m && q.z < tb.z1 + m) {
+      MS.phase = 'done'; MS.doneT = 3.5; MS.beamT.visible = false;
+      const tt = tabTarget(), x = tt.x + 8, z = tt.z;
+      h.root.position.set(x, floorAt(x, z, CURB + .5), z); h.root.rotation.y = Math.PI / 2; h.root.visible = true; h.x = x; h.z = z;
+      sound.gift(); missionHUD();
+      toast('✅ ¡Misión cumplida! Pablo llegó al tabernáculo', '#7ef0a4');
+      sound.say('¡Gracias! Dios te bendiga.', { male: true, rate: .9 });
+    }
+  }
+  missionHUD();
+  return false;
+}
+// rutas de la misión para los mapas: [puntos, color]
+function missionRoutes() {
+  if (MS.phase === 'find') { const src = P.car ? P.car.obj.position : P.pos; return [[streetRoute(src, MS.pablo), '#6fd0ff'], [streetRoute(MS.pablo, tabTarget()), '#ffd34d']]; }
+  if (MS.phase === 'carry') return [[streetRoute(MS.car.obj.position, tabTarget()), '#ffd34d']];
+  return [];
+}
+function drawRoutes(g, X, Z, w, dash) {
+  g.save(); g.lineJoin = g.lineCap = 'round';
+  for (const [pts, col] of missionRoutes()) {
+    g.beginPath(); pts.forEach(([x, z], i) => i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z)));
+    g.setLineDash([]); g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = w * 1.8; g.stroke();
+    g.setLineDash(dash); g.strokeStyle = col; g.lineWidth = w; g.stroke();
+  }
+  g.restore();
 }
 
 /* ---------- Personajes: hablar y recibir regalos ---------- */
@@ -2255,8 +2395,8 @@ function toastOld(txt) { const t = $('toast'); t.textContent = txt; t.style.opac
 const tmpV = new THREE.Vector3(), ray = new THREE.Raycaster();
 
 function update(dt) {
-  timeLeft -= dt;
-  if (timeLeft <= 0) { timeLeft = 0; updateHUD(); endLevel(false); return; }
+  if (!missionMode) { timeLeft -= dt; if (timeLeft <= 0) { timeLeft = 0; updateHUD(); endLevel(false); return; } }
+  if (missionUpdate(dt)) return;
 
   // Entrada → dirección relativa a cámara
   let ix = 0, iz = 0;
@@ -2569,6 +2709,13 @@ function drawMinimap() {
   if (world.clocks) for (const c of world.clocks) if (!c.taken) drawClockIcon(mg, c.x, c.z, 3.4);
   if (world.house) { mg.save(); mg.translate(world.house.cx, world.house.cz); mg.rotate(-(cam.yaw + Math.PI)); mg.font = '9px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText('🏠', 0, 0); mg.restore(); }
   if (world.church) { const c = world.church; mg.save(); mg.translate(c.cx, c.cz); mg.rotate(-(cam.yaw + Math.PI)); mg.font = '9px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText('⛪', 0, 0); mg.restore(); }
+  // misión: rutas e íconos de Pablo y del tabernáculo
+  if (MS.phase === 'find' || MS.phase === 'carry') {
+    const id = v => v; drawRoutes(mg, id, id, 2.2, [5, 4]);
+    const icon = (txt, x, z) => { mg.save(); mg.translate(x, z); mg.rotate(-(cam.yaw + Math.PI)); mg.font = '11px system-ui'; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillText(txt, 0, 0); mg.restore(); };
+    if (MS.phase === 'find') icon('🧔', MS.pablo.x, MS.pablo.z);
+    const tt = tabTarget(); icon('⛺', tt.x, tt.z);
+  }
   mg.restore();
   // jugador
   mg.save(); mg.translate(R, R); mg.rotate(-(P.heading - cam.yaw));
@@ -2579,7 +2726,13 @@ function drawMinimap() {
   // moneda más cercana
   let best = null, bd = 1e9;
   for (const c of world.coins) if (!c.taken) { const d = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); if (d < bd) { bd = d; best = c; } }
-  if (best) {
+  if (MS.phase === 'find' || MS.phase === 'carry') {
+    const src = MS.phase === 'carry' ? MS.car.obj.position : P.pos, tg = MS.phase === 'find' ? MS.pablo : tabTarget();
+    best = tg; bd = Math.hypot(tg.x - src.x, tg.z - src.z);
+    const ang = Math.atan2(tg.x - P.pos.x, tg.z - P.pos.z) - cam.yaw;
+    $('hArrow').style.transform = `rotate(${-ang - Math.PI / 2}rad)`;
+    $('hDist').textContent = MS.phase === 'find' ? `Pablo a ${Math.round(bd)} m` : `Tabernáculo a ${Math.round(bd)} m`;
+  } else if (best) {
     const ang = Math.atan2(best.x - P.pos.x, best.z - P.pos.z) - cam.yaw;
     $('hArrow').style.transform = `rotate(${-ang - Math.PI / 2}rad)`;
     $('hDist').textContent = `Moneda a ${Math.round(bd)} m`;
@@ -2861,7 +3014,7 @@ function renderLevels() {
     b.innerHTML = `<div class="n">NIVEL ${i + 1}</div><div class="t">${locked ? '🔒 ' : ''}${lv.name}</div>
       <small>⏱ ${lv.time} s · 🪙 ${lv.goal} de ${lv.coins} monedas<br>${lv.cars ? '🚗 ' + lv.cars + ' autos' : 'Sin tráfico'} · 👤 ${forLevel(i + 1).length} personajes</small>
       <div class="s">${'★'.repeat(save.stars[i])}${'☆'.repeat(3 - save.stars[i])}</div>`;
-    b.onclick = () => { if (locked) { sound.hurt(); return; } sound.click(); startLevel(i); };
+    b.onclick = () => { if (locked) { sound.hurt(); return; } sound.click(); missionMode = false; startLevel(i); };
     g.appendChild(b);
   });
 }
@@ -2891,6 +3044,8 @@ function renderCollection() {
   });
 }
 function toMenu(screen = 'levelsel') {
+  if (missionMode && screen === 'levelsel') screen = 'splash';
+  missionMode = false; MS.phase = 'off';
   state = 'menu'; sound.setMusicMode('menu');
   $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); $('verse').classList.add('hidden'); $('talk').classList.add('hidden');
   if (screen === 'levelsel') renderLevels();
@@ -2899,6 +3054,7 @@ function toMenu(screen = 'levelsel') {
 }
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { sound.click(); show(b.dataset.go); });
 $('btnPlay').onclick = () => { sound.unlock(); sound.click(); openCreator(); };
+$('btnMission').onclick = () => { sound.unlock(); sound.click(); missionMode = true; startLevel(1); };
 /* ---------- Crear jugador / jugadora ---------- */
 let draft = null;
 function openCreator() {

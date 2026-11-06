@@ -478,19 +478,26 @@ export function createHuman(opt = {}) {
 
   // Túnica, manto y cinto (personajes bíblicos)
   if (robe && SK) {
-    // túnica corta de piel con borde irregular: Adán de la cintura al muslo con tira al hombro; Eva del pecho a la rodilla
-    const prof = F ? [[.215, .5], [.22, .56], [.215, .75], [.19, .95], [.175, 1.1], [.19, 1.22], [.18, 1.32], [.165, 1.36]]
-                   : [[.225, .56], [.23, .62], [.215, .8], [.2, .95], [.198, 1.02]];
-    const g = latheUp(prof, 44), p = g.attributes.position;
-    const yb = prof[0][1];
-    for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (y < yb + .03) { const a = Math.atan2(z, x); p.setY(i, y + Math.abs(Math.sin(a * 7)) * .05 + Math.sin(a * 13) * .015); } }
-    g.computeVertexNormals();
-    const rb = mesh(g, robeM, root); rb.scale.set(1, 1, F ? .74 : .76);
+    // túnica corta de piel con borde irregular: Adán de la cintura al muslo con tira al hombro; Eva del pecho a la rodilla.
+    // Va unida al cuerpo (cadera, torso y una falda que sigue a los muslos) para que al sentarse o arrodillarse siga tapando.
+    const ZS = F ? .74 : .76;
+    const fur = (prof, parent, y0, hemCut = false) => {
+      const g = latheUp(prof.map(([r, y]) => [r, y - y0]), 44), p = g.attributes.position;
+      if (hemCut) { const yb = prof[0][1] - y0; for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i); if (y < yb + .03) { const a = Math.atan2(z, x); p.setY(i, y + Math.abs(Math.sin(a * 7)) * .05 + Math.sin(a * 13) * .015); } } g.computeVertexNormals(); }
+      const m = mesh(g, robeM, parent); m.scale.set(1, 1, ZS); return m;
+    };
+    // falda: gira con los muslos (pivote a la altura de las piernas, 0,91 m)
+    const skirtPiv = grp(hips, 0, -.02, 0);
+    fur(F ? [[.215, .5], [.22, .56], [.215, .75], [.2, .92]] : [[.225, .56], [.23, .62], [.215, .8], [.205, .92]], skirtPiv, .91, true);
+    // cintura (cadera) y parte de arriba (torso, solo Eva)
+    fur(F ? [[.2, .88], [.19, .95], [.185, 1.0]] : [[.205, .88], [.2, .95], [.198, 1.02]], hips, .93);
+    if (F) fur([[.19, .97], [.175, 1.1], [.19, 1.22], [.18, 1.32], [.165, 1.36]], spine, .99);
     // tira de piel: Adán en diagonal desde el hombro; Eva con dos tirantes sobre los hombros
-    if (!F) { const strap = mesh(new THREE.TorusGeometry(.215, .035, 8, 40), robeM, root, 0, 1.2, 0); strap.rotation.set(Math.PI / 2, .62, 0); strap.scale.set(1, .7, 1); }
-    else for (const sx of [-1, 1]) { const st = mesh(new THREE.TorusGeometry(.085, .018, 6, 20, Math.PI), robeM, root, sx * .085, 1.33, 0); st.rotation.y = Math.PI / 2; st.scale.set(1.05, .9, 1); }
+    if (!F) { const strap = mesh(new THREE.TorusGeometry(.215, .035, 8, 40), robeM, spine, 0, .21, 0); strap.rotation.set(Math.PI / 2, .62, 0); strap.scale.set(1, .7, 1); }
+    else for (const sx of [-1, 1]) { const st = mesh(new THREE.TorusGeometry(.085, .018, 6, 20, Math.PI), robeM, spine, sx * .085, .34, 0); st.rotation.y = Math.PI / 2; st.scale.set(1.05, .9, 1); }
     // cordón atado a la cintura
-    const cord = mesh(new THREE.TorusGeometry(.2, .012, 6, 34), sashM, root, 0, .98, 0); cord.rotation.x = Math.PI / 2; cord.scale.set(1, .78, 1);
+    const cord = mesh(new THREE.TorusGeometry(.2, .012, 6, 34), sashM, hips, 0, .05, 0); cord.rotation.x = Math.PI / 2; cord.scale.set(1, .78, 1);
+    o._skinSkirt = skirtPiv;
   }
   if (robe && !SK) {
     // o.hem: altura del borde de la túnica (por defecto llega a los tobillos; más alto deja ver los pies y las sandalias)
@@ -553,7 +560,7 @@ export function createHuman(opt = {}) {
   }
   // Unir las piezas que se mueven juntas (mismo hueso y mismo material): ~55 piezas → ~20 (mucho más rápido de dibujar)
   compactParts(root, new Set([...eyes, skirt].filter(Boolean)));
-  const H = { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
+  const H = { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, skinSkirt: o._skinSkirt || null, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
   root.userData.isHuman = true; root.userData.hum = H;
   return H;
 }
@@ -692,6 +699,12 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
   S(h.hips.position, 'y', P.hipY);
   S(h.head.rotation, 'x', P.headX);
   h.head.rotation.y = -h.spine.rotation.y * .8 + (gesture > 0 ? Math.sin(t * 9) * .35 : 0) + headSide;
+  // falda de pieles (Adán y Eva): sigue a los muslos y se ciñe a ellos al sentarse o arrodillarse
+  if (h.skinSkirt) {
+    const a = (h.legs[0].thigh.rotation.x + h.legs[1].thigh.rotation.x) / 2, fwd = THREE.MathUtils.clamp(-a / 1.5, 0, 1);
+    h.skinSkirt.rotation.x = Math.max(-1.6, Math.min(.25, a));
+    h.skinSkirt.scale.set(1 + .04 * fwd, 1, 1 - .22 * fwd);
+  }
   if (h.skirt) { const sw = Math.max(Math.abs(h.legs[0].thigh.rotation.x), Math.abs(h.legs[1].thigh.rotation.x)); h.skirt.scale.z = .86 + sw * .75; h.skirt.scale.x = 1 + sw * .1; }
   const blink = (t % 3.7) < .12;
   for (const e of h.eyes) e.scale.y = blink ? .15 : 1;
