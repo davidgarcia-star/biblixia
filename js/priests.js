@@ -92,7 +92,8 @@ export async function buildPriests({ group, tab, r, addBox }) {
     for (const sx of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(.05, .02, .26), e.material); st.position.set(sx * .1, .43, 0); h.spine.add(st); } };
   const musicLook = (k, extra = {}) => ({ ...leviteLook(r, k), robe: 0xf4f0e6, mantle: null, sash: [0x1f3a8a, 0x5b2a7a, 0xb3122e][k % 3], ...extra }); // vestidos de lino fino (1 Crónicas 15:27)
   const members = [];
-  const join = (look, role, off, lat, prop) => { const h = place(look, 0, 0, 0); if (prop) prop(h); members.push({ h, role, off, lat, ph: members.length * .7 }); return h; };
+  // túnica a media pierna para que se vean los pies y las sandalias al caminar
+  const join = (look, role, off, lat, prop) => { const h = place({ ...look, hem: .3 }, 0, 0, 0); if (prop) prop(h); members.push({ h, role, off, lat, ph: members.length * .7 }); return h; };
   // Delante: Quenanías, jefe del canto (15:22, 27)
   join(musicLook(0), 'lead', 22, 0);
   // Hemán, Asaf y Etán con címbalos de bronce (15:19)
@@ -107,7 +108,7 @@ export async function buildPriests({ group, tab, r, addBox }) {
   [[8.2, -.9], [8.2, 0], [8.2, .9], [6.4, -.9], [6.4, 0], [6.4, .9], [4.6, 0]].forEach(([o, l], k) => join(priestLook(r, k), 'trumpet', o, l, trumpet));
   // Los levitas llevan el arca sobre los hombros con las varas (15:2, 15; Números 4:15; 7:9)
   const carriers = [];
-  for (let k = 0; k < 4; k++) { await pace(); carriers.push(place(musicLook(k), 0, 0, 0)); }
+  for (let k = 0; k < 4; k++) { await pace(); carriers.push(place({ ...musicLook(k), hem: .3 }, 0, 0, 0)); }
   // Obed-edom y Jehías, porteros del arca, detrás (15:24)
   [-.7, .7].forEach((l, k) => join(leviteLook(r, k + 2), 'walk', -3.4, l));
   let path = { x0: b.x0 - 5.5, x1: b.x1 + 5.5, z0: b.z0 - 5.5, z1: b.z1 + 5.5 };
@@ -120,7 +121,9 @@ export async function buildPriests({ group, tab, r, addBox }) {
     ref: '1 Crónicas 15:2-29; 2 Samuel 6:14; Números 4:15' });
 
   const tmp = new THREE.Vector3();
+  const GY = .08; // la grama de la procesión está a 7 cm del suelo: los pies pisan sobre ella y no quedan tapados
   return {
+    ark, // posición del arca (para la música y las voces de los levitas al acercarse)
     // la procesión camina por el desierto, lejos del arca de Noé; devuelve la zona con su explicación
     setProcessionPath(p) { path = p; per = 2 * (path.x1 - path.x0) + 2 * (path.z1 - path.z0); return pathZone(); },
     update(dt, t, camPos) {
@@ -141,22 +144,22 @@ export async function buildPriests({ group, tab, r, addBox }) {
       if (!pn) return;
       proc.s += proc.sp * dt;
       const [x, z, dx, dz] = at(proc.s), hd = Math.atan2(dx, dz);
-      ark.position.set(x, 1.48, z); ark.rotation.y = hd + Math.PI / 2;
+      ark.position.set(x, 1.48 + GY, z); ark.rotation.y = hd + Math.PI / 2;
       // cada levita en un extremo de las varas
       const fx = dx, fz = dz, rx = dz, rz = -dx;
       [[1.25, .4], [1.25, -.4], [-1.25, .4], [-1.25, -.4]].forEach(([f, s], i) => {
-        const h = carriers[i]; h.root.position.set(x + fx * f + rx * s, 0, z + fz * f + rz * s); h.root.rotation.y = hd;
+        const h = carriers[i]; h.root.position.set(x + fx * f + rx * s, GY, z + fz * f + rz * s); h.root.rotation.y = hd;
         animateHuman(h, dt, { speed: proc.sp * 1.2, onGround: true, vy: 0, land: 0, t });
         const a = h.arms[s > 0 ? 0 : 1]; a.shoulder.rotation.x = -2.5; a.shoulder.rotation.z = (s > 0 ? -1 : 1) * .25; a.elbow.rotation.x = -1.4;
       });
       // el resto de la procesión sigue el mismo camino
       for (const m of members) {
         const [mx, mz, mdx, mdz] = at(proc.s + m.off), h = m.h;
-        h.root.position.set(mx + mdz * m.lat, 0, mz - mdx * m.lat); h.root.rotation.y = Math.atan2(mdx, mdz);
+        h.root.position.set(mx + mdz * m.lat, GY, mz - mdx * m.lat); h.root.rotation.y = Math.atan2(mdx, mdz);
         if (m.role === 'dance') {
           // David salta y gira de gozo (2 Samuel 6:16)
           animateHuman(h, dt, { speed: proc.sp * 1.2, onGround: true, vy: 0, land: 0, t, praise: 1.2 });
-          h.root.position.y = Math.abs(Math.sin(t * 4 + m.ph)) * .28; h.root.rotation.y += Math.sin(t * 1.3) * 1.2;
+          h.root.position.y = GY + Math.abs(Math.sin(t * 4 + m.ph)) * .28; h.root.rotation.y += Math.sin(t * 1.3) * 1.2;
           continue;
         }
         animateHuman(h, dt, { speed: proc.sp * 1.2, onGround: true, vy: 0, land: 0, t });

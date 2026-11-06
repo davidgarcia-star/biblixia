@@ -64,6 +64,8 @@ Las citas bíblicas son de La Biblia de las Américas® (LBLA), © The Lockman F
 
 - **Versículos variados en las monedas**: 197 versículos LBLA de toda la Biblia (antes 39). Primero salen los que nunca has visto y después los que hace más tiempo que no salen, así no se repiten hasta haberlos visto todos.
 
+- **Arca del pacto**: al acercarte, los levitas proclaman «¡Kabod! ¡Presencia de Dios!» (kabod = gloria) y suena una música de adoración hebrea (pandero, arpa, coro, shofar). Los que caminan en la procesión llevan la túnica a media pierna y se ven sus pies y sandalias.
+
 ## Compilación (carga rápida)
 El juego se publica empaquetado y comprimido en `js/biblixia.min.js` (un solo archivo, ~3 veces más liviano).
 Después de cambiar cualquier archivo de `js/`, ejecuta `sh build.sh` (necesita [esbuild](https://esbuild.github.io/)) y sube también `js/biblixia.min.js`.

@@ -492,7 +492,10 @@ export function createHuman(opt = {}) {
     const cord = mesh(new THREE.TorusGeometry(.2, .012, 6, 34), sashM, root, 0, .98, 0); cord.rotation.x = Math.PI / 2; cord.scale.set(1, .78, 1);
   }
   if (robe && !SK) {
-    const rb = mesh(latheUp([[.29, .02], [.3, .05], [.27, .35], [.22, .7], [.2, .95], [.2, 1.15], [.21, 1.3], [.2, 1.4], [.15, 1.46], [.08, 1.5]], 40), robeM, root);
+    // o.hem: altura del borde de la túnica (por defecto llega a los tobillos; más alto deja ver los pies y las sandalias)
+    const prof = [[.29, .02], [.3, .05], [.27, .35], [.22, .7], [.2, .95], [.2, 1.15], [.21, 1.3], [.2, 1.4], [.15, 1.46], [.08, 1.5]];
+    const hem = o.hem || 0, rprof = hem ? [[.285, hem], [.28, hem + .04]].concat(prof.filter(([, y]) => y > hem + .06)) : prof;
+    const rb = mesh(latheUp(rprof, 40), robeM, root);
     rb.scale.set(1, 1, .78);
     if (o.mantle !== null) {
       const mt = mesh(latheUp([[.3, .35], [.27, .7], [.235, 1.0], [.23, 1.25], [.225, 1.38], [.17, 1.46], [.1, 1.5]], 40, Math.PI - 1.55, 3.1), mantleM, root);

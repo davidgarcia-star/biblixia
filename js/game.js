@@ -1690,7 +1690,7 @@ addEventListener('touchend', endTouch); addEventListener('touchcancel', endTouch
 let state = 'menu', L = null, lvlIdx = 0, timeLeft = 0, collected = 0, goal = 0, verseOrder = [], verseCursor = 0, menuT = 0;
 const sound = new Sound();
 try { sound.setMusic(localStorage.getItem(SAVE_KEY + '_music') !== '0'); sound.setSfx(localStorage.getItem(SAVE_KEY + '_sfx') !== '0'); } catch (e) {}
-let musicStarted = false;
+let musicStarted = false, kabodT = 0;
 const ensureMusic = () => { sound.unlock(); if (!musicStarted) { musicStarted = true; sound.startMusic(); } };
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, ensureMusic, { once: false, passive: true }));
 
@@ -2593,7 +2593,16 @@ function loop() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
-    if (world.priests) world.priests.update(dt, t, camera.position);
+    if (world.priests) {
+      world.priests.update(dt, t, camera.position);
+      // al acercarte al arca del pacto: música de adoración y los levitas proclaman «¡Kabod! ¡Presencia de Dios!»
+      const ak = world.priests.ark, dA = ak && ak.visible ? Math.hypot(ak.position.x - P.pos.x, ak.position.z - P.pos.z) : 1e9;
+      if (state === 'play') {
+        if (dA < 28) sound.setMusicMode('ark'); else if (dA > 36 && sound.mode === 'ark') sound.setMusicMode('play');
+        kabodT -= dt;
+        if (dA < 16 && kabodT <= 0) { kabodT = 9; sound.say('¡Kabod! ¡Presencia de Dios!', { male: true, rate: .82 }); }
+      }
+    }
     if (world.church) {
       world.church.update(dt, t, camera.position);
       // música de alabanza mientras estás dentro de la iglesia

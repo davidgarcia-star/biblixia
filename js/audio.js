@@ -422,19 +422,22 @@ export class Sound {
   //           a 104 pulsos por minuto, con sonidos redondeados (sin agudos molestos) y volumen cómodo
   startMusic(mode = this.mode || 'menu') {
     this.stopMusic(); if (!this.unlock()) return;
-    this.mode = mode;
-    if (mode === 'play') this._startPlay(); else this._startMenu();
+    this.mode = this._target = mode;
+    if (mode === 'play') this._startPlay(); else if (mode === 'ark') this._startArk(); else this._startMenu();
   }
   // Cambia de pista con un fundido corto (no se corta de golpe)
   setMusicMode(mode) {
-    if (mode === this.mode && this.timer) return;
+    // el juego lo llama en cada cuadro: si ya está sonando o cambiando a esa pista, no hacer nada
+    if (this._target === mode && (this.mode === mode || this._swap) && this.timer) return;
+    this._target = mode;
     const a = this.unlock(); if (!a) { this.mode = mode; return; }
     if (!this.timer) { this.startMusic(mode); return; }
+    if (mode === this.mode && !this._swap) return;
     const t = a.currentTime;
     this.fade.gain.cancelScheduledValues(t); this.fade.gain.setValueAtTime(this.fade.gain.value, t); this.fade.gain.linearRampToValueAtTime(0, t + .6);
     clearTimeout(this._swap);
     this._swap = setTimeout(() => {
-      this.startMusic(mode);
+      this._swap = null; this.startMusic(mode);
       const t2 = a.currentTime; this.fade.gain.cancelScheduledValues(t2); this.fade.gain.setValueAtTime(0, t2); this.fade.gain.linearRampToValueAtTime(this._duck ?? 1, t2 + 1.2);
     }, 650);
   }
@@ -504,6 +507,59 @@ export class Sound {
           const f = (phrase === 1 ? melA : melB)[(bar % 4) * 8 + s];
           if (f) { this.note(f, E * 2.2, { ...m, type: 'sine', vol: .045, attack: .006, when: w }); this.note(f * 2, E * 1.2, { ...m, type: 'sine', vol: .008, attack: .004, when: w }); }
         } else if (s % 2 === 0) this.note(ch[[0, 1, 2, 1][s / 2]] * 4, E * 1.5, { ...m, type: 'sine', vol: .016, attack: .005, when: w }); // arpegio suave
+        step++; next += E;
+      }
+    };
+    schedule(); this.timer = setInterval(schedule, 60);
+  }
+  // 'ark' – al acercarse al arca del pacto: música de adoración hebrea, solemne y gozosa.
+  //  Escala hebrea (Re, Mi♭, Fa♯, Sol, La, Si♭, Do), pandero (tof) a 84 pulsos por minuto,
+  //  arpa/lira (kinnor), coro de voces «aah», nota pedal grave y toques de shofar (cuerno) de vez en cuando.
+  _startArk() {
+    const a = this.ctx, E = 60 / 84 / 2;
+    const S = { D3: 146.8, Eb3: 155.6, Fs3: 185, G3: 196, A3: 220, Bb3: 233.1, C4: 261.6, D4: 293.7, Eb4: 311.1, Fs4: 370, G4: 392, A4: 440, Bb4: 466.2, C5: 523.3, D5: 587.3 };
+    // acordes: Re (con Fa♯) – Mi♭ – Re – Do menor/Sol menor, típico del modo hebreo
+    const chords = [[S.D3, S.Fs3, S.A3], [S.Eb3, S.G3, S.Bb3], [S.D3, S.Fs3, S.A3], [S.G3 / 1.5 * 1.5, S.Bb3, S.D4]];
+    const harp = [[S.D4, S.Fs4, S.A4, S.D5], [S.Eb4, S.G4, S.Bb4, S.Eb4 * 2], [S.D4, S.Fs4, S.A4, S.C5], [S.G3 * 2, S.Bb4, S.D5, S.Bb4]];
+    const melody = [S.A4, 0, S.Bb4, S.A4, S.G4, 0, S.Fs4, 0, S.G4, 0, S.A4, S.Bb4, S.A4, 0, 0, 0, S.D5, 0, S.C5, S.Bb4, S.A4, 0, S.G4, 0, S.Fs4, S.G4, S.Eb4, 0, S.D4, 0, 0, 0];
+    const at = t => Math.max(0, t - a.currentTime), m = { bus: 'music' };
+    const tof = (t, low, vol) => { // pandero: golpe grave al centro o seco en el borde
+      const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(low ? 95 : 210, t); o.frequency.exponentialRampToValueAtTime(low ? 60 : 160, t + .12);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + (low ? .3 : .12)); o.connect(g).connect(this.music); o.start(t); o.stop(t + .35);
+      if (this.noise) { const src = a.createBufferSource(); src.buffer = this.noise; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = low ? 700 : 2400; f.Q.value = .8;
+        const ng = a.createGain(); ng.gain.setValueAtTime(vol * (low ? .3 : .6), t); ng.gain.exponentialRampToValueAtTime(.001, t + .1); src.connect(f).connect(ng).connect(this.music); src.start(t); src.stop(t + .15); }
+    };
+    const choir = (t, f, dur, vol) => { // voces «aah»: dos sierras ligeramente desafinadas filtradas como una vocal
+      const g = a.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + dur * .3); g.gain.setValueAtTime(vol, t + dur * .7); g.gain.linearRampToValueAtTime(.0001, t + dur);
+      for (const [fq, q, k] of [[750, 6, 1], [1150, 8, .6], [2600, 10, .15]]) { const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q; const bg = a.createGain(); bg.gain.value = k * 3; bp.connect(bg).connect(g); for (const det of [-8, 7]) { const o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+        const v = a.createOscillator(), vg = a.createGain(); v.frequency.value = 5; vg.gain.value = f * .006; v.connect(vg).connect(o.frequency); o.connect(bp); o.start(t); o.stop(t + dur + .05); v.start(t); v.stop(t + dur + .05); } }
+      g.connect(this.music); if (this.rev) g.connect(this.rev);
+    };
+    const shofar = t => { // cuerno de carnero: dos llamadas que suben de tono
+      [[0, 1.1, S.D4, S.A4], [1.4, 1.6, S.D4, S.A4 * 1.02]].forEach(([w, d, f0, f1]) => {
+        const o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(); o.type = 'sawtooth'; const t0 = t + w;
+        o.frequency.setValueAtTime(f0 * .94, t0); o.frequency.exponentialRampToValueAtTime(f0, t0 + .15); o.frequency.setValueAtTime(f0, t0 + d * .35); o.frequency.exponentialRampToValueAtTime(f1, t0 + d * .55);
+        lp.type = 'lowpass'; lp.frequency.value = 1700; lp.Q.value = 2;
+        g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.05, t0 + .08); g.gain.setValueAtTime(.05, t0 + d * .85); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+        o.connect(lp).connect(g).connect(this.music); if (this.rev) g.connect(this.rev); o.start(t0); o.stop(t0 + d + .05);
+      });
+    };
+    let step = 0, next = a.currentTime + .1;
+    const schedule = () => {
+      if (!this.musicOn) { next = Math.max(next, a.currentTime + .05); return; }
+      while (next < a.currentTime + .25) {
+        const t = next, s = step % 8, bar = Math.floor(step / 8), c = bar % 4, w = at(t), phrase = Math.floor(bar / 4) % 3;
+        // pandero: «DUM – tak – tak – DUM – tak»
+        if (s === 0 || s === 3) tof(t, true, .22); else if (s === 2 || s === 5 || s === 6) tof(t, false, .07);
+        // nota pedal grave (Re) y coro al empezar cada compás
+        if (s === 0) { this.note(73.4, E * 8.2, { ...m, type: 'sine', vol: .07, attack: .4, wet: false, when: w }); chords[c].forEach(f => choir(t, f, E * 8, .012)); }
+        // arpa: arpegio que sube y baja
+        const hp = harp[c][[0, 1, 2, 3, 2, 1, 2, 3][s]];
+        this.note(hp, E * 2.5, { ...m, type: 'triangle', vol: .03, attack: .003, filter: 2600, when: w });
+        // melodía (flauta suave) en la segunda y tercera vuelta
+        if (phrase > 0) { const f = melody[(bar % 4) * 8 + s]; if (f) this.note(f, E * 1.9, { ...m, type: 'sine', vol: .04, attack: .05, filter: 2000, when: w }); }
+        // shofar al empezar cada vuelta de 12 compases
+        if (s === 0 && bar % 12 === 0) shofar(t + .02);
         step++; next += E;
       }
     };
