@@ -127,6 +127,23 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(2.6, .45, .45, darkM, cx - 4, fy + .36, Z0 + .55); box(2.62, .03, .47, woodM, cx - 4, fy + .6, Z0 + .55); solid(cx - 5.3, cx - 2.7, Z0 + .3, Z0 + .8, fy + .6);
     // alfombra y planta grande
     box(3, .015, 2.2, mat(0x8a8f96, { roughness: 1 }), cx - 4, fy + .15, Z1 - 2.2, { cast: false });
+    {
+      // planta grande en maceta (ficus de hoja de violín) en la esquina, junto al sofá y el ventanal
+      const plX = cx - 6.1, plZ = Z1 - .6, potH = .55;
+      cyl(.28, .21, potH, mat(0x2b2d31, { roughness: .5, metalness: .2 }), plX, fy + .14 + potH / 2, plZ, 20);
+      cyl(.25, .25, .03, mat(0x3a2a1c, { roughness: 1 }), plX, fy + .14 + potH - .04, plZ, 16);
+      const stemM = mat(0x5a4330, { roughness: .9 }), leafM = mat(0x2f6a2c, { roughness: .6, side: THREE.DoubleSide }), leafM2 = mat(0x3d7f35, { roughness: .6, side: THREE.DoubleSide });
+      const stem = cyl(.025, .035, 1.25, stemM, plX, fy + .14 + potH + .6, plZ, 8); stem.castShadow = false;
+      const leafG = new THREE.SphereGeometry(.13, 10, 6); leafG.scale(1, 1.55, .22);
+      for (let k = 0; k < 16; k++) {
+        const a = k * 2.4, hy = .25 + (k / 16) * .95, rr = .1 + .1 * Math.sin(k * 1.7) ** 2 + (1 - k / 16) * .08;
+        const lf = new THREE.Mesh(leafG, k % 3 ? leafM : leafM2);
+        lf.position.set(plX + Math.cos(a) * rr, fy + .14 + potH + hy, plZ + Math.sin(a) * rr);
+        lf.rotation.set(0, -a + Math.PI / 2, 0, 'YXZ'); lf.rotateX(.45 + .3 * (1 - k / 16));
+        lf.castShadow = true; lf.receiveShadow = true; group.add(lf);
+      }
+      solid(plX - .3, plX + .3, plZ - .3, plZ + .3, fy + .14 + potH);
+    }
     // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
     box(.7, .9, 3.2, cabM, X0 + .45, fy + .45, cz + 1.2); box(.75, .05, 3.25, counterM, X0 + .45, fy + .92, cz + 1.2); solid(X0, X0 + .85, cz - .4, cz + 2.8, fy + .95);
