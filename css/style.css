@@ -606,7 +606,7 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 #wheel .wl{left:-16px}#wheel .wr{right:-16px}
 .actions .pedal{flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:900;line-height:1;border-radius:22px;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
 .actions .pedal small{font-size:10px;letter-spacing:.5px;margin-top:4px}
-#tGas{right:0;bottom:6px;width:100px;height:100px;background:linear-gradient(180deg,#8ff0a8,#2f9e53);color:#06260f}
-#tRev{right:0;bottom:116px;width:100px;height:60px;background:linear-gradient(180deg,#ffb0a0,#c8452f);color:#2a0700}
+#tGas{right:0;bottom:76px;width:100px;height:100px;background:linear-gradient(180deg,#8ff0a8,#2f9e53);color:#06260f}
+#tRev{right:0;bottom:6px;width:100px;height:60px;background:linear-gradient(180deg,#ffb0a0,#c8452f);color:#2a0700}
 .actions .pedal.on{filter:brightness(1.25);transform:scale(.95)}
 #touch.drive #tHonk{right:112px;bottom:88px}
