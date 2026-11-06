@@ -186,7 +186,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     }
     box(1.4, .06, .9, trimM, cx - 1.8, fy + .76, cz - 1.6); for (const [a, b] of [[-.6, -.35], [.6, -.35], [-.6, .35], [.6, .35]]) box(.06, .74, .06, trimM, cx - 1.8 + a, fy + .37, cz - 1.6 + b); solid(cx - 2.5, cx - 1.1, cz - 2.05, cz - 1.15, fy + .78);
     // comida servida en la mesa: arroz, habichuelas, pollo, ensalada, jugo, pan y frutas
-    buildFood(group, cx - 1.8, fy + .79, cz - 1.6);
+    { const food = buildFood(group, cx - 1.8, fy + .79, cz - 1.6); if (food.userData.update) houseUpd.push(food.userData.update); }
     buildChairs(group, cx - 1.8, fy + .14, cz - 1.6, [[-.95, 0, -Math.PI / 2], [.95, 0, Math.PI / 2]]);
     // --- Dormitorio (lado derecho, al fondo) ---
     const bedX = cx + 4.6, bedZ = Z1 - 1.4;

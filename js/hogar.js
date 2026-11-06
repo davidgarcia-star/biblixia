@@ -147,6 +147,26 @@ export function buildFood(group, tx, ty, tz, w = 1.4, d = .9) {
   // servilletas
   for (const [x, z] of [[-.58, -.2], [.58, .22]]) add(g, new THREE.BoxGeometry(.09, .006, .12), S.towelWhite, x, y0 + .003, z, { cast: false });
   bakeInPlace(g, [], false); // todo en pocas piezas
+  // vapor suave que sube de la comida caliente (habichuelas y arroz recién servidos)
+  const steam = [];
+  const stTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 64); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  })();
+  for (const [sx, sz, sy] of [[-.21, -.05, .035], [.21, .07, .035], [-.3, -.18, .04], [.3, .2, .04]]) {
+    for (let k = 0; k < 4; k++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: stTex, transparent: true, depthWrite: false, opacity: 0, color: 0xf4f1ea }));
+      sp.renderOrder = 3; sp.raycast = () => {}; g.add(sp); steam.push({ sp, sx, sz, sy, ph: k / 4 + sx * .7 });
+    }
+  }
+  g.userData.update = (t) => {
+    for (const s of steam) {
+      const f = (t * .32 + s.ph) % 1, f2 = f < 0 ? f + 1 : f;
+      s.sp.position.set(s.sx + Math.sin(t * 1.3 + s.ph * 9) * .012 * (1 + f2 * 2), s.sy + f2 * .26, s.sz + Math.cos(t * 1.1 + s.ph * 7) * .01 * (1 + f2 * 2));
+      s.sp.scale.setScalar(.04 + f2 * .11); s.sp.material.opacity = .16 * Math.sin(f2 * Math.PI);
+    }
+  };
   return g;
 }
 
