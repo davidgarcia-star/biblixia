@@ -125,6 +125,8 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   add(new THREE.LatheGeometry([[0, 0], [.3, .02], [.75, .2], [.85, .42], [.8, .45]].map(([x, y]) => new THREE.Vector2(x, y)), 32), M.bronze, lavX, .7, cz);
   add(new THREE.CircleGeometry(.76, 32), M.water, lavX, 1.08, cz).rotation.x = -Math.PI / 2;
   addBox(lavX - .8, lavX + .8, cz - .8, cz + .8, 1.15);
+  // Ondas suaves en el agua donde el sacerdote se lava las manos (Éxodo 30:18-21)
+  const ripples = []; for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 28), new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(lavX + .3 - i * .06, 1.088, cz + (i - 1) * .12); r.renderOrder = 2; r.castShadow = r.receiveShadow = false; T.add(r); ripples.push({ r, k: i / 3 }); }
   zones.push({ id: 'fuente', name: 'La fuente de bronce', minX: lavX - 2, maxX: lavX + 2, minZ: cz - 2, maxZ: cz + 2, pri: 2,
     text: 'Entre la tienda y el altar estaba la fuente de bronce con su base, llena de agua, para que Aarón y sus hijos lavaran sus manos y sus pies antes de ministrar.', ref: 'Éxodo 30:17-21; 38:8' });
 
@@ -281,6 +283,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
+      for (const w of ripples) { const u = (t * .45 + w.k) % 1; w.r.scale.setScalar(.04 + u * .34); w.r.material.opacity = (1 - u) * Math.min(1, u * 8) * .5; }
       for (let i = 0; i < tongues.length; i++) { const f = tongues[i]; f.scale.set(1, .7 + Math.abs(Math.sin(t * 11 + i * 1.9)) * .7 + Math.sin(t * 23 + i) * .12, 1); f.rotation.z = Math.sin(t * 6 + i) * .12; }
       let root = T; while (root.parent) root = root.parent;
       const fc = root.fog && root.fog.color, lum = fc ? Math.min(1, (fc.r * .3 + fc.g * .59 + fc.b * .11) * 1.25) : 1; // de noche el humo no brilla
