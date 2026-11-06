@@ -3054,7 +3054,6 @@ function toMenu(screen = 'levelsel') {
 }
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => { sound.click(); show(b.dataset.go); });
 $('btnPlay').onclick = () => { sound.unlock(); sound.click(); openCreator(); };
-$('btnMission').onclick = () => { sound.unlock(); sound.click(); missionMode = true; startLevel(1); };
 /* ---------- Crear jugador / jugadora ---------- */
 let draft = null;
 function openCreator() {
