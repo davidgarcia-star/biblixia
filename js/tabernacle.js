@@ -314,6 +314,11 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   const uvA = g.attributes.uv; for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uvA.getX(i) * .35, uvA.getY(i) * .35);
   const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1 }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
   const cols = [0, 0, 0];
+  // Fogatas para cocinar delante de algunas tiendas: anillo de piedras, leña y brasas (Éxodo 16:23; Levítico 6:13)
+  const stoneM = new THREE.MeshStandardMaterial({ color: 0x6d655b, roughness: 1, flatShading: true }), woodM = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 1 });
+  const emberM = new THREE.MeshBasicMaterial({ color: 0xff7a1e }), fireM = new THREE.MeshBasicMaterial({ color: 0xffc04a });
+  const stoneG = new THREE.DodecahedronGeometry(.13), logG = new THREE.CylinderGeometry(.045, .055, .8, 6), emberG = new THREE.CylinderGeometry(.24, .28, .06, 10), fireG = new THREE.ConeGeometry(.13, .38, 7);
+  let nTent = 0;
   const pts = [];
   for (let i = 0; i < 36; i++) {
     const a = i / 36 * Math.PI * 2;
@@ -329,6 +334,14 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
     const op = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), dark); op.position.set(0, .7, 1.76); t.add(op);
     for (const sx of [-2.4, 0, 2.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.2, 5), new THREE.MeshStandardMaterial({ color: 0x5a3a1e })); p.position.set(sx, 1.1, 2.1); t.add(p); }
     const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .1, 2.6); t.add(r2);
+    if (nTent++ % 3 === 0) {
+      const f = new THREE.Group(); f.position.set(0, 0, 4.6); t.add(f);
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, st = new THREE.Mesh(stoneG, stoneM); st.position.set(Math.cos(a) * .42, .08, Math.sin(a) * .42); st.rotation.set(k, k * 2, 0); st.scale.y = .7; st.castShadow = true; f.add(st); }
+      for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(logG, woodM); l.position.y = .16; l.rotation.set(0, k * 2.09, 1.25); l.translateY(-.05); f.add(l); }
+      const em = new THREE.Mesh(emberG, emberM); em.position.y = .04; f.add(em);
+      const fl = new THREE.Mesh(fireG, fireM); fl.position.y = .28; f.add(fl);
+      const wx = x + Math.sin(ry) * 4.6, wz = z + Math.cos(ry) * 4.6; addBox(wx - .5, wx + .5, wz - .5, wz + .5, 1);
+    }
     S.add(t);
     addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
   }
