@@ -188,6 +188,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // comida servida en la mesa: arroz, habichuelas, pollo, ensalada, jugo, pan y frutas
     { const food = buildFood(group, cx - 1.8, fy + .79, cz - 1.6); if (food.userData.update) houseUpd.push(food.userData.update); }
     buildChairs(group, cx - 1.8, fy + .14, cz - 1.6, [[-.95, 0, -Math.PI / 2], [.95, 0, Math.PI / 2]]);
+    {
+      // abanico de techo sobre la mesa del comedor: aspas de madera que giran suavemente
+      const fan = new THREE.Group(); fan.position.set(cx - 1.8, fy + H, cz - 1.6); group.add(fan);
+      const metM = mat(0x2a2b2e, { roughness: .35, metalness: .6 }), bladeM = mat(0x8a6240, { roughness: .7 });
+      const add = (geo, m, y) => { const o = new THREE.Mesh(geo, m); o.position.y = y; fan.add(o); return o; };
+      add(new THREE.CylinderGeometry(.09, .09, .04, 16), metM, -.02);            // base en el techo
+      add(new THREE.CylinderGeometry(.015, .015, .4, 8), metM, -.22);            // varilla
+      add(new THREE.CylinderGeometry(.11, .13, .14, 18), metM, -.48);           // motor
+      const lamp = add(new THREE.SphereGeometry(.09, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 1.2, roughness: .4 }), -.56);
+      const rot = new THREE.Group(); rot.position.y = -.52; fan.add(rot);
+      const bladeG = new THREE.BoxGeometry(.62, .014, .14).translate(.42, 0, 0);
+      for (let k = 0; k < 5; k++) { const b = new THREE.Mesh(bladeG, bladeM); b.rotation.set(0, k / 5 * Math.PI * 2, .08); rot.add(b); }
+      fan.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
+      lamp.receiveShadow = false;
+      houseUpd.push(t => { rot.rotation.y = t * 3.2; });
+    }
     // --- Dormitorio (lado derecho, al fondo) ---
     const bedX = cx + 4.6, bedZ = Z1 - 1.4;
     box(1.8, .4, 2.2, trimM, bedX, fy + .2, bedZ); box(1.7, .22, 2.05, mat(0xf4f2ec, { roughness: .9 }), bedX, fy + .5, bedZ); box(1.72, .1, 1.3, mat(0x7a3b6e, { roughness: .9 }), bedX, fy + .62, bedZ - .3);
