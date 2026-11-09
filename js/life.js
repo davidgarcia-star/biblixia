@@ -90,6 +90,18 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(DW + .3, .5, T + .05, darkM, cx, fy + H - .25, Z0);                            // dintel
     const door = box(.08, H - .55, DW - .2, woodM, cx - DW / 2 + .2, fy + (H - .55) / 2 + .14, Z0 - .4, { cast: true }); door.rotation.y = Math.PI / 2 - 1.1; // puerta de madera abierta
     box(.03, .9, .04, frameM, cx - DW / 2 + .55, fy + 1.1, Z0 - .9, { cast: false });
+    { // alfombra de bienvenida de fibra de coco delante de la puerta (la lee quien llega a la casa)
+      const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
+      g.fillStyle = '#9a6a3a'; g.fillRect(0, 0, 256, 128);
+      for (let k = 0; k < 900; k++) { g.fillStyle = Math.random() < .5 ? 'rgba(60,35,15,.25)' : 'rgba(210,160,100,.22)'; g.fillRect(Math.random() * 256, Math.random() * 128, 1 + Math.random() * 2, 1); }
+      g.strokeStyle = '#3b2412'; g.lineWidth = 7; g.strokeRect(9, 9, 238, 110);
+      g.fillStyle = '#3b2412'; g.textAlign = 'center'; g.font = '900 34px system-ui, sans-serif'; g.fillText('BIENVENIDOS', 128, 62);
+      g.font = '700 15px system-ui, sans-serif'; g.fillText('Josué 24:15', 128, 92);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      const fiber = mat(0x7a5230, { roughness: 1 });
+      const mt = new THREE.Mesh(new THREE.BoxGeometry(1.3, .025, .72), [fiber, fiber, new THREE.MeshStandardMaterial({ map: t, roughness: 1 }), fiber, fiber, fiber]);
+      mt.position.set(cx + .1, fy + .1, Z0 - .62); mt.rotation.y = Math.PI; mt.receiveShadow = true; group.add(mt);
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
