@@ -65,6 +65,26 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const logo = new THREE.Mesh(new THREE.CircleGeometry(1.2, 40), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, emissive: 0xffffff, emissiveMap: logoTex, emissiveIntensity: .25 }));
   logo.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .45); logo.rotation.y = Math.PI; group.add(logo);
   const logo2 = logo.clone(); logo2.position.x = cx + 8.2; group.add(logo2);
+  { // letrero de pie con el horario de los cultos, a la derecha de la entrada (sobre la acera del templo)
+    const c = document.createElement('canvas'); c.width = 256; c.height = 384; const g = c.getContext('2d');
+    g.fillStyle = '#0f1a33'; g.fillRect(0, 0, 256, 384);
+    g.strokeStyle = '#f5c542'; g.lineWidth = 8; g.strokeRect(8, 8, 240, 368);
+    g.textAlign = 'center'; g.fillStyle = '#ffd34d'; g.font = '900 40px "Arial Black", system-ui, sans-serif'; g.fillText('CULTOS', 128, 62);
+    g.fillStyle = '#f5c542'; g.fillRect(48, 80, 160, 3);
+    g.fillStyle = '#ffffff'; g.font = '700 25px system-ui, sans-serif';
+    [['Domingo', '10:00 a. m.'], ['Miércoles', '7:00 p. m.'], ['Viernes', 'Oración 7:00 p. m.']].forEach(([d, h], i) => {
+      g.fillText(d, 128, 126 + i * 70); g.fillStyle = '#cfe0ff'; g.font = '500 21px system-ui, sans-serif'; g.fillText(h, 128, 154 + i * 70);
+      g.fillStyle = '#ffffff'; g.font = '700 25px system-ui, sans-serif';
+    });
+    g.fillStyle = '#e9e0ff'; g.font = 'italic 500 17px system-ui, sans-serif'; g.fillText('«Venid, adoremos', 128, 334); g.fillText('y postrémonos» Sal 95:6', 128, 356);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    const frameM = mat(0x1c1a22, { roughness: .4, metalness: .5 }), sx = cx + 3.4, sz = Z0 - 1.05;
+    for (const dx of [-.62, .62]) box(.08, 2.1, .08, frameM, sx + dx, y0 + 1.05, sz);       // patas
+    box(1.32, 1.86, .1, frameM, sx, y0 + 1.25, sz);                                         // marco
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.74), new THREE.MeshStandardMaterial({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .35, roughness: .6 }));
+    face.position.set(sx, y0 + 1.25, sz - .056); face.rotation.y = Math.PI; group.add(face);
+    solid(sx - .7, sx + .7, sz - .1, sz + .1, y0 + 2.2);
+  }
 
   // --- LOBBY (al frente): recepción, sofás, baños de damas y caballeros ---
   const LZ = Z0 + 7;                                              // pared que separa el lobby del santuario
