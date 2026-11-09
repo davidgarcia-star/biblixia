@@ -328,6 +328,10 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
     for (const [tx, tz] of [[cx - 4, cz], [cx, cz + 1]]) { box(.9, .05, .9, mat(0xf2efe8), tx, y0 + .75, tz); cyl(.05, .05, .72, frameM, tx, y0 + .38, tz, 8); solid(tx - .45, tx + .45, tz - .45, tz + .45, y0 + .78, y0); }
     staticHuman({ gender: 'm', skin: SKINS[1], top: 0x2a4a9a, topStyle: 'camisa', pants: 0x22243a, hair: 'short' }, cx - 4, y0, cz - .75, 0, 'sit');
+    // sillas libres de madera con cojín alrededor de las mesitas de la cafetería
+    const cafeSeats = [[cx - 4, cz + .75, 0], [cx, cz + .25, Math.PI], [cx, cz + 1.75, 0]];
+    buildChairs(group, 0, y0, 0, cafeSeats);
+    for (const [sx, sz] of cafeSeats) solid(sx - .23, sx + .23, sz - .22, sz + .22, y0 + .98, y0);
     // fachada de vidrio con marcos y puerta de entrada al frente
     const Htot = FLOORS * FH;
     const gwall = (ax, az, bx, bz, y = base, h = Htot) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const g = box(w, h, d, glass, (ax + bx) / 2, y + h / 2, (az + bz) / 2, { cast: false, recv: false }); g.renderOrder = 1; solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, 999); };
