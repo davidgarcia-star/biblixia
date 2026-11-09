@@ -208,6 +208,19 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     const bedX = cx + 4.6, bedZ = Z1 - 1.4;
     box(1.8, .4, 2.2, trimM, bedX, fy + .2, bedZ); box(1.7, .22, 2.05, mat(0xf4f2ec, { roughness: .9 }), bedX, fy + .5, bedZ); box(1.72, .1, 1.3, mat(0x7a3b6e, { roughness: .9 }), bedX, fy + .62, bedZ - .3);
     box(1.2, .14, .4, mat(0xffffff, { roughness: .9 }), bedX, fy + .66, bedZ + .75); box(1.8, .9, .1, trimM, bedX, fy + .65, bedZ + 1.1); solid(bedX - .95, bedX + .95, bedZ - 1.1, bedZ + 1.15, fy + .62);
+    {
+      // cuadro enmarcado sobre la cabecera de la cama con Josué 24:15 (LBLA)
+      const c = document.createElement('canvas'); c.width = 512; c.height = 220; const g = c.getContext('2d');
+      g.fillStyle = '#f7f1e3'; g.fillRect(0, 0, 512, 220); g.strokeStyle = '#b8913a'; g.lineWidth = 4; g.strokeRect(14, 14, 484, 192);
+      g.fillStyle = '#3a2a1a'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = 'italic 700 42px Georgia, serif'; g.fillText('«Pero yo y mi casa,', 256, 66); g.fillText('serviremos al SEÑOR»', 256, 118);
+      g.fillStyle = '#8a6420'; g.font = '700 28px Georgia, serif'; g.fillText('JOSUÉ 24:15', 256, 174);
+      const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace; pt.anisotropy = 4;
+      const pz = Z1 - T / 2, py = fy + 2.05;
+      box(1.42, .64, .04, trimM, bedX, py, pz - .02, { cast: false });
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .56), new THREE.MeshStandardMaterial({ map: pt, roughness: .8 }));
+      pic.position.set(bedX, py, pz - .045); pic.rotation.y = Math.PI; pic.receiveShadow = true; group.add(pic);
+    }
     // --- Baño cerrado (esquina del frente a la derecha), con puerta desde el pasillo ---
     const BX0 = cx + 3.2, BZ1 = Z0 + 4.2, DZ0 = Z0 + 2.5, DZ1 = Z0 + 3.5;
     wall(BX0, BZ1, X1, BZ1);                                            // separa el baño del dormitorio
