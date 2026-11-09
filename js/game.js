@@ -1474,7 +1474,7 @@ function placeMate() {
   if (!mate) return;
   const back = P.heading + Math.PI;
   MT.pos.set(P.pos.x + Math.sin(back) * 1.8 + Math.cos(back) * .6, P.pos.y, P.pos.z + Math.cos(back) * 1.8 - Math.sin(back) * .6);
-  MT.vy = 0; MT.speed = 0; MT.heading = P.heading; MT.stuck = 0; MT.sit = null; MT.swim = false;
+  MT.vy = 0; MT.speed = 0; MT.heading = P.heading; MT.stuck = 0; MT.sit = null; MT.swim = false; MT.car = null;
 }
 // Cambiar en vivo entre Adán y Eva: el otro sigue al que manejas
 function swapPair() {
@@ -1489,7 +1489,24 @@ function swapPair() {
 function updateMate(dt, t) {
   if (!mate) return;
   let mSwim = 0, mKneel = -1, mPraise = -1, mSit = 0;
-  if (P.driving && world.ship) {
+  if (P.car) {
+    // el jugador maneja un auto: el compañero va sentado al lado (asiento del pasajero)
+    const c = P.car, o = c.obj, h = c.heading, cs = Math.cos(h), sn = Math.sin(h), lx = c.wid * .22, lz = -.1;
+    MT.pos.set(o.position.x + lx * cs + lz * Math.sin(h), o.position.y, o.position.z - lx * sn + lz * Math.cos(h));
+    MT.heading = h; MT.speed = 0; MT.vy = 0; MT.onGround = true; MT.swim = false; MT.sit = null; MT.stuck = 0;
+    if (!MT.car) { MT.car = c; toast(save.player.gender === 'f' ? '🌿 Adán se sentó a tu lado' : '🌿 Eva se sentó a tu lado', '#7ef0a4'); }
+    mSit = 1;
+  } else if (MT.car) {
+    // el jugador se bajó: el compañero se baja por la puerta del otro lado
+    const c = MT.car, h = c.heading, cs = Math.cos(h), sn = Math.sin(h); MT.car = null;
+    let ok = false;
+    for (const side of [1, 1.6, -1, -1.6]) {
+      const lx = side * (c.wid / 2 + .7), x = c.obj.position.x + lx * cs, z = c.obj.position.z - lx * sn;
+      if (!blocked(x, z, c.obj.position.y) && Math.hypot(x - P.pos.x, z - P.pos.z) > .8) { MT.pos.set(x, floorAt(x, z, c.obj.position.y + .3), z); ok = true; break; }
+    }
+    if (!ok) placeMate();
+    MT.heading = h; MT.speed = 0; MT.vy = 0; MT.onGround = true; MT.stuck = 0;
+  } else if (P.driving && world.ship) {
     const b = world.boat, sh = world.ship, lx = -7, lz = 1.3;
     MT.pos.set(sh.position.x + Math.cos(b.heading) * lx + Math.sin(b.heading) * lz, b.deckY + sh.position.y, sh.position.z - Math.sin(b.heading) * lx + Math.cos(b.heading) * lz);
     MT.heading = P.heading; MT.speed = 0; MT.onGround = true; MT.swim = false; MT.sit = null;
@@ -1734,16 +1751,20 @@ joyEl.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e
 joyEl.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === joy.id) joyEnd(); });
 joyEl.addEventListener('touchcancel', joyEnd);
 joyEl.addEventListener('mousedown', e => { joy.active = true; joyEl.classList.add('on'); joyMove(e.clientX, e.clientY); const mv = ev => joyMove(ev.clientX, ev.clientY), up = () => { joyEnd(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); }; addEventListener('mousemove', mv); addEventListener('mouseup', up); });
-// Guía del vehículo (volante): solo izquierda / derecha, giro moderado; vuelve al centro al soltar
+// Girar el vehículo: botones izquierda / derecha, giro moderado; vuelve al centro al soltar
 const wheel = { id: null, x: 0, active: false, sx: 0 }, pedal = { gas: false, rev: false };
-const wheelEl = $('wheel'), wheelRim = $('wheelRim');
-const wheelMove = cx => { wheel.x = Math.max(-1, Math.min(1, (cx - wheel.sx) / 70)); wheelRim.style.transform = `rotate(${wheel.x * 90}deg)`; };
-const wheelEnd = () => { wheel.id = null; wheel.active = false; wheel.x = 0; wheelRim.style.transform = ''; wheelEl.classList.remove('on'); };
-wheelEl.addEventListener('touchstart', e => { e.preventDefault(); sound.unlock(); const t = e.changedTouches[0]; wheel.id = t.identifier; wheel.active = true; wheel.sx = t.clientX; wheelEl.classList.add('on'); wheelMove(t.clientX); }, { passive: false });
-wheelEl.addEventListener('touchmove', e => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === wheel.id) wheelMove(t.clientX); }, { passive: false });
-wheelEl.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === wheel.id) wheelEnd(); });
-wheelEl.addEventListener('touchcancel', wheelEnd);
-wheelEl.addEventListener('mousedown', e => { wheel.active = true; wheel.sx = e.clientX; wheelEl.classList.add('on'); const mv = ev => wheelMove(ev.clientX), up = () => { wheelEnd(); removeEventListener('mousemove', mv); removeEventListener('mouseup', up); }; addEventListener('mousemove', mv); addEventListener('mouseup', up); });
+const wheelEl = $('wheel');
+// botones simples ◀ / ▶ para girar (más fácil que el volante): mientras estén presionados el vehículo gira
+const steerHeld = { l: false, r: false };
+const steerApply = () => { wheel.x = (steerHeld.r ? 1 : 0) - (steerHeld.l ? 1 : 0); wheel.active = steerHeld.l || steerHeld.r; };
+const wheelEnd = () => { steerHeld.l = steerHeld.r = false; wheel.id = null; steerApply(); for (const id of ['wLeft', 'wRight']) $(id).classList.remove('on'); };
+[['wLeft', 'l'], ['wRight', 'r']].forEach(([id, k]) => {
+  const b = $(id);
+  const on = e => { e.preventDefault(); sound.unlock(); steerHeld[k] = true; b.classList.add('on'); steerApply(); try { b.setPointerCapture(e.pointerId); } catch (er) {} };
+  const off = e => { steerHeld[k] = false; b.classList.remove('on'); steerApply(); };
+  b.addEventListener('pointerdown', on); b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off);
+  b.addEventListener('contextmenu', e => e.preventDefault()); b.addEventListener('click', e => e.preventDefault());
+});
 [['tGas', 'gas'], ['tRev', 'rev']].forEach(([id, k]) => {
   const b = $(id); if (!b) return;
   const on = e => { e.preventDefault(); sound.unlock(); pedal[k] = true; b.classList.add('on'); };
@@ -1811,7 +1832,7 @@ addEventListener('touchstart', e => { if (joy.active && joy.id !== null && !touc
 let state = 'menu', L = null, lvlIdx = 0, timeLeft = 0, collected = 0, goal = 0, verseOrder = [], verseCursor = 0, menuT = 0;
 const sound = new Sound();
 try { sound.setMusic(localStorage.getItem(SAVE_KEY + '_music') !== '0'); sound.setSfx(localStorage.getItem(SAVE_KEY + '_sfx') !== '0'); } catch (e) {}
-let musicStarted = false, kabodT = 0;
+let musicStarted = false, kabodT = 0, trumpetT = 0, trumpetNear = false;
 const ensureMusic = () => { sound.unlock(); if (!musicStarted) { musicStarted = true; sound.startMusic(); } };
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, ensureMusic, { once: false, passive: true }));
 
@@ -1832,7 +1853,7 @@ async function startLevelNow(i) {
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); sound.swimLoop(0); sound.boatLoop(0);
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); P.timeStop = false; elTimer.classList.remove('paused'); trumpetT = 0; trumpetNear = false; sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -2256,7 +2277,13 @@ function toastOld(txt) { const t = $('toast'); t.textContent = txt; t.style.opac
 const tmpV = new THREE.Vector3(), ray = new THREE.Raycaster();
 
 function update(dt) {
-  timeLeft -= dt; if (timeLeft <= 0) { timeLeft = 0; updateHUD(); endLevel(false); return; }
+  // dentro de la iglesia el tiempo se detiene hasta que el jugador salga
+  const enTemplo = !!(world.church && world.church.inside(P.pos) && P.pos.y < 9.5);
+  if (enTemplo !== P.timeStop) {
+    P.timeStop = enTemplo; elTimer.classList.toggle('paused', enTemplo);
+    toast(enTemplo ? '⏸ En la casa de Dios el tiempo se detiene' : '▶ El tiempo sigue corriendo', enTemplo ? '#9fd8ff' : '#ffd34d');
+  }
+  if (!enTemplo) { timeLeft -= dt; if (timeLeft <= 0) { timeLeft = 0; updateHUD(); endLevel(false); return; } }
 
   // Entrada → dirección relativa a cámara
   let ix = 0, iz = 0;
@@ -2733,8 +2760,11 @@ function loopBody() {
       const ak = world.priests.ark, dA = ak && ak.visible ? Math.hypot(ak.position.x - P.pos.x, ak.position.z - P.pos.z) : 1e9;
       if (state === 'play') {
         if (dA < 28) sound.setMusicMode('ark'); else if (dA > 36 && sound.mode === 'ark') sound.setMusicMode('play');
-        kabodT -= dt;
-        if (dA < 16 && kabodT <= 0) { kabodT = 9; sound.say('¡Kabod! ¡Presencia de Dios!', { male: true, rate: .82 }); }
+        kabodT -= dt; trumpetT -= dt;
+        // trompetas de los sacerdotes: suenan al llegar cerca del arca y luego cada pocos segundos mientras sigas cerca
+        if (dA < 24 && trumpetT <= 0) { trumpetT = 7; const pan = THREE.MathUtils.clamp((ak.position.x - P.pos.x) / 20, -.8, .8); sound.trumpet(dA < 12 ? 1 : .6 + (24 - dA) / 30, pan); if (!trumpetNear) toast('🎺 ¡Las trompetas suenan delante del arca del pacto!', '#ffd34d'); trumpetNear = true; }
+        else if (dA > 30) { trumpetNear = false; trumpetT = Math.min(trumpetT, 0); }
+        if (dA < 16 && kabodT <= 0) { kabodT = 9; setTimeout(() => sound.say('¡Kabod! ¡Presencia de Dios!', { male: true, rate: .82 }), 2700); }
       }
     }
     if (world.church) {
@@ -2810,7 +2840,7 @@ function loopBody() {
   human.root.rotation.y = state === 'creator' ? t * .8 : P.heading;
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
-  if (mate) { mate.root.visible = state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'; if (state === 'play') updateMate(dt, t); }
+  if (mate) { mate.root.visible = !P.car && (state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'); if (state === 'play') updateMate(dt, t); }
   if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1, sit: P.sit ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }

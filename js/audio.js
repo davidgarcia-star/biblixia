@@ -332,6 +332,23 @@ export class Sound {
       o.connect(lp).connect(g).connect(bus); o.start(t + w); o.stop(t + w + d + .05);
     }
   }
+  // Trompetas de plata de los sacerdotes (Números 10:2; 1 Crónicas 15:24): toque de fanfarria brillante
+  trumpet(vol = 1, pan = 0) {
+    const a = this.unlock(); if (!a || !this.sfxOn) return;
+    const bus = this._bus(.55 * vol, pan), t = a.currentTime + .03;
+    // Re – Re – Re – La (larga) – Fa♯ – La (muy larga): llamada de fiesta
+    const call = [[0, .16, 587.3], [.2, .16, 587.3], [.4, .16, 587.3], [.6, .55, 880], [1.2, .25, 740], [1.5, 1.1, 880]];
+    for (const [w, d, f] of call) for (const [mul, det, k] of [[1, 0, 1], [1, 9, .55], [.5, -4, .35]]) { // tres trompetas un poco desafinadas (coro de sacerdotes)
+      const t0 = t + w, o = a.createOscillator(), g = a.createGain(), lp = a.createBiquadFilter(), pk = a.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f * mul * .97, t0); o.frequency.exponentialRampToValueAtTime(f * mul, t0 + .05); o.detune.value = det;
+      const vib = a.createOscillator(), vg = a.createGain(); vib.frequency.value = 5.5; vg.gain.setValueAtTime(0, t0); vg.gain.linearRampToValueAtTime(f * mul * .008, t0 + d); vib.connect(vg).connect(o.frequency);
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(900, t0); lp.frequency.exponentialRampToValueAtTime(3600, t0 + .06); lp.Q.value = 1.5; // el «metal» se abre al soplar
+      pk.type = 'peaking'; pk.frequency.value = 1400; pk.gain.value = 6; pk.Q.value = 1.2;
+      g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.16 * k, t0 + .035); g.gain.setValueAtTime(.13 * k, t0 + d * .8); g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .08);
+      o.connect(lp).connect(pk).connect(g).connect(bus); if (this.rev) g.connect(this.rev);
+      o.start(t0); o.stop(t0 + d + .12); vib.start(t0); vib.stop(t0 + d + .12);
+    }
+  }
   // Sonidos de la vida diaria
   life(kind) {
     const a = this.unlock(); if (!a || !this.sfxOn) return;
