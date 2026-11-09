@@ -1887,7 +1887,10 @@ async function startLevelNow(i) {
   await buildHumanLOD(world);
   await warmShaders(scene, camera); pendingGroups.clear();
   lastNow = performance.now();
-  state = 'play'; sound.duck(1); sound.mode = 'play'; ensureMusic(); sound.setMusicMode('play'); // música más activa al entrar al juego
+  // al empezar a jugar suena otra canción (más activa) distinta a la del menú
+  state = 'play'; sound.duck(1);
+  if (musicStarted) sound.setMusicMode('play');            // cambia de la canción del menú a la del juego
+  else { sound.mode = 'play'; ensureMusic(); }             // primera vez: arranca directamente con la canción del juego
 }
 
 const SCREENS = ['splash', 'help', 'levelsel', 'collection', 'pause', 'result', 'creator'];
