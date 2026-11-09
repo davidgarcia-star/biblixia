@@ -70,6 +70,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     for (let k = 0; k < 6; k++) box(1.6, .08, pathL / 6 - .25, mat(0xcfccc6, { roughness: .6 }), cx, fy + .05, z0 + 1 + (k + .5) * pathL / 6, { cast: false });
     const ledM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0c8, emissiveIntensity: 2 });
     for (let k = 0; k < 3; k++) for (const sx of [-1, 1]) { box(.1, .45, .1, darkM, cx + sx * 1.15, fy + .22, z0 + 2 + k * pathL / 3, { cast: false }); box(.11, .06, .11, ledM, cx + sx * 1.15, fy + .42, z0 + 2 + k * pathL / 3, { cast: false }); }
+    { // buzón moderno con el número de la casa junto a la entrada del camino de losas
+      const bx = cx + 2.2, bz = z0 + 1.1;
+      box(.08, 1.05, .08, darkM, bx, fy + .53, bz);                                     // poste
+      box(.3, .34, .48, darkM, bx, fy + 1.2, bz);                                       // caja del buzón
+      box(.24, .03, .04, mat(0xc9ccd0, { metalness: .8, roughness: .25 }), bx, fy + 1.3, bz - .25, { cast: false }); // ranura metálica
+      const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
+      g.fillStyle = '#24272c'; g.fillRect(0, 0, 128, 64); g.fillStyle = '#f2c14e'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = '800 44px system-ui, sans-serif'; g.fillText('7', 64, 34);
+      const nt = new THREE.CanvasTexture(c); nt.colorSpace = THREE.SRGBColorSpace;
+      const num = new THREE.Mesh(new THREE.PlaneGeometry(.26, .13), new THREE.MeshStandardMaterial({ map: nt, roughness: .5 }));
+      num.position.set(bx, fy + 1.12, bz - .245); num.rotation.y = Math.PI; group.add(num);
+      const flag = box(.03, .2, .05, mat(0xc0282a, { roughness: .5 }), bx + .17, fy + 1.3, bz + .1, { cast: false }); flag.rotation.z = -.2; // banderita roja
+      solid(bx - .16, bx + .16, bz - .25, bz + .25, fy + 1.37);
+    }
     box(HW * 2, .14, HD * 2, floorM, cx, fy + .07, cz, { cast: false });
     const X0 = cx - HW, X1 = cx + HW, Z0 = cz - HD, Z1 = cz + HD, DW = 1.4;
     const wall = (ax, az, bx, bz, m = wallM) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const mm = box(w, H, d, m, (ax + bx) / 2, fy + H / 2, (az + bz) / 2); blockers.push(mm); solid(Math.min(ax, bx) - T / 2, Math.max(ax, bx) + T / 2, Math.min(az, bz) - T / 2, Math.max(az, bz) + T / 2, fy + H); };
