@@ -116,6 +116,12 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const mt = new THREE.Mesh(new THREE.BoxGeometry(1.3, .025, .72), [fiber, fiber, new THREE.MeshStandardMaterial({ map: t, roughness: 1 }), fiber, fiber, fiber]);
       mt.position.set(cx + .1, fy + .1, Z0 - .62); mt.rotation.y = Math.PI; mt.receiveShadow = true; group.add(mt);
     }
+    // apliques de pared a ambos lados de la puerta: cuerpo negro con luz cálida hacia arriba y hacia abajo
+    for (const sx of [-1.15, 1.05]) {
+      const sz = Z0 - (sx < 0 ? .16 : .225);
+      box(.16, .34, .1, darkM, cx + sx, fy + 2.1, sz, { cast: false });
+      for (const dy of [-.18, .18]) box(.12, .025, .07, ledM, cx + sx, fy + 2.1 + dy, sz, { cast: false, recv: false });
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
