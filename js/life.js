@@ -306,6 +306,29 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // escaleras: rampa 1→2 a la derecha, 2→3 a la izquierda (a lo largo de z)
     const SZ0 = Z0 + 2.2, SZ1 = Z0 + 11.2, SW = 2.2;
     const stairs = [[X1 - .3 - SW, X1 - .3], [X0 + .3, X0 + .3 + SW]];
+    // pantallas de las computadoras con contenido de verdad: documento, gráfica de barras y hoja de cálculo
+    const screenMs = ['doc', 'chart', 'sheet'].map(kind => {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 150; const g = c.getContext('2d');
+      g.fillStyle = '#eef2f7'; g.fillRect(0, 0, 256, 150);
+      g.fillStyle = kind === 'sheet' ? '#1f7a45' : kind === 'chart' ? '#c2552a' : '#2a5ab8'; g.fillRect(0, 0, 256, 16);
+      for (let k = 0; k < 3; k++) { g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(246 - k * 11, 8, 3.2, 0, Math.PI * 2); g.fill(); }
+      if (kind === 'doc') {
+        g.fillStyle = '#ffffff'; g.fillRect(50, 22, 156, 124);
+        g.fillStyle = '#2a3a55'; g.fillRect(62, 32, 90, 7);
+        for (let k = 0; k < 11; k++) { g.fillStyle = '#9aa6b8'; g.fillRect(62, 48 + k * 8.5, k % 4 === 3 ? 70 : 132, 3); }
+      } else if (kind === 'chart') {
+        g.fillStyle = '#ffffff'; g.fillRect(12, 24, 232, 118); g.strokeStyle = '#8a94a6'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(30, 30); g.lineTo(30, 130); g.lineTo(236, 130); g.stroke();
+        const hs = [40, 58, 46, 72, 64, 88, 80]; hs.forEach((h, k) => { g.fillStyle = k % 2 ? '#e0a31a' : '#2a7ad8'; g.fillRect(42 + k * 27, 128 - h, 17, h); });
+      } else {
+        g.fillStyle = '#ffffff'; g.fillRect(0, 16, 256, 134); g.strokeStyle = '#c9d2dc'; g.lineWidth = 1;
+        for (let yy = 30; yy < 150; yy += 12) { g.beginPath(); g.moveTo(0, yy); g.lineTo(256, yy); g.stroke(); }
+        for (let xx = 28; xx < 256; xx += 46) { g.beginPath(); g.moveTo(xx, 16); g.lineTo(xx, 150); g.stroke(); }
+        g.fillStyle = '#dfe9f3'; g.fillRect(0, 16, 256, 14);
+        for (let row = 0; row < 9; row++) for (let col = 0; col < 5; col++) { g.fillStyle = col === 0 ? '#3a4a60' : '#7a8698'; g.fillRect(34 + col * 46, 35 + row * 12, 14 + ((row * 7 + col * 3) % 5) * 5, 3); }
+      }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+      return new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .85, roughness: .4 });
+    });
     for (let i = 0; i < FLOORS; i++) { await pace();
       const y = fy(i);
       // losa con hueco sobre la escalera que llega a este piso
@@ -316,11 +339,12 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const lampM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 1.6 });
       for (let k = -2; k <= 2; k++) box(1.6, .04, .3, lampM, cx + k * 4, y + FH - .32, cz, { cast: false });
       // escritorios, computadoras, sillas y trabajadores
-      const deskM = mat(0xe6e2da, { roughness: .4 }), pcM = mat(0x15171c, { roughness: .3 }), screenM = new THREE.MeshStandardMaterial({ color: 0x3a7ad8, emissive: 0x2a6ad0, emissiveIntensity: .9 });
+      const deskM = mat(0xe6e2da, { roughness: .4 }), pcM = mat(0x15171c, { roughness: .3 });
       const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
       desks.forEach(([dx, dz], k) => {
         box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
-        box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenM, dx, y + 1.0, dz + .165, { cast: false });
+        box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenMs[(k + i) % screenMs.length], dx, y + 1.0, dz + .165, { cast: false });
+        box(.06, .14, .05, pcM, dx, y + .85, dz + .24, { cast: false }); box(.26, .015, .16, pcM, dx, y + .785, dz + .24, { cast: false });   // pie del monitor
         if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
       });
       // dispensador de agua en cada piso
