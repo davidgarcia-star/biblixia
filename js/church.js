@@ -65,6 +65,17 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const logo = new THREE.Mesh(new THREE.CircleGeometry(1.2, 40), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, emissive: 0xffffff, emissiveMap: logoTex, emissiveIntensity: .25 }));
   logo.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .45); logo.rotation.y = Math.PI; group.add(logo);
   const logo2 = logo.clone(); logo2.position.x = cx + 8.2; group.add(logo2);
+  // letrero luminoso verde de «SALIDA» por dentro, sobre la puerta principal (como en los templos reales)
+  {
+    const ec = document.createElement('canvas'); ec.width = 256; ec.height = 96; const eg = ec.getContext('2d');
+    eg.fillStyle = '#0f8a3c'; eg.fillRect(0, 0, 256, 96); eg.strokeStyle = '#e8fff0'; eg.lineWidth = 5; eg.strokeRect(6, 6, 244, 84);
+    eg.fillStyle = '#ffffff'; eg.font = '900 44px "Arial Black", system-ui, sans-serif'; eg.textAlign = 'center'; eg.textBaseline = 'middle'; eg.fillText('SALIDA', 150, 50);
+    eg.beginPath(); eg.moveTo(22, 50); eg.lineTo(44, 30); eg.lineTo(44, 42); eg.lineTo(60, 42); eg.lineTo(60, 58); eg.lineTo(44, 58); eg.lineTo(44, 70); eg.closePath(); eg.fill();   // flecha
+    const et = new THREE.CanvasTexture(ec); et.colorSpace = THREE.SRGBColorSpace;
+    box(.98, .4, .07, mat(0xf4f4f0, { roughness: .4 }), cx, y0 + 3.8, Z0 + T / 2 + .035, { cast: false });                       // caja del letrero
+    const ep = new THREE.Mesh(new THREE.PlaneGeometry(.9, .34), new THREE.MeshBasicMaterial({ map: et, toneMapped: false }));
+    ep.position.set(cx, y0 + 3.8, Z0 + T / 2 + .075); group.add(ep);
+  }
 
   // --- LOBBY (al frente): recepción, sofás, baños de damas y caballeros ---
   const LZ = Z0 + 7;                                              // pared que separa el lobby del santuario
