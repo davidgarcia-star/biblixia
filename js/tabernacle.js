@@ -274,6 +274,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const flames = [], halos = []; T.traverse(m => { if (m.userData.flame) flames.push(m); if (m.userData.halo) halos.push(m); });
   return {
     zones: zones.filter(z => z.text),
+    indoor: [{ name: 'la tienda del tabernáculo', msg: '⏸ En la tienda del tabernáculo el tiempo se detiene', rects: [[tx0, tx1, tz0, tz1], [tx1, tx1 + 4, tz0 - 1, tz1 + 1]], maxY: TH }],
     bounds: { x0, x1, z0, z1 }, gate: [x1, cz],
     holyGift: [veilX + 3.2, cz], holiestGift: [hhX + 2.3, cz + 1.3], aaronSpot: [veilX + 7, cz],
     altar: [altX, cz, aw / 2, ah], laver: [lavX, cz],

@@ -541,7 +541,7 @@ async function buildWorld(cfg) {
   const N = cfg.grid, T = N * PITCH + STREET, O = -T / 2;
   const group = new THREE.Group(); scene.add(group); pendingGroups.add(group); // no se dibuja hasta estar listo
   const colliders = [], blockers = [], coinSpots = [], platSpots = [], npcSpots = [];
-  const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [], lampPts: [] };
+  const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [], lampPts: [], indoor: [] };
   const addBox = (minX, maxX, minZ, maxZ, top, bottom = 0, tag) => colliders.push({ minX, maxX, minZ, maxZ, top, bottom, tag });
   // Árboles de la Biblia: olivo (Salmo 52:8), higuera (Miqueas 4:4), cedro del Líbano (Salmo 92:12), palmera (Salmo 92:12)
   const treeGroup = new THREE.Group();
@@ -799,7 +799,7 @@ async function buildWorld(cfg) {
     }
     await pace();
     const tab = await buildTabernacle({ group, addBox, blockers, cx: tcx, cz: tcz });
-    W.tab = tab; W.zones = tab.zones;
+    W.tab = tab; W.zones = tab.zones; if (tab.indoor) W.indoor.push(...tab.indoor);
     const tb = tab.bounds;
     await pace();
     W.camp = await buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
@@ -854,7 +854,7 @@ async function buildWorld(cfg) {
     // El río Jordán, al occidente del valle (Juan el Bautista bautizando: Mateo 3)
     await pace();
     const jordan = await buildJordan({ group, addBox, x: O + 22, z0: Z0 + 3, z1: Z0 + SZ - 3, rnd: r });
-    W.ark = ark; W.valley = valley; W.jordan = jordan; W.zones.push(...ark.zones, ...valley.zones, ...jordan.zones);
+    W.ark = ark; if (ark.indoor) W.indoor.push(...ark.indoor); W.valley = valley; W.jordan = jordan; W.zones.push(...ark.zones, ...valley.zones, ...jordan.zones);
     W.johnSpot = jordan.johnSpot; W.johnPos = jordan.johnPos;
     W.south = { Z0, Wt, arkX: O + Wt / 2, arkZ: Z0 + SZ - 40 };
     await plantBiblicalTrees(O + 8, O + Wt - 8, Z0 + 8, Z0 + SZ - 6, 22, [[O + Wt / 2 - 80, O + Wt / 2 + 80, Z0 + 20, Z0 + SZ], [O + Wt - 75, O + Wt, Z0, Z0 + 52], [O, O + 46, Z0, Z0 + SZ]], ['olivo', 'cedro', 'higuera', 'olivo']);
@@ -1007,7 +1007,7 @@ async function buildWorld(cfg) {
     }
   }
   await idle();
-  { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = await buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); } }
+  { const cb = W.blocks.find(b => b[2] === 'iglesia'); if (cb) { W.church = await buildChurch({ group, addBox, addRamp, blockers, block: cb, CURB, BLOCK, r, acts: W.life.acts, fx: k => W.life.fx(k) }); W.zones.push(...W.church.zones); if (W.church.indoor) W.indoor.push(...W.church.indoor); } }
 
   await idle();
   // Faroles de aceite fuera de la ciudad: playa, muelle, desierto, valle y lugares bíblicos (para ver de noche)
@@ -1075,6 +1075,11 @@ async function buildWorld(cfg) {
     W.coins.push(c0); return c0;
   };
   pick.forEach((p, i) => makeCoin(p, i));
+  // Monedas extra en los lugares que se quedaron sin ninguna: si un punto queda a más de 30 m
+  // de cualquier moneda, se pone una allí (así todas las zonas del mapa tienen monedas).
+  { let extra = 0; const maxExtra = 20 + cfg.idx * 6;
+    for (const p of pool) { if (extra >= maxExtra) break;
+      if (W.coins.every(c => Math.hypot(c.x - p[0], c.z - p[1]) > 30)) { makeCoin(p, W.coins.length); extra++; } } }
 
   // Monedas en el barco (viajan con él) y, desde el nivel Intermedio, monedas en alta mar para buscarlas navegando
   if (W.seaInfo && W.boat) {
@@ -1099,8 +1104,8 @@ async function buildWorld(cfg) {
     const rimM = new THREE.MeshStandardMaterial({ color: 0x4fc3ff, metalness: .6, roughness: .25, emissive: 0x1a6aa0, emissiveIntensity: .6 });
     const handM = new THREE.MeshStandardMaterial({ color: 0x1a2a44, roughness: .5 });
     const faceG = new THREE.CircleGeometry(.5, 40), rimG = new THREE.TorusGeometry(.52, .07, 10, 40), bellG = new THREE.SphereGeometry(.13, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-    const nClocks = 3 + cfg.idx;
-    const cpool = coinSpots.filter(p => Math.hypot(p[0] - startX, p[1] - startZ) > 12 && W.coins.every(c => Math.hypot(c.x - p[0], c.z - p[1]) > 5)).sort(() => r() - .5);
+    const nClocks = 7 + cfg.idx * 2; // más relojes en todos los niveles
+    const cpool = coinSpots.filter(p => Math.hypot(p[0] - startX, p[1] - startZ) > 12 && W.coins.every(c => Math.hypot(c.x - p[0], c.z - p[1]) > 3)).sort(() => r() - .5);
     const mkClock = (x, y, z) => {
       const g = new THREE.Group(), body = new THREE.Group();
       const f1 = new THREE.Mesh(faceG, faceM); f1.position.z = .03; const f2 = new THREE.Mesh(faceG, faceM); f2.rotation.y = Math.PI; f2.position.z = -.03;
@@ -1115,7 +1120,7 @@ async function buildWorld(cfg) {
     };
     for (const p of cpool) { await pace();
       if (W.clocks.length >= nClocks) break;
-      if (W.clocks.some(c => Math.hypot(c.x - p[0], c.z - p[1]) < 30)) continue;
+      if (W.clocks.some(c => Math.hypot(c.x - p[0], c.z - p[1]) < 22)) continue;
       mkClock(p[0], p[2], p[1]);
     }
     // 3 relojes más sobre la cubierta del barco (viajan con él)
@@ -1853,7 +1858,7 @@ async function startLevelNow(i) {
   if (!(world && world.key === wkey && !world.used)) { world = await buildWorld(L); world.key = wkey; }
   world.used = true;
   goal = L.goal; collected = 0; timeLeft = L.time;
-  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); P.timeStop = false; elTimer.classList.remove('paused'); trumpetT = 0; trumpetNear = false; sound.swimLoop(0); sound.boatLoop(0);
+  P.pos.copy(world.start); P.vy = 0; P.onGround = true; P.heading = world.startYaw; P.speed = 0; P.inv = 0; P.climb = null; P.swim = false; P.kneel = null; P.praise = null; P.sit = null; sitBtns(''); P.timeStop = false; indoorPlace = null; elTimer.classList.remove('paused'); trumpetT = 0; trumpetNear = false; sound.swimLoop(0); sound.boatLoop(0);
   setCamMode(camMode, false); lifeUsed.clear(); if (world.life) world.life.fx = lifeFx;
   cam.yaw = world.startYaw; cam.pitch = .3;
   cam.cur.set(P.pos.x - Math.sin(cam.yaw) * 7, 4, P.pos.z - Math.cos(cam.yaw) * 7);
@@ -2299,13 +2304,27 @@ function toastOld(txt) { const t = $('toast'); t.textContent = txt; t.style.opac
    ========================================================= */
 const tmpV = new THREE.Vector3(), ray = new THREE.Raycaster();
 
-function update(dt) {
-  // dentro de la iglesia el tiempo se detiene hasta que el jugador salga
-  const enTemplo = !!(world.church && world.church.inside(P.pos) && P.pos.y < 9.5);
-  if (enTemplo !== P.timeStop) {
-    P.timeStop = enTemplo; elTimer.classList.toggle('paused', enTemplo);
-    toast(enTemplo ? '⏸ En la casa de Dios el tiempo se detiene' : '▶ El tiempo sigue corriendo', enTemplo ? '#9fd8ff' : '#ffd34d');
+// Lugares con puerta (iglesia, casa, oficinas, la tienda del tabernáculo, el arca…):
+// el tiempo se detiene desde que el jugador está FRENTE a la puerta o adentro, y sigue al alejarse.
+// Cada lugar: { name, rects: [[x0, x1, z0, z1], …], minY, maxY }
+function indoorAt(p) {
+  const list = world && world.indoor; if (!list) return null;
+  for (const b of list) {
+    if (p.y < (b.minY ?? -1e9) || p.y > (b.maxY ?? 1e9)) continue;
+    for (const r of b.rects) if (p.x > r[0] && p.x < r[1] && p.z > r[2] && p.z < r[3]) return b;
   }
+  return null;
+}
+let indoorPlace = null;
+
+function update(dt) {
+  const lugar = indoorAt(P.pos), enTemplo = !!lugar;
+  if (enTemplo !== P.timeStop || (lugar && lugar !== indoorPlace)) {
+    const antes = P.timeStop; P.timeStop = enTemplo; elTimer.classList.toggle('paused', enTemplo);
+    if (enTemplo && (!antes || lugar !== indoorPlace)) toast(lugar.msg || `⏸ En ${lugar.name} el tiempo se detiene`, '#9fd8ff');
+    else if (!enTemplo) toast('▶ El tiempo sigue corriendo', '#ffd34d');
+  }
+  indoorPlace = lugar;
   if (!enTemplo) { timeLeft -= dt; if (timeLeft <= 0) { timeLeft = 0; updateHUD(); endLevel(false); return; } }
 
   // Entrada → dirección relativa a cámara

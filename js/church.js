@@ -221,7 +221,9 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   ];
   let li = 0, lt = 0, scrT = 0;
   return {
-    zones, cx, cz, seats, greeter, inside: p => p.x > X0 && p.x < X1 && p.z > LZ && p.z < Z1,
+    zones, cx, cz, seats, greeter,
+    indoor: [{ name: 'la casa de Dios', msg: '⏸ En la casa de Dios el tiempo se detiene', rects: [[X0, X1, Z0, Z1], [cx - 5, cx + 5, Z0 - 5, Z0]], maxY: y0 + 9.5 }],
+    inside: p => p.x > X0 && p.x < X1 && p.z > LZ && p.z < Z1,
     update(dt, t, camPos) {
       const near = Math.hypot(cx - camPos.x, cz - camPos.z) < 70;
       if (!near) return;

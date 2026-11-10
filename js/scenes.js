@@ -306,6 +306,7 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   flock.forEach(([c, sz], i) => { const f = makeFlyer(c, sz); A.add(f.d); doves.push({ ...f, k: i, r: 20 + (i % 9) * 3.2, h: H + 5 + (i % 5) * 2.2, sp: .22 + (i % 4) * .05 }); });
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   return {
+    indoor: [{ name: 'el arca', msg: '⏸ En el arca el tiempo se detiene', rects: [[x - L / 2, x + L / 2, doorZ, z + Wd / 2], [x - doorW / 2 - 1, x + doorW / 2 + 1, doorZ - leafLen - 1, doorZ]], minY: doorY - 1.5 }],
     zones: [{ id: 'arca-noe', name: 'El arca de Noé', minX: x - L / 2 - 6, maxX: x + L / 2 + 6, minZ: rampZ0 - 10, maxZ: doorZ, pri: 3,
       text: 'Noé construyó el arca como Dios le mandó y se salvó del diluvio con su familia y los animales.',
       ref: 'Génesis 6:14-22; 7:1-16; 9:12-16' },
