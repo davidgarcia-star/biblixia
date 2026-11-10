@@ -830,6 +830,21 @@ async function buildWorld(cfg) {
       const meadow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gd), new THREE.MeshStandardMaterial({ map: gtex, alphaMap: amap, alphaTest: .5, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }));
       meadow.rotation.x = -Math.PI / 2; meadow.position.set(gx, .07, gz); meadow.receiveShadow = true; group.add(meadow);
       W.meadow = { x0: gx - gw / 2 + 2, x1: gx + gw / 2 - 2, z0: gz - gd / 2 + 2, z1: gz + gd / 2 - 2 };
+      // Luciérnagas: de noche titilan suavemente sobre la grama del oasis
+      const nF = isTouch ? 36 : 64, fPos = new Float32Array(nF * 3), fCol = new Float32Array(nF * 3), fData = [];
+      for (let i = 0; i < nF; i++) fData.push({ x: gx + (Math.random() - .5) * (gw - 4), z: gz + (Math.random() - .5) * (gd - 3), y: .4 + Math.random() * 1.3, ph: Math.random() * 6.28, sp: .4 + Math.random() * .6 });
+      const fGeo = new THREE.BufferGeometry(); fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3)); fGeo.setAttribute('color', new THREE.BufferAttribute(fCol, 3));
+      const fc = document.createElement('canvas'); fc.width = fc.height = 32; const fg2 = fc.getContext('2d'), fgr = fg2.createRadialGradient(16, 16, 0, 16, 16, 16);
+      fgr.addColorStop(0, 'rgba(255,255,255,1)'); fgr.addColorStop(.3, 'rgba(255,255,255,.55)'); fgr.addColorStop(1, 'rgba(255,255,255,0)'); fg2.fillStyle = fgr; fg2.fillRect(0, 0, 32, 32);
+      const fPts = new THREE.Points(fGeo, new THREE.PointsMaterial({ size: .45, map: new THREE.CanvasTexture(fc), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      fPts.frustumCulled = false; fPts.visible = false; fPts.renderOrder = 3; group.add(fPts);
+      W.fireflies = { pts: fPts, update(t) {
+        fPts.visible = stars.visible; if (!fPts.visible) return;
+        for (let i = 0; i < nF; i++) { const f = fData[i], a = t * f.sp + f.ph;
+          fPos[i * 3] = f.x + Math.sin(a * .7) * 1.2; fPos[i * 3 + 1] = f.y + Math.sin(a * 1.3) * .25; fPos[i * 3 + 2] = f.z + Math.cos(a * .5) * .9;
+          const b = Math.max(0, Math.sin(a * 2.1)) ** 3; fCol[i * 3] = .85 * b; fCol[i * 3 + 1] = 1 * b; fCol[i * 3 + 2] = .35 * b; }
+        fGeo.attributes.position.needsUpdate = true; fGeo.attributes.color.needsUpdate = true;
+      } };
     }
     // Niños corriendo y jugando en el campamento
     W.kids = [];
@@ -2804,6 +2819,7 @@ function loopBody() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
+    if (world.fireflies) world.fireflies.update(t);
     if (world.camp) world.camp.update(t);
     if (world.priests) {
       world.priests.update(dt, t, camera.position);
