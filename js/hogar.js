@@ -272,7 +272,15 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   for (const s of [-1, 1]) add(g, new THREE.CylinderGeometry(.025, .025, .03, 12), S.metal, bx1 - e - .03, fl + tH + .12, tZ + s * .12, { cast: false }).rotation.z = Math.PI / 2;
   // toalla doblada sobre el borde, velas y sales
   add(g, new THREE.BoxGeometry(.32, .06, .22), S.towelWhite, tX - tL / 2 + .25, fl + tH + .03, tZ + tW / 2 - .1);
-  for (let k = 0; k < 3; k++) { add(g, new THREE.CylinderGeometry(.025, .025, .06 + k * .02, 12), M(0xf6efe0, { roughness: .6 }), tX + .1 + k * .1, fl + tH + .03 + k * .01, tZ + tW / 2 - .06, { cast: false }); add(g, new THREE.SphereGeometry(.01, 6, 5), new THREE.MeshStandardMaterial({ color: 0xffd060, emissive: 0xffa020, emissiveIntensity: 3 }), tX + .1 + k * .1, fl + tH + .075 + k * .02, tZ + tW / 2 - .06, { cast: false }); }
+  // velas con llamita en forma de gota que titila (cada una a su ritmo)
+  const flameMat = new THREE.MeshStandardMaterial({ color: 0xffd060, emissive: 0xffa020, emissiveIntensity: 3 });
+  const flames = [];
+  for (let k = 0; k < 3; k++) {
+    add(g, new THREE.CylinderGeometry(.025, .025, .06 + k * .02, 12), M(0xf6efe0, { roughness: .6 }), tX + .1 + k * .1, fl + tH + .03 + k * .01, tZ + tW / 2 - .04, { cast: false });
+    add(g, new THREE.CylinderGeometry(.0015, .0015, .012, 4), S.black, tX + .1 + k * .1, fl + tH + .066 + k * .02, tZ + tW / 2 - .04, { cast: false }); // mecha
+    const fm = add(g, new THREE.SphereGeometry(.01, 8, 6), flameMat, tX + .1 + k * .1, fl + tH + .078 + k * .02, tZ + tW / 2 - .04, { cast: false, recv: false });
+    fm.scale.set(.8, 1.6, .8); fm.userData.ph = k * 2.1; flames.push(fm);
+  }
   solid(tX - tL / 2, tX + tL / 2, tZ - tW / 2, tZ + tW / 2, fl + tH);
 
   // --- Inodoro (contra la pared derecha) ---
@@ -316,8 +324,11 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   // batas colgadas detrás de la puerta (lo que el jugador se pone al entrar)
   add(g, new THREE.CapsuleGeometry(.12, .7, 6, 12), S.towelWhite, bx0 + e + .1, fl + 1.2, bz0 + .25).scale.set(.6, 1, 1.2);
 
-  bakeInPlace(g, [dk, ...foam], false);
+  bakeInPlace(g, [dk, ...foam, ...flames], false);
   // espuma que se mueve suavemente y llamitas de las velas
-  const update = (t) => { foamMesh.scale.set(1 + Math.sin(t * 1.3) * .02, 1 + Math.sin(t * 1.7) * .08, 1 + Math.sin(t * 1.1) * .02); dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3; };
+  const update = (t) => { foamMesh.scale.set(1 + Math.sin(t * 1.3) * .02, 1 + Math.sin(t * 1.7) * .08, 1 + Math.sin(t * 1.1) * .02); dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3;
+    for (const f of flames) { const p = f.userData.ph, fl2 = Math.sin(t * 9 + p) * .5 + Math.sin(t * 23 + p * 3) * .3; f.scale.set(.8 - fl2 * .08, 1.6 + fl2 * .25, .8 - fl2 * .08); f.rotation.z = Math.sin(t * 5 + p) * .12; }
+    flameMat.emissiveIntensity = 2.7 + Math.sin(t * 11) * .3 + Math.sin(t * 27) * .2;
+  };
   return { group: g, update, shower: { x: shX, z: shZ }, tub: { x: tX, z: tZ - tW / 2 - .55 }, sink: { x: lX, z: lZ - .55 }, toilet: { x: iX - .9, z: iZ } };
 }
