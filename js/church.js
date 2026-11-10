@@ -165,6 +165,18 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   await pace();
   // predicador con su púlpito de cristal
   const pulp = box(.9, 1.15, .6, glass, cx, yS + .58, SZ + .7, { cast: false });
+  // Biblia abierta sobre el púlpito (tapas negras, hojas en abanico y cinta roja de marcador), mirando al predicador
+  { const bib = new THREE.Group(), topY = yS + .58 + .575;
+    const cover = mat(0x141016, { roughness: .6 }), paper = mat(0xf3ecd8, { roughness: .9 }), ribbon = mat(0xa3121e, { roughness: .6 });
+    for (const s of [-1, 1]) {
+      const half = new THREE.Group(); half.position.x = s * .005; half.rotation.z = s * .06;   // las hojas se abren en V desde el lomo
+      const c = new THREE.Mesh(new THREE.BoxGeometry(.17, .008, .24), cover); c.position.set(s * .085, .004, 0); half.add(c);
+      const p = new THREE.Mesh(new THREE.BoxGeometry(.16, .022, .225), paper); p.position.set(s * .083, .019, 0); half.add(p);
+      bib.add(half);
+    }
+    const rib = new THREE.Mesh(new THREE.BoxGeometry(.012, .002, .16), ribbon); rib.position.set(.01, .032, .03); bib.add(rib);
+    bib.name = 'biblia-pulpito'; bib.position.set(cx, topY + .002, SZ + .75); group.add(bib);
+  }
   person({ gender: 'm', topStyle: 'traje', top: 0x15151a, pants: 0x15151a, tie: 0xb3122e, beard: { color: 0x1d130c, len: .04 } }, cx, SZ + 1.2, Math.PI, 'preach', { y: yS, anim: 'preach' });
   // altavoces
   for (const sx of [-1, 1]) box(.9, 2.6, .8, mat(0x0c0c0e), cx + sx * (HW - 1), yS + 1.3, Z1 - 3);
