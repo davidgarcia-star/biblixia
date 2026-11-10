@@ -142,7 +142,12 @@ const stars = (() => {
   const n = 2600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) { const u = Math.random(), v = Math.random() * .48 + .02, th = u * Math.PI * 2, ph = Math.acos(1 - v); const R = 1600; pos.set([Math.sin(ph) * Math.cos(th) * R, Math.cos(ph) * R, Math.sin(ph) * Math.sin(th) * R], i * 3); const w = .7 + Math.random() * .3; col.set([w, w, .85 + Math.random() * .15], i * 3); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, fog: false, depthWrite: false }));
+  const mat = new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, transparent: true, fog: false, depthWrite: false });
+  // centelleo: cada estrella titila a su propio ritmo (Salmo 147:4 «Cuenta el número de las estrellas»)
+  const ph = new Float32Array(n); for (let i = 0; i < n; i++) ph[i] = Math.random(); g.setAttribute('tw', new THREE.BufferAttribute(ph, 1));
+  const uT = { value: 0 };
+  mat.onBeforeCompile = sh => { sh.uniforms.uTw = uT; sh.vertexShader = 'uniform float uTw;\nattribute float tw;\n' + sh.vertexShader.replace('#include <color_vertex>', '#include <color_vertex>\n  vColor.rgb *= 1.0 - (0.15 + 0.4 * step(0.7, tw)) * (0.5 + 0.5 * sin(uTw * (1.3 + tw * 2.6) + tw * 60.0));'); };
+  const p = new THREE.Points(g, mat); p.userData.tw = uT;
   p.visible = false; p.renderOrder = -1; scene.add(p); return p;
 })();
 const moon = (() => {
@@ -2923,7 +2928,7 @@ function loopBody() {
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
   for (const g of pendingGroups) g.visible = true;
   skyClouds.grp.position.set(camera.position.x * .3, 0, camera.position.z * .3);
-  stars.position.copy(camera.position); moon.position.copy(moonDir).multiplyScalar(1400).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500).add(camera.position);
+  stars.position.copy(camera.position); if (stars.visible) stars.userData.tw.value = performance.now() / 1000; moon.position.copy(moonDir).multiplyScalar(1400).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500).add(camera.position);
 }
 
 /* =========================================================
