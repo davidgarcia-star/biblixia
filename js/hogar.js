@@ -284,6 +284,14 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   const lid = add(g, new THREE.CylinderGeometry(.165, .165, .02, 24), S.porcelain, iX - .24, fl + .64, iZ); lid.rotation.z = Math.PI / 2 - .25; lid.scale.set(1, 1, .82);
   add(g, new THREE.CylinderGeometry(.055, .055, .1, 16), S.towelWhite, iX - .1, fl + .89, iZ + .1, { cast: false }); // papel
   solid(iX - .62, iX, iZ - .22, iZ + .22, fl + .45);
+  // papelera de acero con pedal y escobilla en su base, en el piso junto al inodoro
+  const pbX = iX - .15, pbZ = iZ - .4;
+  add(g, new THREE.CylinderGeometry(.095, .085, .3, 20), S.metal, pbX, fl + .15, pbZ, { cast: false });
+  add(g, new THREE.CylinderGeometry(.1, .1, .02, 20), M(0x2b2f35, { metalness: .4, roughness: .4 }), pbX, fl + .31, pbZ, { cast: false });
+  add(g, new THREE.BoxGeometry(.1, .015, .05), M(0x2b2f35, { roughness: .5 }), pbX - .1, fl + .02, pbZ, { cast: false }); // pedal
+  add(g, new THREE.CylinderGeometry(.05, .045, .14, 14), S.porcelain, iX - .14, fl + .07, iZ + .38, { cast: false }); // base de la escobilla
+  add(g, new THREE.CylinderGeometry(.008, .008, .3, 6), S.metal, iX - .14, fl + .25, iZ + .38, { cast: false });
+  add(g, new THREE.SphereGeometry(.016, 8, 6), S.metal, iX - .14, fl + .41, iZ + .38, { cast: false });
 
   // --- Lavamanos con mueble y espejo (pared del fondo, junto a la puerta) ---
   const lX = bx0 + e + .55, lZ = bz1 - e - .26;
