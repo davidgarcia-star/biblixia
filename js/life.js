@@ -357,6 +357,11 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const wx = X1 - 1, wz = Z1 - 1;
       box(.4, 1.0, .4, mat(0xf2f2f0, { roughness: .3 }), wx, y + .5, wz); cyl(.16, .16, .45, new THREE.MeshStandardMaterial({ color: 0x7fc4ff, transparent: true, opacity: .6, roughness: .05 }), wx, y + 1.23, wz);
       solid(wx - .25, wx + .25, wz - .25, wz + .25, y + 1.5, y);
+      // llaves de agua caliente (roja) y fría (azul), bandeja de goteo y tubo de vasitos de papel
+      for (const [dz, c] of [[-.08, 0xd03a2a], [.08, 0x2a7ad8]]) { const tp = cyl(.025, .025, .07, mat(c, { roughness: .35 }), wx - .235, y + .8, wz + dz, 10); tp.rotation.z = Math.PI / 2; }
+      box(.12, .02, .3, mat(0x9aa2aa, { metalness: .6, roughness: .3 }), wx - .26, y + .62, wz, { cast: false });
+      cyl(.045, .045, .32, new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .55, roughness: .1 }), wx, y + .78, wz - .25, 12);
+      cyl(.04, .03, .05, mat(0xf4f1ea, { roughness: .8 }), wx, y + .6, wz - .25, 12);
       act(wx - .9, wz, y, '💧 Tomar agua', () => life.fx('water'));
       // planta de lengua de suegra (sansevieria) en maceta, en la esquina opuesta de cada piso
       { const px = X0 + 1, pz = Z1 - 1, pH = .42;
