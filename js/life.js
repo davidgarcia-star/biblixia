@@ -199,6 +199,12 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.5, .1, .6, mat(0x9aa4ae, { metalness: .8, roughness: .2 }), X0 + .45, fy + .93, cz + 2.2);          // fregadero
     cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
+    { // nevera de acero: junta entre congelador y refrigerador, y dos tiradores verticales de acero inoxidable
+      const steelM = mat(0xc8ced4, { metalness: .9, roughness: .22 });
+      box(.006, .012, .66, mat(0x8a9096, { roughness: .5 }), X0 + .763, fy + 1.3, cz - 1.9, { cast: false });
+      box(.05, .45, .03, steelM, X0 + .785, fy + 1.58, cz - 1.62, { cast: false });
+      box(.05, .75, .03, steelM, X0 + .785, fy + .82, cz - 1.62, { cast: false });
+    }
     const coffee = box(.22, .3, .2, mat(0x1a1a1e, { roughness: .3 }), X0 + .45, fy + 1.1, cz + .4); coffee.castShadow = false; steam(X0 + .45, fy + 1.3, cz + .4);
     {
       // reloj de pared sobre el mueble de la cocina: sus manecillas marcan la hora real del dispositivo
