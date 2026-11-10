@@ -169,7 +169,9 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const drumX = cx, drumZ = Z1 - 2.2;
   box(2.4, .25, 2, mat(0x2a2430), drumX, yS + .12, drumZ, { cast: false });
   for (const [dx, dz, rr, hh] of [[0, .6, .32, .5], [-.55, .2, .18, .2], [.55, .2, .18, .2], [.9, .5, .22, .35]]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, hh, 20), mat(0xc0392b, { metalness: .3, roughness: .3 })); d.position.set(drumX + dx, yS + .25 + (dz === .6 ? .3 : .75), drumZ - dz); d.rotation.x = dz === .6 ? Math.PI / 2 : .2; group.add(d); }
-  for (const cxx of [-1, 1]) { const cy = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .02, 24), mat(0xd4a72c, { metalness: 1, roughness: .2 })); cy.position.set(drumX + cxx * 1, yS + 1.3, drumZ - .1); cy.rotation.x = .2; group.add(cy); }
+  const cymbals = [];   // platillos: vibran al ritmo del baterista (ver update)
+  for (const cxx of [-1, 1]) { const cy = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .02, 24), mat(0xd4a72c, { metalness: 1, roughness: .2 })); cy.position.set(drumX + cxx * 1, yS + 1.3, drumZ - .1); cy.rotation.x = .2; group.add(cy); cymbals.push(cy);
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.05, 6), metal); st.position.set(drumX + cxx * 1, yS + .25 + .525, drumZ - .1); group.add(st); }   // soporte hasta la tarima
   await pace();
   person({ gender: 'm', topStyle: 'camiseta' }, drumX, drumZ + .4, Math.PI, 'drum', { y: yS + .25, anim: 'drum' });
   const gtr = (x, col, gender) => { person({ gender, topStyle: 'camisa' }, x, Z1 - 3.2, Math.PI, 'guitar', { y: yS, anim: 'sway' }); const g = box(.85, .3, .06, mat(col, { roughness: .3 }), x - .1, yS + 1.05, Z1 - 3.5); g.rotation.z = .5; };
@@ -247,6 +249,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
       for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
+      // cada golpe (|sin(8t)| llega a 0) hace temblar los platillos, que se calman poco a poco
+      cymbals.forEach((cy, i) => { const ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = .2 + Math.sin(t * 38 + i) * amp; cy.rotation.z = Math.cos(t * 31 + i) * amp * .6; });
       for (const d of dance) {
         if (d.kind === 'jump') d.o.position.y = d.y + Math.max(0, Math.sin(t * 6 + d.ph)) * .35;
         else if (d.kind === 'sway') d.o.rotation.z = Math.sin(t * 1.6 + d.ph) * .06;
