@@ -271,6 +271,18 @@ export class Sound {
       o.connect(trem).connect(g).connect(bus); o.start(t0); o.stop(t0 + .1); am.start(t0); am.stop(t0 + .1);
     }
   }
+  // Canto de pajaritos de día: unos trinos cortos, agudos y suaves (solo si el audio ya fue activado por el jugador)
+  birdsong(vol = .5, pan = 0) {
+    const a = this.ctx; if (!a || a.state !== 'running' || !this.sfxOn || vol < .01) return;
+    const bus = this._bus(vol, pan), t = a.currentTime, base = 2400 + Math.random() * 1400, n = 2 + (Math.random() * 4 | 0), up = Math.random() < .5;
+    for (let i = 0; i < n; i++) {
+      const o = a.createOscillator(), g = a.createGain(), t0 = t + i * (.09 + Math.random() * .05), d = .05 + Math.random() * .05;
+      const f0 = base * (up ? .8 : 1.25) * (1 + (Math.random() - .5) * .1), f1 = base * (up ? 1.3 : .75);
+      o.type = 'sine'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + d);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.04, t0 + .012); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+      o.connect(g).connect(bus); o.start(t0); o.stop(t0 + d + .02);
+    }
+  }
   // Rugido de león: gruñido grave que crece y se apaga, con respiración áspera
   roar(vol = 1) {
     const a = this.unlock(); if (!a || !this.sfxOn) return;

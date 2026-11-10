@@ -179,10 +179,14 @@ const birds = (() => {
     list.push({ b, L, R, off: new THREE.Vector3((Math.random() - .5) * 26, (Math.random() - .5) * 6, (Math.random() - .5) * 26), ph: Math.random() * 6.28, fs: 7 + Math.random() * 3 }); grp.add(b);
   }
   scene.add(grp);
-  let a = 0;
+  let a = 0, sing = 4, chk = 0, inside = false;
+  const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo', 'mar']);
   return {
     grp, update(dt, t, cp) {
       if (!grp.visible) return;
+      // pajaritos que cantan de vez en cuando al aire libre (de día y al atardecer)
+      if ((chk -= dt) <= 0) { chk = .5; inside = !world || (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ); }
+      if (state === 'play' && !inside && (sing -= dt) <= 0) { sing = 3 + Math.random() * 6; sound.birdsong(.3 + Math.random() * .35, Math.random() * 1.6 - .8); }
       a += dt * .09; const R0 = 70, cx = cp.x + Math.cos(a) * R0, cz = cp.z + Math.sin(a) * R0, dir = -a; // miran hacia donde vuelan (tangente al círculo)
       for (const k of list) {
         const flap = Math.sin(t * .7 + k.ph) > .2 ? Math.sin(t * k.fs + k.ph) * .7 : .12 + Math.sin(t * 1.5 + k.ph) * .05; // aletean y luego planean
