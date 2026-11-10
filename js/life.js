@@ -253,6 +253,19 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.3, .56), new THREE.MeshStandardMaterial({ map: pt, roughness: .8 }));
       pic.position.set(bedX, py, pz - .045); pic.rotation.y = Math.PI; pic.receiveShadow = true; group.add(pic);
     }
+    {
+      // mesita de noche junto a la cabecera, con gaveta y lámpara de pantalla tela que da luz cálida
+      const nx = bedX - 1.22, nz = Z1 - T / 2 - .3, nwM = trimM;
+      box(.46, .5, .4, nwM, nx, fy + .39, nz); box(.5, .03, .44, mat(0x5a3d24, { roughness: .5 }), nx, fy + .655, nz);
+      box(.38, .16, .01, mat(0x6e4c2e, { roughness: .6 }), nx, fy + .5, nz - .205, { cast: false });
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(.018, 10, 6), mat(0xc9a24a, { metalness: .8, roughness: .3 })); knob.position.set(nx, fy + .5, nz - .22); group.add(knob);
+      for (const [a, b] of [[-.2, -.17], [.2, -.17], [-.2, .17], [.2, .17]]) box(.04, .14, .04, nwM, nx + a, fy + .07, nz + b, { cast: false });
+      cyl(.07, .09, .04, mat(0x2a2b2e, { roughness: .4, metalness: .5 }), nx + .06, fy + .69, nz + .03, 14);
+      cyl(.012, .012, .26, mat(0xc9a24a, { metalness: .8, roughness: .3 }), nx + .06, fy + .84, nz + .03, 8);
+      const shade = new THREE.Mesh(new THREE.CylinderGeometry(.09, .15, .2, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffd48a, emissiveIntensity: .75, roughness: .9, side: THREE.DoubleSide }));
+      shade.position.set(nx + .06, fy + 1.02, nz + .03); shade.castShadow = false; group.add(shade);
+      solid(nx - .25, nx + .25, nz - .22, nz + .22, fy + .67);
+    }
     // --- Baño cerrado (esquina del frente a la derecha), con puerta desde el pasillo ---
     const BX0 = cx + 3.2, BZ1 = Z0 + 4.2, DZ0 = Z0 + 2.5, DZ1 = Z0 + 3.5;
     wall(BX0, BZ1, X1, BZ1);                                            // separa el baño del dormitorio
