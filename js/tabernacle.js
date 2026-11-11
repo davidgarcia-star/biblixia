@@ -268,7 +268,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   priest(x1 - 3, cz - gateHalf + 2, -Math.PI / 2);
   priest(x1 - 3, cz + gateHalf - 2, -Math.PI / 2);
   const sheep = [];
-  [[altX + 5, cz + 4], [altX + 6.5, cz + 5.2], [altX + 4.2, cz + 6.2], [x1 - 7, cz - 4]].forEach(([sx2, sz2], i) => { const o = makeAnimal('oveja', .95); o.position.set(sx2, 0, sz2); o.rotation.y = i * 1.7; T.add(o); sheep.push(o); addBox(sx2 - .5, sx2 + .5, sz2 - .5, sz2 + .5, 1); });
+  [[altX + 5, cz + 4], [altX + 6.5, cz + 5.2], [altX + 4.2, cz + 6.2], [x1 - 7, cz - 4]].forEach(([sx2, sz2], i) => { const o = makeAnimal('oveja', .95); o.position.set(sx2, 0, sz2); o.rotation.y = i * 1.7; T.add(o); sheep.push({ o, r0: o.rotation.y, per: 9 + i * 2.3, ph: i * 3.7 }); addBox(sx2 - .5, sx2 + .5, sz2 - .5, sz2 + .5, 1); });
   S.updateMatrixWorld(true);
   T.add(bakeStatic(S));
   const flames = [], halos = []; T.traverse(m => { if (m.userData.flame) flames.push(m); if (m.userData.halo) halos.push(m); });
@@ -280,6 +280,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     altar: [altX, cz, aw / 2, ah], laver: [lavX, cz],
     entrance: new THREE.Vector3(x1 + 4, 0, cz),
     update(t) {
+      // Las ovejas del atrio no están quietas: de vez en cuando giran despacio en su sitio dando pasitos, como cuando pastan
+      for (const m of sheep) {
+        const c = (t + m.ph) % m.per, k = THREE.MathUtils.smoothstep(c, 0, 1.6), n = Math.floor((t + m.ph) / m.per);
+        const ang = q => m.r0 + (q % 2 ? .55 : 0); // alterna entre dos posturas sin saltos
+        m.o.rotation.y = ang(n - 1) + (ang(n) - ang(n - 1)) * k;
+        const paso = c < 1.6 ? Math.sin(c * 11) * .35 * Math.sin(c / 1.6 * Math.PI) : 0;
+        m.o.userData.legs.forEach((l, j) => { l.rotation.x = (j === 0 || j === 3 ? 1 : -1) * paso; });
+      }
       for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
       for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
