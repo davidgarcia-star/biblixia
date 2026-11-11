@@ -361,12 +361,15 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const lampM = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f8ff, emissiveIntensity: 1.6 });
       for (let k = -2; k <= 2; k++) box(1.6, .04, .3, lampM, cx + k * 4, y + FH - .32, cz, { cast: false });
       // escritorios, computadoras, sillas y trabajadores
-      const deskM = mat(0xe6e2da, { roughness: .4 }), pcM = mat(0x15171c, { roughness: .3 });
+      const deskM = mat(0xe6e2da, { roughness: .4 }), pcM = mat(0x15171c, { roughness: .3 }), keyM = mat(0x9aa0aa, { roughness: .6 });
       const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
       desks.forEach(([dx, dz], k) => {
         box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
         box(.6, .38, .04, pcM, dx, y + 1.0, dz + .2); box(.55, .32, .01, screenMs[(k + i) % screenMs.length], dx, y + 1.0, dz + .165, { cast: false });
         box(.06, .14, .05, pcM, dx, y + .85, dz + .24, { cast: false }); box(.26, .015, .16, pcM, dx, y + .785, dz + .24, { cast: false });   // pie del monitor
+        // teclado con sus teclas claras y ratón al lado, apoyados sobre el escritorio
+        box(.46, .02, .15, pcM, dx, y + .79, dz - .08, { cast: false }); box(.42, .006, .115, keyM, dx, y + .804, dz - .08, { cast: false });
+        box(.06, .022, .1, pcM, dx + .36, y + .791, dz - .08, { cast: false });
         if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
       });
       // dispensador de agua en cada piso
