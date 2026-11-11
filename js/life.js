@@ -435,6 +435,17 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
     for (const [tx, tz] of [[cx - 4, cz], [cx, cz + 1]]) { box(.9, .05, .9, mat(0xf2efe8), tx, y0 + .75, tz); cyl(.05, .05, .72, frameM, tx, y0 + .38, tz, 8); solid(tx - .45, tx + .45, tz - .45, tz + .45, y0 + .78, y0); }
     staticHuman({ gender: 'm', skin: SKINS[1], top: 0x2a4a9a, topStyle: 'camisa', pants: 0x22243a, hair: 'short' }, cx - 4, y0, cz - .75, 0, 'sit');
+    {
+      // tazas de café humeantes con su platito sobre las mesitas de la cafetería
+      const cupM = mat(0xf7f4ee, { roughness: .35 }), cafM = mat(0x3a2414, { roughness: .2 }), ty = y0 + .775;
+      for (const [ux, uz] of [[cx - 4, cz - .22], [cx + .18, cz + 1.05]]) {
+        cyl(.075, .07, .012, cupM, ux, ty + .006, uz, 14);
+        cyl(.042, .034, .075, cupM, ux, ty + .05, uz, 12);
+        cyl(.038, .038, .004, cafM, ux, ty + .084, uz, 12);
+        box(.012, .04, .03, cupM, ux + .05, ty + .05, uz, { cast: false });
+        steam(ux, ty + .14, uz);
+      }
+    }
     // sillas libres de madera con cojín alrededor de las mesitas de la cafetería
     const cafeSeats = [[cx - 4, cz + .75, 0], [cx, cz + .25, Math.PI], [cx, cz + 1.75, 0]];
     buildChairs(group, 0, y0, 0, cafeSeats);
