@@ -49,6 +49,12 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const DW = 3.2;
   wall(X0, Z1, X1, Z1, H, darkM); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1); wall(X0, Z0, cx - DW / 2, Z0); wall(cx + DW / 2, Z0, X1, Z0);
   box(DW, H - 3.4, T, wallM, cx, y0 + 3.4 + (H - 3.4) / 2, Z0);
+  // fachada trasera por fuera: la pared del escenario es oscura por dentro, pero por fuera se veía como un bloque negro;
+  // se reviste del mismo color claro que el resto del templo, con zócalo y una cruz dorada
+  box(HW * 2 + T, H, .06, wallM, cx, y0 + H / 2, Z1 + T / 2 + .04, { cast: false });
+  box(HW * 2 + T + .04, .5, .1, mat(0x9a948a, { roughness: .95 }), cx, y0 + .25, Z1 + T / 2 + .1, { cast: false });
+  { const gold = mat(0xd9b24a, { metalness: .6, roughness: .35, emissive: 0x3a2a08 });
+    box(.4, 3.4, .12, gold, cx, y0 + H - 3.6, Z1 + T / 2 + .13, { cast: false }); box(2, .4, .12, gold, cx, y0 + H - 2.9, Z1 + T / 2 + .13, { cast: false }); }
   const roof = box(HW * 2 + .8, .4, HD * 2 + .8, mat(0x3a3f47), cx, y0 + H + .2, cz, { cast: false }); blockers.push(roof);
   // puertas de vidrio y fachada con letrero y logo
   const glass = new THREE.MeshStandardMaterial({ color: 0x8fc4e0, metalness: .3, roughness: .05, transparent: true, opacity: .35, depthWrite: false });
