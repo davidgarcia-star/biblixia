@@ -248,7 +248,7 @@ function applyTime(mode) {
   skyClouds.grp.children.forEach((c, i) => { c.visible = i < T2.clouds; });
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
-  if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; }
+  if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? 4.5 : 2); }
   if (bloomPass) bloomPass.strength = T2.bloom * .55;
   try { persist(); } catch (e) {}
 }
@@ -2742,7 +2742,7 @@ const fireflies = (() => {
   return {
     update(dt, t, cp) {
       if (!stars.visible || !world) { p.visible = false; return; }
-      if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ); }
+      if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && ((cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ) || (P.pos.x > z.minX && P.pos.x < z.maxX && P.pos.z > z.minZ && P.pos.z < z.maxZ))); }
       p.visible = !inside; if (inside) return;
       if (state === 'play' && (crk -= dt) <= 0) { crk = .9 + Math.random() * 2.6; sound.cricket(.35 + Math.random() * .4, Math.random() * 1.6 - .8); } // grillos de noche al aire libre
       if (Math.hypot(cp.x - cx, cp.z - cz) > 18) { cx = cp.x; cz = cp.z; }
@@ -2775,11 +2775,13 @@ const butterflies = (() => {
   }
   grp.visible = false; scene.add(grp);
   const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo', 'mar']);
-  let cx = 0, cz = 0, chk = 0, inside = false;
+  let cx = 0, cz = 0, chk = 0, inside = false, izs = [];
   return {
     update(dt, t, cp) {
       if (!world || stars.visible || save.time === 'atardecer' || state !== 'play') { grp.visible = false; return; }
-      if ((chk -= dt) <= 0) { chk = .5; inside = (world.zones || []).some(z => INDOOR.has(z.id) && cp.x > z.minX && cp.x < z.maxX && cp.z > z.minZ && cp.z < z.maxZ) || (P.pos.y > 3); }
+      // Se revisa la cámara Y el jugador: con la cámara afuera y el jugador dentro del Lugar Santo, las mariposas atravesaban las cortinas
+      const inZ = (x, z) => izs.some(z2 => x > z2.minX && x < z2.maxX && z > z2.minZ && z < z2.maxZ);
+      if ((chk -= dt) <= 0) { chk = .5; izs = (world.zones || []).filter(z => INDOOR.has(z.id)); inside = inZ(cp.x, cp.z) || inZ(P.pos.x, P.pos.z) || (P.pos.y > 3); }
       grp.visible = !inside; if (inside) return;
       if (Math.hypot(P.pos.x - cx, P.pos.z - cz) > 14) { cx = P.pos.x; cz = P.pos.z; }
       for (const k of list) {
@@ -2790,7 +2792,7 @@ const butterflies = (() => {
         k.b.position.set(x, y, z); k.b.rotation.set(-.15, Math.atan2(vx, vz), 0);
         // Si una mariposa pasa pegada a la cámara se veía enorme tapando la pantalla: cerca de la cámara se encoge suavemente
         const dc = Math.hypot(x - cp.x, y - cp.y, z - cp.z), near = Math.min(1, Math.max(0, (dc - 1.2) / 1.6));
-        k.b.scale.setScalar(k.sc * near); k.b.visible = near > .02;
+        k.b.scale.setScalar(k.sc * near); k.b.visible = near > .02 && !inZ(x, z); // tampoco se meten volando dentro de casas, templo o tabernáculo
         const f = Math.sin(t * k.fs + k.ph) * 1.1 + .25; k.L.rotation.z = -f; k.R.rotation.z = f;
       }
     }

@@ -140,6 +140,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(5.5, 1.8, .05, winGlass, cx - 3.5, fy + H + 1.2, cz - .72, { cast: false });
     box(5.9, .2, 4.6, darkM, cx - 3.5, fy + H + 2.2, cz + 1.4, { cast: false });
     const lampM = new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 2 });
+    // de noche las lámparas del techo brillan más cálidas y se ven desde la calle a través del ventanal (applyTime las ajusta)
+    M.homeLamps = [lampM]; if (M.lamp && M.lamp.emissiveIntensity > 5) lampM.emissiveIntensity = 4.5;
     for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
     sign('MI CASA', '', cx, fy + H - .25, Z0 - .14, Math.PI);
     const glass = winGlass;
