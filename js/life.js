@@ -122,6 +122,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       box(.16, .34, .1, darkM, cx + sx, fy + 2.1, sz, { cast: false });
       for (const dy of [-.18, .18]) box(.12, .025, .07, ledM, cx + sx, fy + 2.1 + dy, sz, { cast: false, recv: false });
     }
+    { // dos maceteros altos de concreto con arbustos redondos a los lados de la entrada
+      const potM = mat(0x8d8a85, { roughness: .9 }), soilM = mat(0x3a2a1c, { roughness: 1 });
+      const leafM = [mat(0x2f6b2a, { roughness: .85 }), mat(0x3d7d33, { roughness: .85 })];
+      const bushG = new THREE.IcosahedronGeometry(.3, 1);
+      for (const sx of [-1.6, 1.55]) {
+        const px = cx + sx, pz = Z0 - .5;
+        box(.52, .62, .52, potM, px, fy + .14 + .31, pz);
+        box(.44, .02, .44, soilM, px, fy + .14 + .6, pz, { cast: false });
+        for (const [ox, oy, oz, s] of [[0, .88, 0, 1], [-.1, .8, .09, .7], [.11, .82, -.08, .72]]) {
+          const b = new THREE.Mesh(bushG, leafM[(ox > 0) | 0]); b.position.set(px + ox, fy + .14 + oy, pz + oz); b.scale.setScalar(s); b.rotation.set(s * 3, s * 5, 0); b.castShadow = true; group.add(b);
+        }
+        solid(px - .27, px + .27, pz - .27, pz + .27, fy + .76);
+      }
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });

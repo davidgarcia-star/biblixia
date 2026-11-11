@@ -1121,7 +1121,7 @@ async function buildWorld(cfg) {
     g.add(coin, glow, beam);
     g.position.set(p[0], p[2] + 1.1, p[1]);
     group.add(g);
-    const c0 = { g, coin, x: p[0], z: p[1], y: p[2] + 1.1, taken: false, phase: i * .9, ...extra };
+    const c0 = { g, coin, glow, beam, x: p[0], z: p[1], y: p[2] + 1.1, taken: false, phase: i * .9, ...extra };
     W.coins.push(c0); return c0;
   };
   pick.forEach((p, i) => makeCoin(p, i));
@@ -2861,7 +2861,11 @@ function loopBody() {
 
   if (world) {
     followShip();
-    for (const c of world.coins) if (!c.taken) { c.coin.rotation.y = t * 2 + c.phase; c.g.position.y = c.y + Math.sin(t * 2.2 + c.phase) * .12; }
+    for (const c of world.coins) if (!c.taken) {
+      c.coin.rotation.y = t * 2 + c.phase; c.g.position.y = c.y + Math.sin(t * 2.2 + c.phase) * .12;
+      // si la cámara queda dentro del haz o pegada al brillo, se ocultan (así la pantalla no se pone toda amarilla)
+      if (c.beam) { const dc = Math.hypot(camera.position.x - c.x, camera.position.z - c.z); c.beam.visible = dc > .9; c.glow.visible = dc > 1.6 || Math.abs(camera.position.y - c.g.position.y) > 2; }
+    }
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
