@@ -161,7 +161,13 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const SZ = Z1 - 6.5, SH = .9;                                   // inicio de la tarima y su altura
   box(HW * 2 - .6, SH, Z1 - SZ, mat(0x15131a, { roughness: .5 }), cx, y0 + SH / 2, (SZ + Z1) / 2); solid(X0, X1, SZ, Z1, y0 + SH);
   addRamp(cx - 1.5, cx + 1.5, SZ - 2.4, SZ, y0 + .1, y0 + SH);   // escalones al centro
-  for (let k = 0; k < 4; k++) box(3, .05, .6, mat(0xd8d0c0), cx, y0 + .1 + (k + 1) * (SH - .1) / 4, SZ - 2.4 + (k + .5) * .6, { cast: false });
+  // escalones macizos (bloque desde el piso hasta la huella) con borde claro: ya no quedan láminas flotando
+  { const stepM = mat(0x2a2630, { roughness: .6 }), noseM = mat(0xd8d0c0);
+    for (let k = 0; k < 4; k++) {
+      const top = y0 + .1 + (k + 1) * (SH - .1) / 4, z = SZ - 2.4 + (k + .5) * .6;
+      box(3, top - y0 - .01, .6, stepM, cx, y0 + (top - y0 - .01) / 2, z, { cast: false });
+      box(3.02, .05, .62, noseM, cx, top - .015, z, { cast: false });
+    } }
   // pantalla LED con letras de alabanza
   // a media resolución (se dibuja igual, en coordenadas de 1024×512): 4 veces menos para subir a la tarjeta gráfica
   const scr = document.createElement('canvas'); scr.width = 512; scr.height = 256; const sc = scr.getContext('2d'); sc.scale(.5, .5);
