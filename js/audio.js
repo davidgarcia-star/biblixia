@@ -478,6 +478,11 @@ export class Sound {
     this.fade.gain.setTargetAtTime(level, a.currentTime, .4);
   }
   _startMenu() {
+    // Temporada navideña (navidad.js, 1 de noviembre al 31 de enero): villancicos en el portal y los menús
+    if (typeof window !== 'undefined' && window.Navidad && window.Navidad.activo) {
+      const x = window.Navidad.musica(this.ctx, this.music, 1.1);
+      this.timer = x.id; return;
+    }
     const chords = [[146.8, 185, 220, 293.7], [110, 164.8, 220, 277.2], [123.5, 185, 246.9, 293.7], [98, 146.8, 196, 246.9]];
     let step = 0;
     const tick = () => {

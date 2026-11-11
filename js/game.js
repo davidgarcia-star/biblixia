@@ -1980,7 +1980,13 @@ function endLevel(won, why) {
     $('resVerse').textContent = lvlIdx + 1 < LEVELS.length ? '«Todo lo puedo en Cristo que me fortalece.» — Filipenses 4:13' : '¡Completaste todos los niveles! «He peleado la buena batalla, he terminado la carrera, he guardado la fe.» — 2 Timoteo 4:7';
     $('btnNext').textContent = lvlIdx + 1 < LEVELS.length ? 'Siguiente nivel' : 'Ver mis versículos';
     $('btnNext').classList.remove('hidden');
+    // al completar todos los niveles se desbloquea BIBLIXIA 2
+    const todo = save.stars.slice(0, LEVELS.length).every(x => x > 0);
+    $('btnB2')?.classList.toggle('hidden', !todo);
+    if (todo && lvlIdx + 1 >= LEVELS.length) $('resVerse').textContent += '  🔓 ¡Desbloqueaste BIBLIXIA 2!';
+    window.__pintarB2?.();
   } else {
+    $('btnB2')?.classList.add('hidden');
     sound.lose();
     $('resTitle').textContent = '¡Se acabó el tiempo!';
     $('resText').textContent = `Recogiste ${collected} de ${goal} monedas. ¡No te rindas, inténtalo otra vez!`;

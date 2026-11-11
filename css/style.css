@@ -637,3 +637,8 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
   #talk .card.talk .vref{font-size:11.5px;margin:5px 0 4px}
   #talk .tgift{font-size:12.5px;padding:6px 10px;margin-bottom:8px;border-radius:10px}
 }
+
+/* BIBLIXIA 2 bloqueado hasta completar los 5 niveles */
+.js-b2 { flex-direction: column; line-height: 1.2; }
+.js-b2 small { display: block; font-size: 11px; font-weight: 600; opacity: .85; letter-spacing: 0; }
+.js-b2.b2-lock { opacity: .7; filter: grayscale(.6); cursor: not-allowed; }
