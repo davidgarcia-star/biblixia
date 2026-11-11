@@ -76,6 +76,8 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 .coins.done .big{color:#7ef0a4}
 .timer{top:14px;left:50%;transform:translateX(-50%);text-align:center;min-width:120px}
 .timer.low .big{color:#ff6b6b}
+.timer.urgent .big{animation:tlatido 1s ease-out infinite}
+@keyframes tlatido{0%{transform:scale(1.18)}35%,100%{transform:scale(1)}}
 .timer.paused .big{color:#9fd8ff}
 .timer.paused::after{content:'⏸ Tiempo detenido';display:block;font-size:11px;font-weight:700;color:#9fd8ff;margin-top:2px}
 .bar{height:4px;border-radius:4px;background:rgba(255,255,255,.15);margin-top:6px;overflow:hidden}
@@ -432,6 +434,7 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
   .coinico{width:26px;height:26px}
   .hint{top:72px;left:max(12px,env(safe-area-inset-left));font-size:12px;padding:6px 10px}
   .timer{top:max(12px,env(safe-area-inset-top));min-width:96px;padding:7px 12px}
+  .coins .lbl{font-size:10px;letter-spacing:1px}
   #prompt{bottom:230px;font-size:14px;max-width:90vw;white-space:normal;text-align:center}
   #info{top:auto;bottom:240px;left:12px;right:12px;width:auto;max-height:34vh;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:12px 14px}
   #info h3{font-size:17px;margin:2px 0 4px}
@@ -441,6 +444,8 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #levelsel,#help,#collection{justify-content:flex-start;overflow-y:auto;touch-action:pan-y;padding-top:84px;padding-bottom:40px}
 @media (max-width:760px){.levels{grid-template-columns:1fr 1fr;gap:10px}.lvl{padding:12px}.lvl .t{font-size:17px}.lvl small{font-size:12px}#levelsel h2{font-size:24px}}
 @media (max-width:380px){.levels{grid-template-columns:1fr}}
+/* Que el reloj no tape el nombre del nivel (INTERMEDIO) en celulares angostos */
+@media (max-width:440px){.timer{left:58%}}
 
 #tTurbo.locked{opacity:.55}
 

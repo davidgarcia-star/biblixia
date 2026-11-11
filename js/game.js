@@ -2661,7 +2661,12 @@ function updateHUD() {
   // solo se toca la página cuando algo cambia (evita trabajo extra en cada cuadro)
   const t = Math.ceil(timeLeft), bar = Math.round(timeLeft / L.time * 200);
   if (hudCache.c !== collected) { elC.textContent = collected; elCoins.classList.toggle('done', collected >= goal); hudCache.c = collected; }
-  if (hudCache.t !== t) { elT.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; elTimer.classList.toggle('low', t <= 15); hudCache.t = t; }
+  if (hudCache.t !== t) { elT.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; elTimer.classList.toggle('low', t <= 15);
+    // tic-tac suave y latido del reloj en los últimos 10 segundos (solo mientras el tiempo corre)
+    const urgent = state === 'play' && t > 0 && t <= 10 && !P.timeStop;
+    elTimer.classList.toggle('urgent', urgent);
+    if (urgent && hudCache.t !== undefined && t < hudCache.t) sound.tick(t <= 5);
+    hudCache.t = t; }
   if (hudCache.b !== bar) { elB.style.width = Math.min(100, bar / 2) + '%'; hudCache.b = bar; }
 }
 

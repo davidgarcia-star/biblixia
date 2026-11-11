@@ -393,6 +393,7 @@ export class Sound {
   }
   jump() { this.note(220, .18, { type: 'sine', vol: .08, slide: 440, wet: false }); }
   hurt() { this.note(330, .5, { type: 'sawtooth', vol: .07, slide: 110, filter: 900 }); this.note(392, .35, { type: 'square', vol: .05, filter: 1200, when: .02 }); }
+  tick(hi = false) { this.note(hi ? 1760 : 1320, .05, { type: 'square', vol: .035, filter: 2600, wet: false }); this.note(hi ? 880 : 660, .08, { type: 'sine', vol: .04, when: .01, wet: false }); }
   click() { this.note(880, .06, { type: 'sine', vol: .06, wet: false }); }
   win() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.note(f, .9, { type: 'triangle', vol: .1, when: i * .12 })); }
   lose() { [392, 349, 311, 262].forEach((f, i) => this.note(f, .7, { type: 'sine', vol: .12, when: i * .22 })); }
