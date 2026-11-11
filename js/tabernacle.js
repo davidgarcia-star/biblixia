@@ -118,6 +118,29 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   for (let i = 0; i < 7; i++) { const f = new THREE.Mesh(new THREE.ConeGeometry(.16 + (i % 3) * .05, .7, 6).translate(0, .35, 0), tongueM); f.position.set(altX + Math.sin(i * 2.4) * aw * .3, ah + .04, cz + Math.cos(i * 1.7) * aw * .3); f.castShadow = false; T.add(f); tongues.push(f); }
   zones.push({ id: 'altar', name: 'El altar de bronce', minX: altX - 3, maxX: altX + 3, minZ: cz - 3, maxZ: cz + 3, pri: 2,
     text: 'En el altar de bronce se ofrecían los holocaustos y apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Levítico 6:13; Juan 1:29' });
+  // Utensilios de bronce del altar junto a su lado norte: olla para las cenizas, pala, tazón, garfio y brasero (Éxodo 27:3)
+  {
+    const uz = cz - aw / 2 - .75, bronzeDS = M.bronze.clone(), ash = new THREE.MeshStandardMaterial({ color: 0x8d8780, roughness: 1 });
+    bronzeDS.side = THREE.DoubleSide;
+    add(new THREE.LatheGeometry([[0, 0], [.17, .01], [.23, .12], [.22, .26], [.18, .32], [.2, .34]].map(([x, y]) => new THREE.Vector2(x, y)), 20), bronzeDS, altX - .9, 0, uz);
+    add(new THREE.CircleGeometry(.18, 16), ash, altX - .9, .3, uz, { cast: false }).rotation.x = -Math.PI / 2;
+    // pala apoyada en la olla
+    const sh = new THREE.Group(); sh.position.set(altX - .55, 0, uz); sh.rotation.z = .42; S.add(sh);
+    const hd = new THREE.Mesh(new THREE.CylinderGeometry(.018, .018, .78, 6), M.bronze); hd.position.y = .5; sh.add(hd);
+    const bl = new THREE.Mesh(new THREE.BoxGeometry(.2, .2, .025), M.bronze); bl.position.y = .1; bl.rotation.x = .08; sh.add(bl);
+    // tazón para la sangre
+    add(new THREE.SphereGeometry(.15, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), bronzeDS, altX - .05, .15, uz - .05);
+    // garfio de tres dientes tendido en el suelo
+    const fk = new THREE.Group(); fk.position.set(altX + .5, .05, uz - .12); fk.rotation.y = .25; S.add(fk);
+    const fh = new THREE.Mesh(new THREE.CylinderGeometry(.016, .016, .7, 6), M.bronze); fh.rotation.z = Math.PI / 2; fk.add(fh);
+    const fb = new THREE.Mesh(new THREE.BoxGeometry(.03, .02, .16), M.bronze); fb.position.x = .36; fk.add(fb);
+    for (const tz of [-.07, 0, .07]) { const tn = new THREE.Mesh(new THREE.BoxGeometry(.13, .02, .018), M.bronze); tn.position.set(.43, 0, tz); fk.add(tn); }
+    // brasero con unas brasas
+    add(new THREE.CylinderGeometry(.17, .14, .06, 16), M.bronze, altX + 1.1, .07, uz + .1);
+    box(.24, .02, .03, M.bronze, altX + 1.38, .09, uz + .1);
+    for (let i = 0; i < 4; i++) add(new THREE.DodecahedronGeometry(.035), M.fire, altX + 1.1 + Math.sin(i * 2.3) * .07, .11, uz + .1 + Math.cos(i * 1.9) * .07, { cast: false });
+    addBox(altX - 1.15, altX + 1.5, uz - .3, uz + .3, .36);
+  }
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
   const lavX = cx + 10 * C;
