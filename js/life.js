@@ -393,6 +393,25 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(4, 1.05, .8, mat(0x6a4a2a), cx - 4, y0 + .52, Z1 - 2); box(4.1, .06, .9, mat(0x2a2420, { roughness: .3 }), cx - 4, y0 + 1.07, Z1 - 2); solid(cx - 6, cx - 2, Z1 - 2.45, Z1 - 1.55, y0 + 1.1, y0);
     box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
+    {
+      // pizarra del menú colgada del techo sobre el mostrador, escrita con tiza
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
+      g.fillStyle = '#23302a'; g.fillRect(0, 0, 512, 256);
+      for (let k = 0; k < 260; k++) { g.fillStyle = `rgba(255,255,255,${.015 + (k % 5) * .006})`; g.fillRect((k * 197) % 512, (k * 83) % 256, 18, 2); }
+      g.textBaseline = 'middle'; g.fillStyle = '#f7f1dc'; g.textAlign = 'center'; g.font = '700 40px Georgia, serif'; g.fillText('☕ CAFETERÍA', 256, 38);
+      g.strokeStyle = 'rgba(247,241,220,.6)'; g.lineWidth = 2; g.beginPath(); g.moveTo(110, 66); g.lineTo(402, 66); g.stroke();
+      const items = [['Café negro', '75'], ['Café con leche', '100'], ['Chocolate caliente', '110'], ['Pan dulce', '60'], ['Jugo natural', '90']];
+      g.font = '26px Georgia, serif';
+      items.forEach(([n, p], k) => { const yy = 92 + k * 30; g.textAlign = 'left'; g.fillStyle = '#f7f1dc'; g.fillText(n, 60, yy); g.textAlign = 'right'; g.fillStyle = '#ffd36b'; g.fillText('RD$ ' + p, 452, yy); });
+      g.textAlign = 'center'; g.fillStyle = '#9fe0b8'; g.font = 'italic 19px Georgia, serif'; g.fillText('«Probad y ved que el SEÑOR es bueno» – Salmo 34:8', 256, 240);
+      const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+      const by = y0 + 2.45, bz = Z1 - 1.0;
+      box(2.3, 1.2, .06, mat(0x6a4a2a, { roughness: .6 }), cx - 4, by, bz, { cast: false });
+      const bd = new THREE.Mesh(new THREE.PlaneGeometry(2.16, 1.08), new THREE.MeshStandardMaterial({ map: tx, roughness: .9 }));
+      bd.position.set(cx - 4, by, bz - .035); bd.rotation.y = Math.PI; group.add(bd);
+      const topY = fy(1) - .3;
+      for (const dx of [-.9, .9]) cyl(.006, .006, topY - (by + .6), frameM, cx - 4 + dx, (topY + by + .6) / 2, bz, 4);
+    }
     act(cx - 4, Z1 - 3.1, y0, '☕ Comprar un café', () => life.fx('coffee'));
     act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
     for (const [tx, tz] of [[cx - 4, cz], [cx, cz + 1]]) { box(.9, .05, .9, mat(0xf2efe8), tx, y0 + .75, tz); cyl(.05, .05, .72, frameM, tx, y0 + .38, tz, 8); solid(tx - .45, tx + .45, tz - .45, tz + .45, y0 + .78, y0); }
