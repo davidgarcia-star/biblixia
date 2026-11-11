@@ -61,6 +61,9 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #verse .btn:disabled{opacity:.75}
 @keyframes vshake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
 #verse .card.shake{animation:vshake .25s ease 2}
+#verse .vbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#verse #btnVerseDone{border-color:rgba(126,240,164,.6);color:#c9f7d8}
+#verse.ready #btnVerseDone{display:none}
 
 /* HUD */
 #hud{position:fixed;inset:0;z-index:5;pointer-events:none}

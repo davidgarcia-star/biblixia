@@ -264,7 +264,10 @@
     <p class="vtext" id="vText"></p>
     <p class="vref" id="vRef"></p>
     <div class="vbar"><i id="vProg"></i></div>
-    <button class="btn" id="btnVerseOk" disabled>📖 Lee el versículo…</button>
+    <div class="vbtns">
+      <button class="btn" id="btnVerseOk" disabled>📖 Lee el versículo…</button>
+      <button class="btn ghost" id="btnVerseDone">✅ Terminé de leer</button>
+    </div>
   </div>
 </div>
 
@@ -297,6 +300,6 @@ window.NAVIDAD_CFG = {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pintar); else pintar();
 })();
 </script>
-<script type="module" src="js/biblixia.min.js?v=20261111c"></script>
+<script type="module" src="js/biblixia.min.js?v=20261111d"></script>
 </body>
 </html>

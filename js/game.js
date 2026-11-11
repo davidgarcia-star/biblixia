@@ -1714,7 +1714,7 @@ const keys = {};
 let jumpPressed = false, takePressed = false, runToggle = false, look = { id: null, x: 0, y: 0 }, joy = { id: null, x: 0, y: 0, active: false };
 addEventListener('keydown', e => {
   if (e.target && e.target.tagName === 'INPUT') return;
-  if (state === 'verse') { e.preventDefault(); if (!e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyT')) closeVerse(); return; }
+  if (state === 'verse') { e.preventDefault(); if (!e.repeat && (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyT')) closeVerse(true); return; }
   if (state === 'talk' && (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyT')) { e.preventDefault(); takeGift(); return; }
   if (state === 'map' && (e.code === 'Escape' || e.code === 'KeyM')) { closeMap(); return; }
   if (e.code === 'Escape' || e.code === 'KeyP') { if (state === 'play') pauseGame(); else if (state === 'pause') resumeGame(); return; }
@@ -1943,22 +1943,28 @@ function openVerse() {
   const palabras = (VERSES[k][0] + ' ' + VERSES[k][1]).trim().split(/\s+/).length;
   verseSecs = Math.min(20, Math.max(6, Math.ceil(palabras / 2) + 1));
   verseReadyAt = performance.now() + verseSecs * 1000;
+  verseMinAt = performance.now() + 1500;
   elTimer.classList.add('paused');
   $('verse').classList.remove('hidden'); $('verse').classList.remove('ready');
   tickVerse(); clearInterval(verseIv); verseIv = setInterval(tickVerse, 100);
 }
-let verseReadyAt = 0, verseSecs = 0, verseIv = 0;
+let verseReadyAt = 0, verseSecs = 0, verseIv = 0, verseMinAt = 0;
 function verseReady() { return performance.now() >= verseReadyAt; }
 function tickVerse() {
   const btn = $('btnVerseOk'), falta = (verseReadyAt - performance.now()) / 1000;
   $('vProg').style.width = Math.min(100, (1 - Math.max(0, falta) / verseSecs) * 100) + '%';
+  // "Terminé de leer": quien lee rápido puede cerrar antes; se activa tras un instante
+  // para que un toque accidental no quite el versículo sin verlo.
+  $('btnVerseDone').disabled = performance.now() < verseMinAt;
   if (falta > 0) { btn.disabled = true; btn.textContent = `📖 Lee el versículo… ${Math.ceil(falta)}`; return; }
   clearInterval(verseIv); verseIv = 0; btn.disabled = false; btn.textContent = 'Amén · Continuar';
   $('verse').classList.add('ready');
 }
-function closeVerse() {
+function closeVerse(terminado) {
   if (state !== 'verse') return;
-  if (!verseReady()) { const c = $('verse').querySelector('.card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); return; }
+  // El que lee lento espera el tiempo establecido; el que ya leyó puede pulsar "Terminé de leer".
+  const yaLeyo = terminado === true && performance.now() >= verseMinAt;
+  if (!verseReady() && !yaLeyo) { const c = $('verse').querySelector('.card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); return; }
   clearInterval(verseIv); verseIv = 0;
   sound.click(); $('verse').classList.add('hidden');
   elTimer.classList.toggle('paused', !!P.timeStop);
@@ -3062,7 +3068,8 @@ $('btnCollection').onclick = () => { sound.unlock(); sound.click(); renderCollec
 $('btnTake').onclick = () => takeGift();
 $('iClose').onclick = () => { $('info').classList.remove('show'); infoTimer = 0; };
 document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { colTab = b.dataset.tab; renderCollection(); });
-$('btnVerseOk').onclick = closeVerse;
+$('btnVerseOk').onclick = () => closeVerse();
+$('btnVerseDone').onclick = () => closeVerse(true);
 // Pantalla completa (botón en la barra y en el juego; tecla F en la PC)
 const fsReq = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
