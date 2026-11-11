@@ -172,6 +172,32 @@ const sunGlow = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.set(260, 260, 1); scene.add(sp); return sp;
 })();
+// Estrella fugaz: de noche, de vez en cuando cruza el cielo una estela brillante (Salmo 19:1 «Los cielos proclaman la gloria de Dios»)
+const meteor = (() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array([1, 1, .95, 0, 0, 0]), 3));
+  const m = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, fog: false, depthWrite: false, blending: THREE.AdditiveBlending });
+  const line = new THREE.Line(g, m); line.frustumCulled = false; line.renderOrder = -1; line.visible = false; stars.add(line);
+  const a = new THREE.Vector3(), d = new THREE.Vector3(), pos = g.attributes.position;
+  let wait = 5 + Math.random() * 8, life = 0, dur = 1;
+  return {
+    update(dt) {
+      if (!stars.visible) { line.visible = false; return; }
+      if (life <= 0) {
+        line.visible = false; if ((wait -= dt) > 0) return;
+        wait = 9 + Math.random() * 18; dur = .7 + Math.random() * .6; life = dur;
+        const th = Math.random() * Math.PI * 2, el = .45 + Math.random() * .5, s = Math.random() < .5 ? 1 : -1;
+        a.set(Math.cos(th) * Math.cos(el), Math.sin(el), Math.sin(th) * Math.cos(el)).multiplyScalar(1450);
+        d.set(-Math.sin(th) * s, -.3 - Math.random() * .3, Math.cos(th) * s).normalize().multiplyScalar(480);
+      }
+      life -= dt; const k = 1 - Math.max(0, life) / dur;
+      const hx = a.x + d.x * k, hy = a.y + d.y * k, hz = a.z + d.z * k, tl = .14 + .16 * Math.min(1, k * 3);
+      pos.setXYZ(0, hx, hy, hz); pos.setXYZ(1, hx - d.x * tl, hy - d.y * tl, hz - d.z * tl); pos.needsUpdate = true;
+      m.opacity = Math.sin(Math.PI * k) * .95; line.visible = true;
+    }
+  };
+})();
 // Bandada de aves que planea en círculos alto en el cielo y aletea de vez en cuando (de día y al atardecer)
 const birds = (() => {
   const grp = new THREE.Group(), list = [];
@@ -2821,6 +2847,7 @@ function loopBody() {
   }
   if (state === 'play') { applyLook(); update(dt); } else lookAcc.x = lookAcc.y = 0;
   birds.update(dt, elapsed, camera.position);
+  meteor.update(dt);
   fireflies.update(dt, elapsed, camera.position);
   butterflies.update(dt, elapsed, camera.position);
   shootingStar.update(dt, camera.position);
