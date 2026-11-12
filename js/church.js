@@ -119,6 +119,37 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   };
   bath(X0 + 3, '🚺 Damas', 'bano-f'); bath(X1 - 3, '🚹 Caballeros', 'bano-m');
 
+  // Alfolí de diezmos y ofrendas junto a la entrada del santuario: mueble de madera con ranura y placa dorada,
+  // y un cuadro en la pared con 2 Corintios 9:7 (LBLA)
+  {
+    const ox = cx + 4.6, oz = LZ - T / 2 - .24, fl = y0 + .1;
+    const wood = mat(0x5a3a22, { roughness: .55 }), brass = mat(0xd4a72c, { metalness: .7, roughness: .3 });
+    box(.62, .9, .44, wood, ox, fl + .45, oz);                                                   // mueble
+    box(.68, .05, .5, mat(0x3e2816, { roughness: .45 }), ox, fl + .925, oz);                   // tapa
+    box(.3, .012, .04, mat(0x0c0806), ox, fl + .953, oz, { cast: false });                     // ranura
+    box(.66, .06, .48, mat(0x3e2816), ox, fl + .03, oz, { cast: false });                       // zócalo
+    const sign = (w, h, cw, ch, draw, mm = {}) => {
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch; draw(c.getContext('2d'));
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: t, roughness: .5, ...mm })); s.rotation.y = Math.PI; group.add(s); return s;
+    };
+    const plate = sign(.44, .13, 256, 76, g => {
+      const gr = g.createLinearGradient(0, 0, 0, 76); gr.addColorStop(0, '#f4d77a'); gr.addColorStop(1, '#b8871e'); g.fillStyle = gr; g.fillRect(0, 0, 256, 76);
+      g.strokeStyle = '#7a5410'; g.lineWidth = 4; g.strokeRect(4, 4, 248, 68);
+      g.fillStyle = '#3a2606'; g.textAlign = 'center'; g.font = '800 30px system-ui, sans-serif'; g.fillText('DIEZMOS Y', 128, 34); g.fillText('OFRENDAS', 128, 64);
+    }, { metalness: .5, roughness: .35 });
+    plate.position.set(ox, fl + .7, oz - .222);
+    box(.9, .62, .03, brass, ox, fl + 1.75, LZ - T / 2 - .015, { cast: false });               // marco del cuadro
+    const verse = sign(.84, .56, 420, 280, g => {
+      g.fillStyle = '#fbf6ea'; g.fillRect(0, 0, 420, 280); g.fillStyle = '#4a3410'; g.textAlign = 'center';
+      g.font = 'italic 600 25px Georgia, serif';
+      ['«Que cada uno dé como', 'propuso en su corazón,', 'no de mala gana ni por', 'obligación, porque Dios', 'ama al dador alegre.»'].forEach((l, k) => g.fillText(l, 210, 48 + k * 38));
+      g.font = '700 20px system-ui, sans-serif'; g.fillStyle = '#8a6414'; g.fillText('2 Corintios 9:7 (LBLA)', 210, 258);
+    });
+    verse.position.set(ox, fl + 1.75, LZ - T / 2 - .032);
+    solid(ox - .34, ox + .34, oz - .25, oz + .25, fl + .95);
+  }
+
   // --- árbol de Navidad en el lobby (solo en temporada: 1 nov – 31 ene, o con ?navidad=1) ---
   // entre el baño de damas y la entrada al santuario, sin estorbar el paso; luces que titilan y estrella arriba
   const xmasLights = [];
