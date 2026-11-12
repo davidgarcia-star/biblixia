@@ -191,6 +191,12 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(2 * C + .06, .05, 1 * C + .06, M.gold, tbX, 1.5 * C + .05, tbZ);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(.025, 1.5 * C, M.gold, tbX + sx * (C - .06), .75 * C, tbZ + sz * (C / 2 - .05), 8);
   for (const sx of [-1, 1]) for (let k = 0; k < 6; k++) { const b = add(new THREE.CylinderGeometry(.16, .17, .05, 18), M.bread, tbX + sx * .24, 1.5 * C + .06 + k * .055, tbZ); b.scale.set(1, 1, .75); }
+  // «Pondrás incienso puro en cada hilera» (Levítico 24:7): un tacita de oro con incienso blanco sobre cada pila de panes
+  { const incM = new THREE.MeshStandardMaterial({ color: 0xf3ecd8, roughness: .85 }), topY = 1.5 * C + .06 + 5 * .055 + .025;
+    for (const sx of [-1, 1]) {
+      add(new THREE.CylinderGeometry(.055, .038, .04, 16), M.gold, tbX + sx * .24, topY + .02, tbZ, { cast: false });
+      const inc = add(new THREE.SphereGeometry(.045, 12, 8), incM, tbX + sx * .24, topY + .038, tbZ, { cast: false }); inc.scale.set(1, .35, 1);
+    } }
   addBox(tbX - .55, tbX + .55, tbZ - .3, tbZ + .3, .8);
   // Candelabro de oro puro (lado sur): 7 lámparas
   const lampGlowMat = (() => {
