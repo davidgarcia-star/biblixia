@@ -313,6 +313,17 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   add(g, new THREE.CylinderGeometry(.03, .025, .09, 12), M(0xffffff, { roughness: .3 }), lX + .3, fl + .87, lZ - .1, { cast: false }); // jabón líquido
   for (const [c, dx] of [[0x2a8ad0, -.02], [0xe03a5a, .02]]) { const cep = add(g, new THREE.CylinderGeometry(.005, .005, .17, 6), M(c), lX - .32 + dx, fl + .92, lZ - .1, { cast: false }); cep.rotation.z = dx * 6; }
   add(g, new THREE.CylinderGeometry(.03, .026, .09, 12), S.glass, lX - .32, fl + .87, lZ - .1, { cast: false });
+  // tubo de pasta dental acostado junto al vaso de los cepillos
+  const pasta = add(g, new THREE.CapsuleGeometry(.016, .1, 4, 10), M(0xffffff, { roughness: .35 }), lX - .2, fl + .838, lZ - .15, { cast: false }); pasta.rotation.z = Math.PI / 2; pasta.rotation.y = .4; pasta.scale.set(1, 1, .7);
+  const tapa = add(g, new THREE.CylinderGeometry(.011, .011, .022, 10), M(0x2a8ad0, { roughness: .4 }), lX - .2 - Math.cos(.4) * .075, fl + .838, lZ - .15 + Math.sin(.4) * .075, { cast: false }); tapa.rotation.z = Math.PI / 2; tapa.rotation.y = .4;
+  // maceta pequeña con una suculenta en la esquina del mueble
+  add(g, new THREE.CylinderGeometry(.045, .035, .07, 14), M(0xd8cfc0, { roughness: .7 }), lX + .33, fl + .855, lZ + .13, { cast: false });
+  add(g, new THREE.CylinderGeometry(.04, .04, .005, 14), M(0x4a3626, { roughness: 1 }), lX + .33, fl + .888, lZ + .13, { cast: false });
+  for (let k = 0; k < 7; k++) {
+    const a = k / 7 * Math.PI * 2, hoja = add(g, new THREE.SphereGeometry(.022, 8, 6), M(0x6aa36a, { roughness: .55 }), lX + .33 + Math.cos(a) * .018, fl + .9, lZ + .13 + Math.sin(a) * .018, { cast: false });
+    hoja.scale.set(.55, 1.3, .35); hoja.rotation.y = -a; hoja.rotation.z = -.45;
+  }
+  add(g, new THREE.SphereGeometry(.016, 8, 6), M(0x7fb87a, { roughness: .55 }), lX + .33, fl + .91, lZ + .13, { cast: false }).scale.set(1, 1.2, 1);
   solid(lX - .47, lX + .47, lZ - .26, lZ + .26, fl + .82);
 
   // --- Toallero con toallas (pared de la puerta) y alfombra ---
