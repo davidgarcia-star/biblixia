@@ -435,6 +435,18 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           bl.castShadow = true; group.add(bl);
         }
         solid(px - .25, px + .25, pz - .25, pz + .25, y + pH + .5, y); }
+      // fotocopiadora con bandejas de papel, tapa oscura y panel de control con pantallita verde
+      if (i > 0) {
+        const kx = X0 + .9, kz = Z1 - 2.6, cpM = mat(0xdcdcd8, { roughness: .45 }), dkM = mat(0x3a3d44, { roughness: .4 });
+        box(.6, .9, .7, cpM, kx, y + .45, kz);
+        box(.62, .05, .72, dkM, kx, y + .925, kz, { cast: false });
+        for (const ty of [.22, .45]) box(.02, .14, .55, dkM, kx + .31, y + ty, kz, { cast: false });
+        box(.3, .012, .5, mat(0xfafafa, { roughness: .9 }), kx + .4, y + .7, kz, { cast: false });
+        box(.2, .02, .52, dkM, kx + .4, y + .69, kz, { cast: false });
+        box(.12, .04, .22, dkM, kx + .26, y + .97, kz - .18, { cast: false });
+        box(.004, .025, .1, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x3ad07a, emissiveIntensity: 1.1 }), kx + .321, y + .975, kz - .2, { cast: false });
+        solid(kx - .3, kx + .55, kz - .36, kz + .36, y + .95, y);
+      }
       // rampa / escalera hacia el piso de arriba
       if (i < FLOORS - 1) {
         const [sa, sb] = stairs[i % 2], st = 14;
