@@ -288,6 +288,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       shade.position.set(nx + .06, fy + 1.02, nz + .03); shade.castShadow = false; group.add(shade);
       solid(nx - .25, nx + .25, nz - .22, nz + .22, fy + .67);
     }
+    {
+      // pantuflas de felpa en el piso junto a la cama, listas para levantarse (decorativas, sin colisión)
+      const soleM = mat(0xe8e1d4, { roughness: .95 }), plushM = mat(0x5b6f8f, { roughness: 1 });
+      const soleG = new THREE.CylinderGeometry(.5, .5, 1, 18).scale(.095, .028, .14);
+      const upG = new THREE.SphereGeometry(.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(.1, .07, .12);
+      [[-.08, .12], [.08, -.02]].forEach(([dx, rot], i) => {
+        const s = new THREE.Group();
+        const sole = new THREE.Mesh(soleG, soleM); sole.position.y = .014; s.add(sole);
+        const up = new THREE.Mesh(upG, plushM); up.position.set(0, .026, -.06); s.add(up);
+        s.position.set(bedX - 1.12 + dx, fy + .142, bedZ - .25 + i * .03); s.rotation.y = rot;
+        s.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
+        group.add(s);
+      });
+    }
     // --- Baño cerrado (esquina del frente a la derecha), con puerta desde el pasillo ---
     const BX0 = cx + 3.2, BZ1 = Z0 + 4.2, DZ0 = Z0 + 2.5, DZ1 = Z0 + 3.5;
     wall(BX0, BZ1, X1, BZ1);                                            // separa el baño del dormitorio
