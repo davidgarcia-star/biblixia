@@ -818,7 +818,7 @@ async function buildWorld(cfg) {
     for (let i = 0; i < 14; i++) {
       const d = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.sandDune);
       const side = i % 3, t = r();
-      const x = side === 0 ? X0 + DES + 18 + r() * 30 : X0 + t * DES, z = side === 0 ? (r() - .5) * T : -(T / 2 + 18 + r() * 25);
+      const x = side === 0 ? X0 + DES + 18 + r() * 30 : X0 + t * DES, z = side === 0 ? (r() - .5) * T : O - NZ - 22 - r() * 20; // al norte, detrás de los lugares bíblicos (antes tapaban Jericó, Babel y el Mar Rojo)
       d.position.set(x, 0, z); d.scale.set(14 + r() * 16, 4 + r() * 8, 12 + r() * 14); d.receiveShadow = true; group.add(d);
     }
     const sinai = new THREE.Mesh(mountainGeo(160, 190, r), M.rock); sinai.position.set(X0 + DES + 330, 90, -60); group.add(sinai);

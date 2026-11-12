@@ -124,8 +124,27 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const scaf = std({ color: 0x7a5232, roughness: .8 });
     for (let k = 0; k < 6; k++) box(.15, 4, .15, scaf, px - 4 + k * 1.6, y + 2, pz - 3);
     box(9, .15, .15, scaf, px, y + 3.6, pz - 3);
+    // Ladrillos cocidos apilados y una vasija de asfalto junto a la base (Génesis 11:3)
+    const fz = pz + s0 * .425 + 2.6;
+    const brickM = std({ color: 0xa8582e, roughness: .95 }), brickM2 = std({ color: 0x8e4524, roughness: .95 });
+    for (const sx of [-1, 1]) {
+      const bx = px + sx * s0 * .28;
+      for (let ly = 0; ly < 4; ly++) for (let ix = 0; ix < 3; ix++) for (let iz = 0; iz < 2; iz++) {
+        if (ly === 3 && (ix + iz) % 2) continue; // la capa de arriba queda incompleta
+        const rot = ly % 2; // las capas se cruzan como en una pila real
+        const b = box(rot ? .26 : .52, .2, rot ? .52 : .26, (ix + iz + ly) % 3 ? brickM : brickM2,
+          bx + (rot ? (ix - 1) * .28 : (ix - 1) * .54), .1 + ly * .205, fz + (rot ? (iz - .5) * .54 : (iz - .5) * .28));
+        b.castShadow = ly === 3;
+      }
+      addBox(bx - .85, bx + .85, fz - .55, fz + .55, .85);
+    }
+    const potX = px + s0 * .28 + 1.6;
+    add(new THREE.CylinderGeometry(.38, .3, .55, 14), std({ color: 0x6e4a2c, roughness: .9 }), potX, .275, fz);
+    const pitch = add(new THREE.CircleGeometry(.34, 14), std({ color: 0x0c0a08, roughness: .15, metalness: .1 }), potX, .53, fz);
+    pitch.rotation.x = -Math.PI / 2;
+    addBox(potX - .4, potX + .4, fz - .4, fz + .4, .6);
     out.zones.push({ id: 'babel', name: 'La torre de Babel', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'En Babel el SEÑOR confundió la lengua de los hombres que querían una torre hasta el cielo.',
+      text: 'Usaron ladrillo en lugar de piedra y asfalto en lugar de mezcla, pero el SEÑOR confundió su lengua cuando quisieron una torre hasta el cielo.',
       ref: 'Génesis 11:1-9' });
     out.coins.push([px - s0 / 2 - 3, pz + 6, 0], [px + s0 / 2 + 3, pz - 6, 0]);
     out.treasures.babel = [px, pz + s0 * .45 + 2, 0];
