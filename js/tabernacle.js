@@ -357,6 +357,9 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   const emberM = new THREE.MeshBasicMaterial({ color: 0xff7a1e }), fireM = new THREE.MeshBasicMaterial({ color: 0xffc04a });
   const stoneG = new THREE.DodecahedronGeometry(.13), logG = new THREE.CylinderGeometry(.045, .055, .8, 6), emberG = new THREE.CylinderGeometry(.24, .28, .06, 10), fireG = new THREE.ConeGeometry(.13, .38, 7);
   const fireCore = new THREE.MeshBasicMaterial({ color: 0xfff2b0 }), FL = new THREE.Group(), fires = [];
+  // Cántaros de barro para el agua junto a la entrada de algunas tiendas (Génesis 24:14-15)
+  const jarG = new THREE.LatheGeometry([[0, 0], [.1, 0], [.18, .1], [.21, .24], [.17, .39], [.08, .49], [.065, .55], [.095, .6], [.08, .61]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
+  const jarM = new THREE.MeshStandardMaterial({ color: 0xa8603a, roughness: .95, side: THREE.DoubleSide });
   let nTent = 0;
   const pts = [];
   for (let i = 0; i < 36; i++) {
@@ -373,6 +376,7 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
     const op = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), dark); op.position.set(0, .7, 1.76); t.add(op);
     for (const sx of [-2.4, 0, 2.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.2, 5), new THREE.MeshStandardMaterial({ color: 0x5a3a1e })); p.position.set(sx, 1.1, 2.1); t.add(p); }
     const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .1, 2.6); t.add(r2);
+    if (nTent % 3 === 1) for (const [jx, jz, js] of [[1.55, 2.75, 1], [1.95, 3.05, .8]]) { const j = new THREE.Mesh(jarG, jarM); j.position.set(jx, 0, jz); j.scale.setScalar(js); j.castShadow = true; t.add(j); }
     if (nTent++ % 3 === 0) {
       const f = new THREE.Group(); f.position.set(0, 0, 4.6); t.add(f);
       for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, st = new THREE.Mesh(stoneG, stoneM); st.position.set(Math.cos(a) * .42, .08, Math.sin(a) * .42); st.rotation.set(k, k * 2, 0); st.scale.y = .7; st.castShadow = true; f.add(st); }
