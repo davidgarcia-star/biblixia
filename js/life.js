@@ -165,6 +165,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(pW + .4, .14, pD + .4, mat(0xe9e6df, { roughness: .5 }), pX, fy + .1, pZ, { cast: false });
     box(pW, .02, pD, new THREE.MeshStandardMaterial({ color: 0x29a8d8, roughness: .05, metalness: .1, emissive: 0x0a3a50, emissiveIntensity: .4, transparent: true, opacity: .9 }), pX, fy + .17, pZ, { cast: false });
     solid(pX - pW / 2, pX + pW / 2, pZ - pD / 2, pZ + pD / 2, fy + 1.4);
+    {
+      // flotador salvavidas rojo y blanco que se mece y va a la deriva despacio sobre el agua de la piscina
+      const ring = new THREE.Group(); group.add(ring);
+      const tG = new THREE.TorusGeometry(.32, .1, 10, 8, Math.PI / 4);
+      for (let k = 0; k < 8; k++) { const s = new THREE.Mesh(tG, mat(k % 2 ? 0xf4f2ee : 0xd6262b, { roughness: .45 })); s.rotation.z = k * Math.PI / 4; ring.add(s); }
+      ring.rotation.x = -Math.PI / 2;
+      ring.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
+      const fx0 = pX + 1.6, fz0 = pZ - .2, fyW = fy + .19;
+      ring.position.set(fx0, fyW, fz0);
+      houseUpd.push(t => {
+        ring.position.set(fx0 + Math.sin(t * .11) * 1.9, fyW + Math.sin(t * 1.3) * .012, fz0 + Math.sin(t * .17) * .7);
+        ring.rotation.z = t * .08; ring.rotation.y = Math.sin(t * 1.1) * .035;
+      });
+    }
     for (const sx of [-1.6, 0, 1.6]) { const t = box(.7, .12, 1.9, mat(0xf2f2f0), pX + 6.3, fy + .35, pZ + sx * .7 - .3); t.rotation.x = -.05; box(.7, .5, .12, mat(0xf2f2f0), pX + 6.3, fy + .55, pZ + sx * .7 + .6); }
     // --- Sala y cocina (lado izquierdo) ---
     const sofaM = mat(0x8c8a86, { roughness: .95 });
