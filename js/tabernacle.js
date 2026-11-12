@@ -141,6 +141,21 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     for (let i = 0; i < 4; i++) add(new THREE.DodecahedronGeometry(.035), M.fire, altX + 1.1 + Math.sin(i * 2.3) * .07, .11, uz + .1 + Math.cos(i * 1.9) * .07, { cast: false });
     addBox(altX - 1.15, altX + 1.5, uz - .3, uz + .3, .36);
   }
+  // Lugar de las cenizas al oriente del altar: montón bajo de ceniza con tizones apagados (Levítico 1:16; 6:10-11)
+  {
+    const ax = altX + aw / 2 + 1.1, az = cz + aw / 2 + .6;
+    const ashM = new THREE.MeshStandardMaterial({ color: 0xa59c90, roughness: 1 }), charM = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: .95 });
+    const heap = add(new THREE.SphereGeometry(.55, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), ashM, ax, 0, az);
+    heap.scale.set(1, .32, .8); heap.castShadow = false;
+    const heap2 = add(new THREE.SphereGeometry(.3, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2), ashM, ax + .45, 0, az - .25);
+    heap2.scale.set(1, .35, 1); heap2.castShadow = false;
+    for (let i = 0; i < 5; i++) {
+      // cada tizón se apoya sobre la superficie del montón (sin flotar)
+      const ox = Math.sin(i * 2.4) * .26, oz = Math.cos(i * 1.8) * .17, q = Math.min(1, Math.hypot(ox / .55, oz / .44));
+      const st = add(new THREE.CylinderGeometry(.022, .028, .3 + (i % 2) * .08, 6), charM, ax + ox, .176 * Math.sqrt(1 - q * q) - .005, az + oz, { cast: false });
+      st.rotation.set(Math.PI / 2, i * 1.3, 0);
+    }
+  }
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
   const lavX = cx + 10 * C;
