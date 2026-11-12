@@ -375,6 +375,8 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   // Cántaros de barro para el agua junto a la entrada de algunas tiendas (Génesis 24:14-15)
   const jarG = new THREE.LatheGeometry([[0, 0], [.1, 0], [.18, .1], [.21, .24], [.17, .39], [.08, .49], [.065, .55], [.095, .6], [.08, .61]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
   const jarM = new THREE.MeshStandardMaterial({ color: 0xa8603a, roughness: .95, side: THREE.DoubleSide });
+  const ropeG = new THREE.CylinderGeometry(.012, .012, 1, 4), ropeM = new THREE.MeshStandardMaterial({ color: 0xb59a6a, roughness: 1 });
+  const stakeG = new THREE.CylinderGeometry(.025, .015, .28, 5), stakeM = new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 1 }), UPV = new THREE.Vector3(0, 1, 0);
   let nTent = 0;
   const pts = [];
   for (let i = 0; i < 36; i++) {
@@ -390,6 +392,13 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
     const m = new THREE.Mesh(g, tentM); m.castShadow = m.receiveShadow = true; t.add(m);
     const op = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.4), dark); op.position.set(0, .7, 1.76); t.add(op);
     for (const sx of [-2.4, 0, 2.4]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 2.2, 5), new THREE.MeshStandardMaterial({ color: 0x5a3a1e })); p.position.set(sx, 1.1, 2.1); t.add(p); }
+    // Cuerdas tensas y estacas que sujetan la tienda al suelo: «alarga tus cuerdas y refuerza tus estacas» (Isaías 54:2)
+    for (const sx of [-1, 1]) for (const lz of [-1.1, 1.1]) {
+      const a = new THREE.Vector3(sx * 2.58, .88, lz), b = new THREE.Vector3(sx * 3.2, .06, lz), d = b.clone().sub(a);
+      const rp = new THREE.Mesh(ropeG, ropeM); rp.position.copy(a).addScaledVector(d, .5); rp.scale.y = d.length(); rp.quaternion.setFromUnitVectors(UPV, d.normalize()); t.add(rp);
+      const sk = new THREE.Mesh(stakeG, stakeM); sk.position.set(sx * 3.2, .1, lz); sk.rotation.z = sx * .35; t.add(sk);
+      const wx = x + Math.cos(ry) * sx * 3.2 + Math.sin(ry) * lz, wz = z - Math.sin(ry) * sx * 3.2 + Math.cos(ry) * lz; addBox(wx - .2, wx + .2, wz - .2, wz + .2, .35);
+    }
     const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .1, 2.6); t.add(r2);
     if (nTent % 3 === 1) for (const [jx, jz, js] of [[1.55, 2.75, 1], [1.95, 3.05, .8]]) { const j = new THREE.Mesh(jarG, jarM); j.position.set(jx, 0, jz); j.scale.setScalar(js); j.castShadow = true; t.add(j); }
     if (nTent++ % 3 === 0) {
