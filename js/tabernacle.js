@@ -390,6 +390,24 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
     S.add(t);
     addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
   }
+  // Estandartes de las cuatro divisiones del campamento: Judá al oriente (junto al camino de la entrada), Rubén al sur,
+  // Efraín al occidente y Dan al norte, «cada uno junto a su estandarte» (Números 2:2-3, 10, 18, 25)
+  const poleM = new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: .9 }), tipM = new THREE.MeshStandardMaterial({ color: 0xb08a3a, metalness: .6, roughness: .4 });
+  for (const [name, col, a, dz] of [['JUDÁ', '#1f5fa8', 0, 10], ['RUBÉN', '#a3241e', Math.PI / 2, 0], ['EFRAÍN', '#2e5a2a', Math.PI, 0], ['DAN', '#b8962e', -Math.PI / 2, 0]]) {
+    const x = cx + Math.cos(a) * radiusX * .78, z = cz + Math.sin(a) * radiusZ * .78 + dz; // entre el atrio y las tiendas
+    const c = document.createElement('canvas'); c.width = 256; c.height = 160; const q = c.getContext('2d');
+    q.fillStyle = col; q.fillRect(0, 0, 256, 160); q.strokeStyle = '#e8d6a0'; q.lineWidth = 10; q.strokeRect(8, 8, 240, 144);
+    q.fillStyle = '#f4ead0'; q.font = 'bold 46px Georgia, serif'; q.textAlign = 'center'; q.textBaseline = 'middle'; q.fillText(name, 128, 82);
+    const ft = new THREE.CanvasTexture(c); ft.colorSpace = THREE.SRGBColorSpace;
+    const fm = new THREE.MeshStandardMaterial({ map: ft, roughness: .95 });
+    const st = new THREE.Group(); st.position.set(x, 0, z); st.rotation.y = Math.atan2(cx - x, cz - z);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 4.4, 6), poleM); pole.position.y = 2.2; pole.castShadow = true; st.add(pole);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(.1, .3, 6), tipM); tip.position.y = 4.55; st.add(tip);
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.7, 5), poleM); bar.rotation.z = Math.PI / 2; bar.position.set(.85, 4.15, 0); st.add(bar);
+    for (const s of [1, -1]) { const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), fm); fl.position.set(.85, 3.62, s * .012); if (s < 0) fl.rotation.y = Math.PI; st.add(fl); }
+    S.add(st);
+    addBox(x - .3, x + .3, z - .3, z + .3, 4.4);
+  }
   S.updateMatrixWorld(true);
   group.add(bakeStatic(S));
   group.add(FL);
