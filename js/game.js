@@ -626,6 +626,8 @@ async function buildWorld(cfg) {
   const hydrants = [];
   // --- Aparcabicicletas con una bicicleta estacionada (acera opuesta al hidrante) ---
   const bikeRacks = [];
+  // --- Papeleras metálicas verdes con tapa (borde oeste de cada manzana de torres o plaza) ---
+  const bins = [];
 
   const streetCenters = [];
   for (let i = 0; i <= N; i++) streetCenters.push(O + i * PITCH + STREET / 2);
@@ -651,7 +653,7 @@ async function buildWorld(cfg) {
       const t = (k + .5) / 2;
       lamps.push([x0 + BLOCK * t, z0 + .8, 0], [x0 + BLOCK * t, z0 + BLOCK - .8, Math.PI], [x0 + .8, z0 + BLOCK * t, Math.PI / 2], [x0 + BLOCK - .8, z0 + BLOCK * t, -Math.PI / 2]);
     }
-    if (type === 'tower' || type === 'plaza') { hydrants.push([x0 + BLOCK * .25 + 2.4, z0 + .75]); bikeRacks.push([x0 + 14, z0 + BLOCK - 1.3, (bi * 7 + bj * 3) % 4]); }
+    if (type === 'tower' || type === 'plaza') { hydrants.push([x0 + BLOCK * .25 + 2.4, z0 + .75]); bikeRacks.push([x0 + 14, z0 + BLOCK - 1.3, (bi * 7 + bj * 3) % 4]); bins.push([x0 + .8, z0 + BLOCK * .25 + 2.4], [x0 + BLOCK - .8, z0 + BLOCK * .75 - 2.4]); }
     // Monedas en la acera
     coinSpots.push([cx, z0 + 1.6, CURB], [cx, z0 + BLOCK - 1.6, CURB], [x0 + 1.6, cz, CURB], [x0 + BLOCK - 1.6, cz, CURB]);
 
@@ -793,6 +795,27 @@ async function buildWorld(cfg) {
     const o = new THREE.Object3D();
     hydrants.forEach(([x, z], i) => { o.position.set(x, CURB, z); o.rotation.set(0, 0, 0); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); addBox(x - .2, x + .2, z - .2, z + .2, CURB + .9); });
     hm.castShadow = true; group.add(hm);
+  }
+  // Instanciar papeleras: cuerpo cilíndrico verde con aros, tapa abovedada con boca y base oscura
+  if (bins.length) {
+    const body = [
+      [new THREE.CylinderGeometry(.27, .24, .78, 14, 1, true), .47],
+      [new THREE.CircleGeometry(.24, 14).rotateX(-Math.PI / 2), .08],
+      [new THREE.TorusGeometry(.275, .022, 5, 14).rotateX(Math.PI / 2), .78],
+      [new THREE.TorusGeometry(.26, .02, 5, 14).rotateX(Math.PI / 2), .3]
+    ].map(([g, y]) => { g.deleteAttribute('uv'); g.translate(0, y, 0); return g; });
+    const lid = new THREE.SphereGeometry(.29, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2.6); lid.scale(1, .55, 1); lid.translate(0, .86, 0); lid.deleteAttribute('uv');
+    const foot = new THREE.CylinderGeometry(.2, .22, .08, 12); foot.translate(0, .04, 0); foot.deleteAttribute('uv');
+    const mouth = new THREE.BoxGeometry(.26, .07, .05); mouth.translate(0, .93, .2); mouth.deleteAttribute('uv');
+    const green = new THREE.MeshStandardMaterial({ color: 0x1f6b3a, roughness: .55, metalness: .35, side: THREE.DoubleSide });
+    const bm = new THREE.InstancedMesh(mergeGeometries([...body, lid]), green, bins.length);
+    const dm = new THREE.InstancedMesh(mergeGeometries([foot, mouth]), new THREE.MeshStandardMaterial({ color: 0x18191b, roughness: .8 }), bins.length);
+    const o = new THREE.Object3D();
+    bins.forEach(([x, z], i) => {
+      o.position.set(x, CURB, z); o.rotation.set(0, i & 1 ? -Math.PI / 2 : Math.PI / 2, 0); o.updateMatrix();
+      bm.setMatrixAt(i, o.matrix); dm.setMatrixAt(i, o.matrix); addBox(x - .3, x + .3, z - .3, z + .3, CURB + 1);
+    });
+    bm.castShadow = dm.castShadow = true; group.add(bm, dm);
   }
   // Instanciar aparcabicicletas: tres arcos de acero y una bicicleta apoyada (ruedas, cuadro y manubrio)
   if (bikeRacks.length) {
