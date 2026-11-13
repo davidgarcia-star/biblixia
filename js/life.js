@@ -176,6 +176,37 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
       solid(bbx - .45, bbx + .45, bbz - .45, bbz + .45, fy + .9);
     }
+    { // gato atigrado anaranjado durmiendo enroscado en la grama junto a la entrada: respira, mueve la cola y una oreja
+      const kx = cx - 2.45, kz = Z0 - .75, ky = fy + .04;
+      const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
+      g.fillStyle = '#d98a3d'; g.fillRect(0, 0, 128, 64); g.strokeStyle = 'rgba(160,88,30,.55)'; g.lineWidth = 3;
+      for (let k = 0; k < 12; k++) { g.beginPath(); for (let y = 8; y <= 56; y += 4) g.lineTo(k * 10.7 + 4 + Math.sin(y * .25 + k) * 2, y); g.stroke(); } // rayas suaves del atigrado
+      const furT = new THREE.CanvasTexture(c); furT.colorSpace = THREE.SRGBColorSpace;
+      const furM = new THREE.MeshStandardMaterial({ map: furT, roughness: .9 }), plainM = mat(0xd98a3d, { roughness: .9 }), creamM = mat(0xf1e2c8, { roughness: .9 });
+      const cat = new THREE.Group(); cat.name = 'gatoCasa'; cat.position.set(kx, ky, kz); cat.rotation.y = .6; group.add(cat);
+      const torso = new THREE.Group(); cat.add(torso);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.16, 14, 10), furM); body.scale.set(1.35, .6, 1); body.position.y = .095; torso.add(body);
+      const head = new THREE.Group(); head.position.set(.17, .09, .06); cat.add(head);
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(.075, 12, 9), plainM); skull.scale.set(1, .85, 1); head.add(skull);
+      const muzzle = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), creamM); muzzle.position.set(.055, -.02, 0); muzzle.scale.set(.8, .7, 1.1); head.add(muzzle);
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(.009, 6, 4), mat(0xc77a7a)); nose.position.set(.083, -.008, 0); head.add(nose);
+      for (const s of [-1, 1]) { const eye = box(.004, .004, .024, mat(0x2a1a10), .06, .018, s * .03, { cast: false, parent: head }); eye.rotation.y = s * .2; } // ojitos cerrados
+      const earG = new THREE.ConeGeometry(.028, .055, 4), ears = [];
+      for (const s of [-1, 1]) { const e = new THREE.Mesh(earG, plainM); e.position.set(-.005, .062, s * .04); e.rotation.x = s * .35; head.add(e); ears.push(e); }
+      for (const s of [-1, 1]) { const paw = new THREE.Mesh(new THREE.SphereGeometry(.03, 8, 6), creamM); paw.scale.set(1.6, .7, 1); paw.position.set(.19, .022, s * .045 - .03); cat.add(paw); } // patitas delanteras
+      // cola que rodea el cuerpo y su puntita que se mueve
+      const tail = new THREE.Mesh(new THREE.TorusGeometry(.2, .028, 7, 18, Math.PI * 1.1), furM); tail.rotation.x = -Math.PI / 2; tail.position.set(0, .035, 0); tail.rotation.z = Math.PI * .95; cat.add(tail);
+      const tip = new THREE.Group(); tip.position.set(.2 * Math.cos(Math.PI * .95 + Math.PI * 1.1), .035, -.2 * Math.sin(Math.PI * .95 + Math.PI * 1.1)); cat.add(tip); tip.rotation.y = 1.73;
+      const tipM = new THREE.Mesh(new THREE.CylinderGeometry(.022, .028, .09, 7), furM); tipM.rotation.z = Math.PI / 2; tipM.position.x = .045; tip.add(tipM);
+      cat.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; } });
+      houseUpd.push(t => {
+        const br = Math.sin(t * 2.4) * .5 + .5;                                             // respiración tranquila
+        torso.scale.set(1 + br * .025, 1 + br * .06, 1 + br * .025); head.position.y = .09 + br * .006;
+        const c2 = t % 7; tip.rotation.y = 1.73 + (c2 < 1.2 ? Math.sin(c2 / 1.2 * Math.PI * 2) * .5 : 0); // la puntita de la cola se mueve
+        const c3 = t % 9.5; ears[1].rotation.z = c3 > 6 && c3 < 6.3 ? Math.sin((c3 - 6) * 30) * .35 : 0; // sacudida de oreja
+      });
+      solid(kx - .3, kx + .3, kz - .3, kz + .3, ky + .2);
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
