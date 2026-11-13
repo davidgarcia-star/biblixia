@@ -624,6 +624,8 @@ async function buildWorld(cfg) {
   const lamps = [];
   // --- Hidrantes de bomberos (uno por manzana de torres o plaza) ---
   const hydrants = [];
+  // --- Aparcabicicletas con una bicicleta estacionada (acera opuesta al hidrante) ---
+  const bikeRacks = [];
 
   const streetCenters = [];
   for (let i = 0; i <= N; i++) streetCenters.push(O + i * PITCH + STREET / 2);
@@ -649,7 +651,7 @@ async function buildWorld(cfg) {
       const t = (k + .5) / 2;
       lamps.push([x0 + BLOCK * t, z0 + .8, 0], [x0 + BLOCK * t, z0 + BLOCK - .8, Math.PI], [x0 + .8, z0 + BLOCK * t, Math.PI / 2], [x0 + BLOCK - .8, z0 + BLOCK * t, -Math.PI / 2]);
     }
-    if (type === 'tower' || type === 'plaza') hydrants.push([x0 + BLOCK * .25 + 2.4, z0 + .75]);
+    if (type === 'tower' || type === 'plaza') { hydrants.push([x0 + BLOCK * .25 + 2.4, z0 + .75]); bikeRacks.push([x0 + 14, z0 + BLOCK - 1.3, (bi * 7 + bj * 3) % 4]); }
     // Monedas en la acera
     coinSpots.push([cx, z0 + 1.6, CURB], [cx, z0 + BLOCK - 1.6, CURB], [x0 + 1.6, cz, CURB], [x0 + BLOCK - 1.6, cz, CURB]);
 
@@ -791,6 +793,40 @@ async function buildWorld(cfg) {
     const o = new THREE.Object3D();
     hydrants.forEach(([x, z], i) => { o.position.set(x, CURB, z); o.rotation.set(0, 0, 0); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); addBox(x - .2, x + .2, z - .2, z + .2, CURB + .9); });
     hm.castShadow = true; group.add(hm);
+  }
+  // Instanciar aparcabicicletas: tres arcos de acero y una bicicleta apoyada (ruedas, cuadro y manubrio)
+  if (bikeRacks.length) {
+    const tube = (ax, ay, az, bx, by, bz, rad, seg = 6) => {
+      const a = new THREE.Vector3(ax, ay, az), b = new THREE.Vector3(bx, by, bz), d = b.clone().sub(a), g = new THREE.CylinderGeometry(rad, rad, d.length(), seg);
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize())); g.translate((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2); return g;
+    };
+    const clean = g => { g.deleteAttribute('uv'); return g; };
+    const hoop = [];
+    for (const hx of [-.8, 0, .8]) {
+      for (const hz of [-.32, .32]) hoop.push(tube(hx, 0, hz, hx, .62, hz, .03));
+      const arc = new THREE.TorusGeometry(.32, .03, 6, 12, Math.PI); arc.rotateY(Math.PI / 2); arc.translate(hx, .62, 0); hoop.push(arc);
+    }
+    hoop.push(tube(-.8, .02, 0, .8, .02, 0, .025));
+    const tire = [], frame = [], bx = .93;
+    for (const wz of [-.5, .5]) {
+      const t = new THREE.TorusGeometry(.31, .035, 6, 18); t.rotateY(Math.PI / 2); t.translate(bx, .345, wz); tire.push(t);
+      tire.push(tube(bx, .345, wz - .3, bx, .345, wz + .3, .008, 3), tube(bx, .045, wz, bx, .645, wz, .008, 3));
+    }
+    tire.push(tube(bx - .02, .82, .42, bx + .02, .82, .42, .03), tube(bx, .8, -.3, bx, .8, -.14, .045));
+    frame.push(tube(bx, .345, -.5, bx, .36, -.08, .022), tube(bx, .36, -.08, bx, .78, -.22, .022), tube(bx, .345, -.5, bx, .76, -.24, .02),
+      tube(bx, .76, -.24, bx, .76, .36, .022), tube(bx, .36, -.08, bx, .74, .38, .024), tube(bx, .345, .5, bx, .8, .4, .022),
+      tube(bx - .22, .84, .42, bx + .22, .84, .42, .018));
+    const n = bikeRacks.length, o = new THREE.Object3D(), col = new THREE.Color(), bikeCols = [0x1f6fd1, 0xd13b2a, 0x2f9e4f, 0xe0a516];
+    const rack = new THREE.InstancedMesh(mergeGeometries(hoop.map(clean)), M.steel, n);
+    const tires = new THREE.InstancedMesh(mergeGeometries(tire.map(clean)), new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: .8 }), n);
+    const frames = new THREE.InstancedMesh(mergeGeometries(frame.map(clean)), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .35, metalness: .4 }), n);
+    bikeRacks.forEach(([x, z, c], i) => {
+      o.position.set(x, CURB, z); o.updateMatrix();
+      rack.setMatrixAt(i, o.matrix); tires.setMatrixAt(i, o.matrix); frames.setMatrixAt(i, o.matrix); frames.setColorAt(i, col.setHex(bikeCols[c]));
+      addBox(x - .9, x + 1.05, z - .85, z + .85, CURB + .9);
+    });
+    rack.castShadow = tires.castShadow = frames.castShadow = true;
+    group.add(rack, tires, frames);
   }
   await idle();
   // Instanciar árboles
