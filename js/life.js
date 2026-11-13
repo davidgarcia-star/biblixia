@@ -223,6 +223,16 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // --- Sala y cocina (lado izquierdo) ---
     const sofaM = mat(0x8c8a86, { roughness: .95 });
     box(2.4, .45, .9, sofaM, cx - 4, fy + .23, Z1 - .8); box(2.4, .7, .25, sofaM, cx - 4, fy + .6, Z1 - .35); solid(cx - 5.2, cx - 2.8, Z1 - 1.3, Z1 - .2, fy + .45);
+    {
+      // apoyabrazos acolchados y cojines decorativos de colores recostados en el respaldo del sofá
+      for (const s of [-1, 1]) box(.16, .62, 1.0, sofaM, cx - 4 + s * 1.14, fy + .45, Z1 - .77);
+      const cushG = new THREE.SphereGeometry(.2, 14, 10); cushG.scale(1.1, 1, .38);
+      for (const [dx, col, ry] of [[-.72, 0xc9a13b, .12], [.72, 0x3f7f86, -.12], [-.28, 0xe8e2d4, .05]]) {
+        const cu = new THREE.Mesh(cushG, mat(col, { roughness: 1 }));
+        cu.position.set(cx - 4 + dx, fy + .64, Z1 - .58); cu.rotation.set(-.22, ry, dx * .04);
+        cu.castShadow = true; cu.receiveShadow = true; group.add(cu);
+      }
+    }
     box(1.2, .06, .7, trimM, cx - 4, fy + .45, Z1 - 2.1); for (const [a, b] of [[-.5, -.28], [.5, -.28], [-.5, .28], [.5, .28]]) box(.06, .42, .06, trimM, cx - 4 + a, fy + .21, Z1 - 2.1 + b);
     // tele
     box(2, 1.1, .06, mat(0x101216, { roughness: .2, metalness: .3 }), cx - 4, fy + 1.45, Z0 + .55);
