@@ -622,6 +622,8 @@ async function buildWorld(cfg) {
   const trees = [];
   // --- Faroles instanciados ---
   const lamps = [];
+  // --- Hidrantes de bomberos (uno por manzana de torres o plaza) ---
+  const hydrants = [];
 
   const streetCenters = [];
   for (let i = 0; i <= N; i++) streetCenters.push(O + i * PITCH + STREET / 2);
@@ -647,6 +649,7 @@ async function buildWorld(cfg) {
       const t = (k + .5) / 2;
       lamps.push([x0 + BLOCK * t, z0 + .8, 0], [x0 + BLOCK * t, z0 + BLOCK - .8, Math.PI], [x0 + .8, z0 + BLOCK * t, Math.PI / 2], [x0 + BLOCK - .8, z0 + BLOCK * t, -Math.PI / 2]);
     }
+    if (type === 'tower' || type === 'plaza') hydrants.push([x0 + BLOCK * .25 + 2.4, z0 + .75]);
     // Monedas en la acera
     coinSpots.push([cx, z0 + 1.6, CURB], [cx, z0 + BLOCK - 1.6, CURB], [x0 + 1.6, cz, CURB], [x0 + BLOCK - 1.6, cz, CURB]);
 
@@ -772,6 +775,22 @@ async function buildWorld(cfg) {
     });
     pole.castShadow = arm.castShadow = true;
     group.add(pole, arm, head);
+  }
+  // Instanciar hidrantes: cuerpo rojo con tapa, bocas laterales y tuerca superior
+  if (hydrants.length) {
+    const parts = [
+      [new THREE.CylinderGeometry(.2, .22, .1, 12), 0, .05, 0],
+      [new THREE.CylinderGeometry(.14, .15, .55, 12), 0, .37, 0],
+      [new THREE.CylinderGeometry(.17, .17, .06, 12), 0, .66, 0],
+      [new THREE.SphereGeometry(.14, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), 0, .69, 0],
+      [new THREE.CylinderGeometry(.035, .035, .08, 6), 0, .85, 0]
+    ].map(([g, x, y, z]) => { g.translate(x, y, z); return g; });
+    for (const sx of [-1, 1]) { const g = new THREE.CylinderGeometry(.055, .055, .14, 8); g.rotateZ(Math.PI / 2); g.translate(sx * .19, .45, 0); parts.push(g); }
+    const fr = new THREE.CylinderGeometry(.075, .075, .12, 8); fr.rotateX(Math.PI / 2); fr.translate(0, .42, -.17); parts.push(fr);
+    const hm = new THREE.InstancedMesh(mergeGeometries(parts), new THREE.MeshStandardMaterial({ color: 0xc62020, roughness: .45, metalness: .25 }), hydrants.length);
+    const o = new THREE.Object3D();
+    hydrants.forEach(([x, z], i) => { o.position.set(x, CURB, z); o.rotation.set(0, 0, 0); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); addBox(x - .2, x + .2, z - .2, z + .2, CURB + .9); });
+    hm.castShadow = true; group.add(hm);
   }
   await idle();
   // Instanciar árboles
