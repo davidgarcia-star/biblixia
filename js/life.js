@@ -180,6 +180,25 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
     box(.9, H, .06, darkM, X1 - .45, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
+    { // llave de agua exterior y carrete con manguera verde enrollada en la pared lateral, para regar el jardín
+      const wx = X0 - T / 2, hz = Z0 + 2.2, steelM = mat(0xb8bec4, { metalness: .85, roughness: .25 }), hoseM = mat(0x2f8a3a, { roughness: .55 });
+      box(.04, .5, .36, darkM, wx - .02, fy + .75, hz, { cast: false });                                // placa de montaje
+      const axle = cyl(.035, .035, .34, steelM, wx - .19, fy + .75, hz, 10); axle.rotation.z = Math.PI / 2; // eje del carrete
+      for (const d of [-.3, -.08]) { const disc = cyl(.24, .24, .025, darkM, wx + d, fy + .75, hz, 22); disc.rotation.z = Math.PI / 2; } // tapas del carrete
+      const hoseG = new THREE.TorusGeometry(.15, .028, 8, 22);
+      for (let k = 0; k < 4; k++) { const ring = new THREE.Mesh(hoseG, hoseM); ring.position.set(wx - .12 - k * .053, fy + .75, hz); ring.rotation.y = Math.PI / 2; ring.castShadow = true; group.add(ring); }
+      const crank = box(.03, .16, .03, steelM, wx - .33, fy + .82, hz, { cast: false }); crank.rotation.x = .3;         // manivela
+      cyl(.02, .02, .08, darkM, wx - .37, fy + .88, hz + .02, 8).rotation.z = Math.PI / 2;
+      const drop = cyl(.026, .026, .54, hoseM, wx - .19, fy + .32, hz + .03, 8); drop.rotation.x = .12;                 // tramo que baja del carrete
+      const lay = cyl(.026, .026, .5, hoseM, wx - .3, fy + .06, hz + .2, 8); lay.rotation.set(Math.PI / 2, 0, .5);      // tramo tendido en la grama
+      const noz = cyl(.032, .022, .16, mat(0xe0a31a, { roughness: .45 }), wx - .45, fy + .07, hz + .45, 10); noz.rotation.set(Math.PI / 2, 0, .5); // pistola de riego
+      // llave de paso de bronce sobre el carrete
+      const tap = cyl(.022, .022, .14, mat(0xb08a3a, { metalness: .8, roughness: .3 }), wx - .07, fy + 1.15, hz, 10); tap.rotation.z = Math.PI / 2;
+      cyl(.008, .008, .06, steelM, wx - .1, fy + 1.19, hz, 6);                                                         // vástago
+      cyl(.05, .05, .02, mat(0xc0282a, { roughness: .5 }), wx - .1, fy + 1.22, hz, 12);                                // maneral rojo
+      cyl(.018, .018, .32, mat(0xb08a3a, { metalness: .8, roughness: .3 }), wx - .03, fy + 1.0, hz, 8);                 // tubo hacia el carrete
+      solid(wx - .36, wx, hz - .26, hz + .3, fy + 1.0);
+    }
     // pared interior entre la sala y el dormitorio/baño (con paso)
     wall(cx + 1.5, Z0 + 4.2, cx + 1.5, Z1);
     // techo plano con alero grueso, franja de luz LED y alero sobre la entrada
