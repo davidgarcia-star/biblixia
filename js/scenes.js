@@ -554,7 +554,10 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
   }
   const bubble = bubbleSprite('¡Santo, Santo, Santo!'); bubble.position.set(eastX + 2.3, 3.2, zc - 4.2); J.add(bubble);
   const menC = [eastX + 2.3, zc - 4.2];
-  J.traverse(m => { if (m.isMesh && m !== water) m.castShadow = true; });
+  // ondas en el agua cuando el bautizado sale del río (se expanden y se desvanecen)
+  const ripM = new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+  const ripples = [0, 1, 2].map(() => { const r = new THREE.Mesh(new THREE.RingGeometry(.42, .5, 28), ripM.clone()); r.rotation.x = -Math.PI / 2; r.position.set(cx0, .2, zc); r.renderOrder = 6; r.visible = false; J.add(r); return r; });
+  J.traverse(m => { if (m.isMesh && m !== water && !ripples.includes(m)) m.castShadow = true; });
 
   let cyc = 0, praiseT = -1, cool = 0;
   const tmp = new THREE.Vector3();
@@ -582,6 +585,10 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
       conv.root.position.set(cx0 - .45 + e * .35, wy - e * .55, zc);
       conv.spine.rotation.x = -e * 1.25; conv.head.rotation.x = -e * .3;
       for (const a of conv.arms) { a.shoulder.rotation.x = -1.2; a.shoulder.rotation.z = a === conv.arms[0] ? .5 : -.5; a.elbow.rotation.x = -1.4; } // manos cruzadas al pecho
+      for (let i = 0; i < 3; i++) {
+        const age = cyc - 4.3 - i * .45, on = age >= 0 && age < 2.2, r = ripples[i]; r.visible = on;
+        if (on) { r.scale.setScalar(1 + age * 1.6); r.material.opacity = .55 * (1 - age / 2.2); r.position.y = water.position.y + .02; }
+      }
       // los hombres alaban
       const d = Math.hypot(menC[0] - pp.x, menC[1] - pp.z);
       cool -= dt;
