@@ -136,6 +136,30 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         solid(px - .27, px + .27, pz - .27, pz + .27, fy + .76);
       }
     }
+    { // bebedero de piedra para pajaritos en el jardín delantero, con un gorrión que se inclina a beber
+      const bbx = cx - 6, bbz = z0 + 6.5, stoneM = mat(0xb9b2a6, { roughness: .95 });
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(.12, .2, .72, 10), stoneM); ped.position.set(bbx, fy + .04 + .36, bbz); ped.castShadow = true; ped.receiveShadow = true; group.add(ped);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(.28, .32, .08, 12), stoneM); base.position.set(bbx, fy + .08, bbz); base.receiveShadow = true; group.add(base);
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(.46, .3, .14, 16), stoneM); bowl.position.set(bbx, fy + .83, bbz); bowl.castShadow = true; bowl.receiveShadow = true; group.add(bowl);
+      const water = new THREE.Mesh(new THREE.CircleGeometry(.4, 18), new THREE.MeshStandardMaterial({ color: 0x5f9fb8, roughness: .08, metalness: .1 }));
+      water.rotation.x = -Math.PI / 2; water.position.set(bbx, fy + .905, bbz); group.add(water);
+      // gorrión sentado en el borde: cuerpo, cabeza, pico y cola; baja la cabeza para beber de vez en cuando
+      const bird = new THREE.Group(), brownM = mat(0x7a5634, { roughness: .8 }), bellyM = mat(0xd8c6a8, { roughness: .8 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), brownM); body.scale.set(1, .85, 1.35); bird.add(body);
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), bellyM); belly.position.set(0, -.018, .01); belly.scale.set(.95, .8, 1.2); bird.add(belly);
+      const neck = new THREE.Group(); neck.position.set(0, .03, .06); bird.add(neck);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.038, 8, 6), brownM); head.position.set(0, .025, .02); neck.add(head);
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(.012, .035, 5), mat(0x3a3028, { roughness: .6 })); beak.rotation.x = Math.PI / 2; beak.position.set(0, .02, .06); neck.add(beak);
+      const tail = box(.05, .012, .07, brownM, 0, .015, -.1, { cast: false, parent: bird }); tail.rotation.x = -.35;
+      bird.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+      bird.position.set(bbx + .42, fy + .96, bbz); bird.rotation.y = -Math.PI / 2; group.add(bird);   // en el borde mirando al agua
+      houseUpd.push(t => {
+        const c = t % 5.5, dip = c < .9 ? Math.sin(c / .9 * Math.PI) : 0;                   // cada 5,5 s baja a beber
+        neck.rotation.x = dip * .9; bird.rotation.x = dip * .25;
+        tail.rotation.x = -.35 - dip * .3 + (c > 3 && c < 3.25 ? Math.sin((c - 3) * 25) * .2 : 0); // meneíto de cola
+      });
+      solid(bbx - .45, bbx + .45, bbz - .45, bbz + .45, fy + .9);
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
