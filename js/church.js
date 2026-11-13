@@ -150,6 +150,28 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     solid(ox - .34, ox + .34, oz - .25, oz + .25, fl + .95);
   }
 
+  // dispensador de agua (garrafón) al otro lado de la entrada al santuario, con vasitos de papel:
+  // cuerpo blanco, llaves roja (caliente) y azul (fría), bandeja de goteo y garrafón azul translúcido
+  {
+    const wx = cx - 3.65, wz = LZ - T / 2 - .2, fl = y0 + .1;
+    const white = mat(0xeef0f2, { roughness: .35 }), grey = mat(0x6a6e74, { roughness: .4, metalness: .3 });
+    box(.34, .98, .34, white, wx, fl + .49, wz);                                                  // cuerpo
+    box(.3, .02, .02, grey, wx, fl + .62, wz - .171, { cast: false });                           // rejilla de ventilación
+    box(.22, .2, .06, mat(0x2a2c30, { roughness: .5 }), wx, fl + .74, wz - .19, { cast: false }); // nicho de las llaves
+    box(.24, .025, .12, grey, wx, fl + .64, wz - .22, { cast: false });                          // bandeja de goteo
+    [[-.05, 0xc0392b], [.05, 0x2a6ad0]].forEach(([dx, c]) => box(.035, .05, .05, mat(c, { roughness: .35 }), wx + dx, fl + .8, wz - .23, { cast: false }));
+    box(.2, .06, .2, white, wx, fl + 1.01, wz);                                                   // cuello donde se asienta el garrafón
+    const jugM = new THREE.MeshStandardMaterial({ color: 0x6fb8f0, roughness: .08, metalness: .1, transparent: true, opacity: .55, depthWrite: false });
+    const jug = new THREE.Mesh(new THREE.CylinderGeometry(.14, .14, .36, 18), jugM); jug.position.set(wx, fl + 1.24, wz); jug.renderOrder = 2; group.add(jug);
+    const sh = new THREE.Mesh(new THREE.CylinderGeometry(.05, .14, .07, 18), jugM); sh.position.set(wx, fl + 1.075, wz); sh.renderOrder = 2; group.add(sh);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(.09, .14, .05, 18), jugM); cap.position.set(wx, fl + 1.445, wz); cap.renderOrder = 2; group.add(cap);
+    // pila de vasitos de papel en un dispensador lateral
+    const cupH = new THREE.Mesh(new THREE.CylinderGeometry(.035, .028, .2, 10), mat(0xf6f3ea, { roughness: .8 })); cupH.position.set(wx + .2, fl + .78, wz - .05); group.add(cupH);
+    box(.012, .24, .03, grey, wx + .172, fl + .78, wz - .05, { cast: false });
+    solid(wx - .19, wx + .19, wz - .19, wz + .19, fl + 1.45);
+    acts.push({ x: wx, z: wz - .9, y: y0, label: '💧 Tomar agua del dispensador', fn: () => fx('water'), r: 1.3 });
+  }
+
   // --- árbol de Navidad en el lobby (solo en temporada: 1 nov – 31 ene, o con ?navidad=1) ---
   // entre el baño de damas y la entrada al santuario, sin estorbar el paso; luces que titilan y estrella arriba
   const xmasLights = [];
