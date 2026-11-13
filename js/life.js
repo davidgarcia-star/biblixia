@@ -403,6 +403,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
       return new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .85, roughness: .4 });
     });
+    let wbM = null;
     for (let i = 0; i < FLOORS; i++) { await pace();
       const y = fy(i);
       // losa con hueco sobre la escalera que llega a este piso
@@ -477,6 +478,44 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         for (let k = 0; k < st; k++) { const zz = SZ0 + (k + .5) * (SZ1 - SZ0) / st; box(sb - sa, .12, (SZ1 - SZ0) / st + .02, frameM, (sa + sb) / 2, y + (k + 1) / st * FH - .06, zz); }
         addRamp(sa, sb, SZ0, SZ1, y, y + FH);
         box(.05, 1, SZ1 - SZ0, frameM, i % 2 ? sb : sa, y + FH * .5 + .5, (SZ0 + SZ1) / 2);
+      }
+      // pizarra blanca con ruedas junto a los trabajadores: lista de tareas escrita con marcador y un versículo (Colosenses 3:23, LBLA)
+      if (i > 0) {
+        if (!wbM) {
+          const c = document.createElement('canvas'); c.width = 512; c.height = 320; const g = c.getContext('2d');
+          g.fillStyle = '#fbfcfd'; g.fillRect(0, 0, 512, 320);
+          g.fillStyle = 'rgba(120,140,160,.07)'; for (let k = 0; k < 6; k++) g.fillRect(40 + k * 70, 20 + (k % 3) * 40, 120, 14);   // rastros de borrador
+          g.textBaseline = 'middle'; g.fillStyle = '#1f4fa8'; g.font = '700 34px "Comic Sans MS", "Segoe Print", cursive'; g.fillText('Tareas de hoy', 28, 36);
+          g.strokeStyle = '#1f4fa8'; g.lineWidth = 3; g.beginPath(); g.moveTo(28, 58); g.lineTo(250, 58); g.stroke();
+          g.font = '24px "Comic Sans MS", "Segoe Print", cursive';
+          [['Informe mensual', 1], ['Llamar a clientes', 1], ['Reunión 3:00 pm', 0], ['Orar por el equipo', 0]].forEach(([tx, ok], k) => {
+            const yy = 92 + k * 36; g.strokeStyle = '#2a2e35'; g.lineWidth = 2; g.strokeRect(30, yy - 10, 20, 20);
+            if (ok) { g.strokeStyle = '#1f8a4a'; g.lineWidth = 4; g.beginPath(); g.moveTo(33, yy); g.lineTo(40, yy + 8); g.lineTo(54, yy - 14); g.stroke(); }
+            g.fillStyle = '#2a2e35'; g.fillText(tx, 62, yy);
+          });
+          // gráfica de barras dibujada a mano
+          g.strokeStyle = '#2a2e35'; g.lineWidth = 3; g.beginPath(); g.moveTo(320, 60); g.lineTo(320, 200); g.lineTo(490, 200); g.stroke();
+          [50, 80, 70, 115].forEach((h, k) => { g.fillStyle = k === 3 ? '#1f8a4a' : '#d03a2a'; g.fillRect(334 + k * 38, 200 - h, 24, h); });
+          g.strokeStyle = '#1f8a4a'; g.lineWidth = 3; g.beginPath(); g.moveTo(340, 140); g.lineTo(380, 110); g.lineTo(420, 120); g.lineTo(468, 72); g.stroke();
+          g.beginPath(); g.moveTo(468, 72); g.lineTo(454, 74); g.moveTo(468, 72); g.lineTo(464, 86); g.stroke();
+          g.fillStyle = '#c0392b'; g.textAlign = 'center'; g.font = 'italic 21px "Comic Sans MS", "Segoe Print", cursive';
+          g.fillText('«Y todo lo que hagáis, hacedlo de corazón,', 256, 262); g.fillText('como para el Señor y no para los hombres» Col 3:23', 256, 292);
+          const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+          wbM = new THREE.MeshStandardMaterial({ map: tx, roughness: .35, metalness: .05 });
+        }
+        const bx = cx + 6.6, bz = cz + 5.6, bw = 1.7, bh = 1.06, by = y + 1.45, legM = mat(0x9aa2aa, { metalness: .7, roughness: .3 });
+        box(bw + .08, bh + .08, .04, legM, bx, by, bz, { cast: false });                        // marco de aluminio
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(bw, bh), wbM); pl.position.set(bx, by, bz - .022); pl.rotation.y = Math.PI; group.add(pl);
+        box(bw * .7, .025, .07, legM, bx, by - bh / 2 - .05, bz - .04, { cast: false });          // bandeja para marcadores
+        [0xd03a2a, 0x1f4fa8, 0x1a1a1e].forEach((cc, q) => { const mk = cyl(.012, .012, .13, mat(cc, { roughness: .5 }), bx - .25 + q * .17, by - bh / 2 - .025, bz - .05, 6); mk.rotation.z = Math.PI / 2; mk.castShadow = false; });
+        box(.07, .022, .045, mat(0x2a2e35, { roughness: .8 }), bx + .38, by - bh / 2 - .022, bz - .05, { cast: false });   // borrador
+        for (const sx of [-1, 1]) {
+          const lx = bx + sx * (bw / 2 + .02);
+          box(.04, by + bh / 2 - y - .1, .04, legM, lx, (by + bh / 2 + y + .1) / 2, bz);   // patas
+          box(.05, .04, .6, legM, lx, y + .08, bz);                                              // base en T
+          for (const dz of [-.27, .27]) cyl(.035, .035, .03, mat(0x1a1a1e, { roughness: .8 }), lx, y + .035, bz + dz, 10).rotation.z = Math.PI / 2;   // ruedas
+        }
+        solid(bx - bw / 2 - .1, bx + bw / 2 + .1, bz - .32, bz + .32, by + bh / 2, y);
       }
       // trabajadores de pie conversando
       if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * 6) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
