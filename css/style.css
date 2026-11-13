@@ -650,3 +650,5 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 .js-b2 { flex-direction: column; line-height: 1.2; }
 .js-b2 small { display: block; font-size: 11px; font-weight: 600; opacity: .85; letter-spacing: 0; }
 .js-b2.b2-lock { opacity: .7; filter: grayscale(.6); cursor: not-allowed; }
+/* la nota 🎵 es oscura: halo claro para que se vea sobre fondos claros (paredes blancas, cielo) */
+#btnMusic{text-shadow:0 0 2px #fff,0 0 5px rgba(255,255,255,.9)}
