@@ -501,6 +501,25 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
   for (let zz = z0; zz < z1; zz += 2) { if (Math.abs(zz + 1 - fordZ) < 3) continue; const cx = mx(zz + 1); addBox(cx - HW + .4, cx + HW - .4, zz, zz + 2, 1.2); }
   const stoneM = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: .95 });
   for (let k = 0; k < 6; k++) { const st = new THREE.Mesh(new THREE.CylinderGeometry(.55, .65, .3, 9), stoneM); st.position.set(mx(fordZ) - HW + .9 + k * 1.3, .2, fordZ + (k % 2 ? .4 : -.4)); st.receiveShadow = st.castShadow = true; J.add(st); }
+  // las doce piedras que Israel sacó del Jordán y levantó como memorial (Josué 4:20-22): 7 abajo, 4 en medio y 1 arriba
+  {
+    const mzc = fordZ + 5, mxc = mx(mzc) - HW - 4.2, rockG = new THREE.DodecahedronGeometry(.36, 0);
+    const rockM = new THREE.MeshStandardMaterial({ color: 0x8e877b, roughness: 1, flatShading: true });
+    const put = (px, py, pz, s) => { const m = new THREE.Mesh(rockG, rockM); m.position.set(px, py, pz); m.scale.set(s, s * .8, s); m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); J.add(m); };
+    for (let k = 0; k < 7; k++) { const a = k / 7 * Math.PI * 2; put(mxc + Math.cos(a) * .62, .26, mzc + Math.sin(a) * .62, 1.05); }
+    for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2 + .4; put(mxc + Math.cos(a) * .3, .7, mzc + Math.sin(a) * .3, .9); }
+    put(mxc, 1.08, mzc, .8);
+    addBox(mxc - .95, mxc + .95, mzc - .95, mzc + .95, 1.3); addBox(mxc + 1.3, mxc + 1.5, mzc + .5, mzc + 1.3, 1.3);
+    // tablilla de madera con la cita
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
+    g.fillStyle = '#7a5a36'; g.fillRect(0, 0, 256, 128); g.strokeStyle = '#4a3220'; g.lineWidth = 8; g.strokeRect(4, 4, 248, 120);
+    g.fillStyle = '#fff3d6'; g.textAlign = 'center'; g.font = '800 30px system-ui, sans-serif'; g.fillText('Doce piedras', 128, 56); g.font = '600 24px system-ui, sans-serif'; g.fillText('Josué 4:20-22', 128, 94);
+    const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
+    const woodM = new THREE.MeshStandardMaterial({ color: 0x5a3e24, roughness: .9 });
+    const post = new THREE.Mesh(new THREE.BoxGeometry(.08, 1.1, .08), woodM); post.position.set(mxc + 1.4, .55, mzc + .9); J.add(post);
+    const board = new THREE.Mesh(new THREE.BoxGeometry(.7, .35, .04), [woodM, woodM, woodM, woodM, new THREE.MeshStandardMaterial({ map: tx, roughness: .9 }), woodM]);
+    board.position.set(mxc + 1.43, 1.1, mzc + .9); board.rotation.y = Math.PI / 2; J.add(board);
+  }
 
   // Juan el Bautista: vestido de pelo de camello y un cinto de cuero (Mateo 3:4), metido en el río
   const cx0 = mx(zc), wy = -.82;                                   // el agua le llega a la cintura
