@@ -207,6 +207,15 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
       solid(kx - .3, kx + .3, kz - .3, kz + .3, ky + .2);
     }
+    { // timbre con videocámara junto a la puerta: placa negra brillante, lente y aro de luz azul que respira suavemente
+      const bx = cx + 1.05, bz = Z0 - T / 2 - .085, by = fy + 1.3;     // sobre el panel de madera, debajo del aplique
+      box(.075, .17, .03, mat(0x15171a, { roughness: .15, metalness: .4 }), bx, by, bz, { cast: false });
+      const lens = cyl(.016, .016, .012, mat(0x050608, { roughness: .05, metalness: .6 }), bx, by + .05, bz - .018, 12); lens.rotation.x = Math.PI / 2;
+      const ringM = new THREE.MeshStandardMaterial({ color: 0x9fd8ff, emissive: 0x3aa8ff, emissiveIntensity: 1.2 });
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(.022, .005, 6, 20), ringM); ring.position.set(bx, by - .03, bz - .017); group.add(ring);
+      const btn = cyl(.013, .013, .01, mat(0xd9dde2, { metalness: .7, roughness: .3 }), bx, by - .03, bz - .018, 12); btn.rotation.x = Math.PI / 2;
+      houseUpd.push(t => { ringM.emissiveIntensity = .7 + (Math.sin(t * 1.6) * .5 + .5) * 1.1; });
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
