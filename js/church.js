@@ -294,6 +294,15 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   person({ gender: 'm', topStyle: 'traje', top: 0x15151a, pants: 0x15151a, tie: 0xb3122e, beard: { color: 0x1d130c, len: .04 } }, cx, SZ + 1.2, Math.PI, 'preach', { y: yS, anim: 'preach' });
   // altavoces
   for (const sx of [-1, 1]) box(.9, 2.6, .8, mat(0x0c0c0e), cx + sx * (HW - 1), yS + 1.3, Z1 - 3);
+  // monitores de piso (retorno) inclinados hacia cada cantante, con rejilla y luz de encendido azul
+  { const wedM = mat(0x111114, { roughness: .7 }), grillM = mat(0x2c2e33, { roughness: .95, metalness: .3 }), ledM = new THREE.MeshBasicMaterial({ color: 0x3aa0ff });
+    for (const x of [cx - 6, cx - 1.6, cx + 1.6]) {
+      const w = new THREE.Group(); w.position.set(x, yS + .225, SZ + .75); w.rotation.x = -.45; group.add(w);
+      const body = new THREE.Mesh(new THREE.BoxGeometry(.56, .32, .45), wedM); body.castShadow = true; body.receiveShadow = true; w.add(body);
+      const gr = new THREE.Mesh(new THREE.BoxGeometry(.5, .25, .012), grillM); gr.position.set(0, .01, .227); w.add(gr);
+      const led = new THREE.Mesh(new THREE.BoxGeometry(.025, .012, .006), ledM); led.position.set(.22, -.135, .234); w.add(led);
+      solid(x - .3, x + .3, SZ + .5, SZ + 1, yS + .4, yS);
+    } }
 
   await pace();
   // --- CONGREGACIÓN: sillas y personas adorando ---
