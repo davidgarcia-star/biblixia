@@ -47,10 +47,14 @@ const rng = seed => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013
    RENDER
    ========================================================= */
 const canvas = $('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: false });
-const isTouch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const isTouch0 = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+// Calidad automática guardada: si el equipo fue lento la vez anterior, empieza ya liviano (sin tirones al comenzar)
+let QL = 0; try { QL = Math.min(3, Math.max(0, +localStorage.getItem('bx_ql') || 0)); } catch (e) {}
+// en computadoras el suavizado de bordes lo hace el acabado (composer); así no se dibuja dos veces
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: isTouch0 || QL >= 2, powerPreference: 'high-performance', logarithmicDepthBuffer: false });
+const isTouch = isTouch0;
 const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
-renderer.setPixelRatio(MAX_PR);
+renderer.setPixelRatio(QL >= 1 ? Math.max(.75, MAX_PR - .35 * QL) : MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 // Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde: guardar y recargar UNA sola vez
 // (antes había dos avisos y uno recargaba siempre, lo que podía dejar el juego recargándose sin parar)
@@ -101,6 +105,8 @@ sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048); sun.shadow
 const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
 scene.add(sun, sun.target);
+// La sombra del sol se redibuja un cuadro sí y otro no (en equipos lentos, 1 de cada 3): es la mitad del trabajo de dibujo
+sun.shadow.autoUpdate = false; let shadowTick = 0;
 let nightT = 0;
 function updateNightAndBlobs(dt) {
   const night = save.time === 'noche', live = world && (state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map' || state === 'creator' || state === 'menu');
@@ -125,12 +131,12 @@ function updateNightAndBlobs(dt) {
   const best = pts.map(q => [(q[0] - px) ** 2 + (q[2] - pz) ** 2, q]).sort((a, b) => a[0] - b[0]);
   nightLights.forEach((l, i) => { const q = best[i]; if (!q) { l.intensity = 0; return; } l.position.set(q[1][0], q[1][1] - .3, q[1][2]); l.intensity = 60; });
 }
-const _sq = new THREE.Quaternion(), _sv = new THREE.Vector3(), _sm = new THREE.Matrix4();
+const _sq = new THREE.Quaternion(), _sqi = new THREE.Quaternion(), _sv = new THREE.Vector3(), _sm = new THREE.Matrix4(), _s0 = new THREE.Vector3(), _sY = new THREE.Vector3(0, 1, 0), _sZ = new THREE.Vector3(0, 0, 1);
 function snapShadow(c) {
   const texel = (SC * 2) / sun.shadow.mapSize.x;
-  _sm.lookAt(sunDir, new THREE.Vector3(0, 0, 0), Math.abs(sunDir.y) > .99 ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(0, 1, 0));
+  _sm.lookAt(sunDir, _s0, Math.abs(sunDir.y) > .99 ? _sZ : _sY);
   _sq.setFromRotationMatrix(_sm);
-  _sv.copy(c).applyQuaternion(_sq.clone().invert());
+  _sv.copy(c).applyQuaternion(_sqi.copy(_sq).invert());
   _sv.x = Math.round(_sv.x / texel) * texel; _sv.y = Math.round(_sv.y / texel) * texel;
   _sv.applyQuaternion(_sq);
   sun.target.position.copy(_sv); sun.position.copy(_sv).addScaledVector(sunDir, 150);
@@ -250,6 +256,7 @@ function applyTime(mode) {
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
   if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? 4.5 : 2); }
   if (bloomPass) bloomPass.strength = T2.bloom * .55;
+  if (typeof setNightLights === 'function') setNightLights(mode === 'noche');
   try { persist(); } catch (e) {}
 }
 
@@ -274,9 +281,9 @@ const GradeShader = {
     }`
 };
 let gradePass = null;
-if (!isTouch) {
+if (!isTouch && QL < 2) {
   try {
-    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: QL ? 2 : 4 });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
     bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .14, .5, .92);
@@ -465,6 +472,9 @@ const blobs = { p: makeBlob(), m: makeBlob() };
 const nightLights = [];
 for (let i = 0; i < (isTouch ? 3 : 5); i++) { const l = new THREE.PointLight(0xffc47a, 0, 22, 1.6); scene.add(l); nightLights.push(l); }
 const playerLamp = new THREE.PointLight(0xffd9a0, 0, 16, 1.4); scene.add(playerLamp);
+// De día estas luces no se usan: apagarlas del todo evita que cada píxel las calcule (antes costaban aunque estuvieran en 0)
+function setNightLights(on) { for (const l of nightLights) l.visible = on; playerLamp.visible = on; }
+setNightLights(save.time === 'noche');
 
 // Olas suaves en el mar (se mueven en la tarjeta gráfica, sin costo para el procesador)
 M.sea.onBeforeCompile = sh => {
@@ -1362,6 +1372,8 @@ async function buildWorld(cfg) {
   W.humanLOD = [];
   await idle();
   W.cull = buildCull(group);
+  // Las piezas pequeñas (dedos, botones, tazas, hojas…) ya no proyectan sombra del sol: casi no se notaba y duplicaba el trabajo
+  group.traverse(o => { if (o.castShadow && o.isMesh && !o.isInstancedMesh && o.geometry) { const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = o.matrixWorld.getMaxScaleOnAxis(); if (g.boundingSphere.radius * sc < .45) o.castShadow = false; } });
   W.start = new THREE.Vector3(startX, 0, startZ);
   W.startYaw = Math.atan2(-startX, -startZ);
   return W;
@@ -1370,7 +1382,7 @@ async function buildWorld(cfg) {
 /* Ocultado por distancia (carga y fluidez en celulares):
    cada objeto pequeño o mediano del mundo deja de dibujarse (y de proyectar sombra) cuando queda lejos de la cámara.
    Lo grande (suelo, mar, montañas, edificios) se ve siempre. Se usa la capa 1 de three.js para no tocar "visible". */
-const CULL_K = isTouch ? 1 : 1.8;
+const CULL_K = isTouch ? 1 : 1.35;
 const _cb = new THREE.Box3(), _cs = new THREE.Sphere(), _ci = new THREE.Matrix4(), _cv = new THREE.Vector3();
 // pieza diminuta bajo el suelo para que el material de las personas lejanas se prepare junto con los demás
 { const g = new THREE.BoxGeometry(.01, .01, .01); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); const m = new THREE.Mesh(g, FAR_MAT); m.position.y = -40; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
@@ -2941,13 +2953,20 @@ function loopBody() {
   // Resolución automática suave: solo baja un poco si el equipo va lento (nunca quita sombras ni detalle)
   // Cambiar la resolución obliga a rehacer la imagen de la pantalla (da un tirón), así que se hace pocas veces:
   // se mide durante 4 s, solo baja si de verdad va lento, solo sube si va muy sobrado y nunca sube y baja sin parar
-  if (!building && state === 'play' && raw < .25 && perf.changes < 2) {
+  if (!building && state === 'play' && raw < .25 && perf.changes < 4) {
     perf.acc += raw; perf.n++;
     if (perf.acc > 4) {
       const avg = perf.acc / perf.n; let pr = renderer.getPixelRatio();
-      const MIN_PR = Math.min(MAX_PR, .85);
-      if (avg > .04 && pr > MIN_PR) { renderer.setPixelRatio(Math.max(MIN_PR, pr - .2)); perf.changes++; perf.lowered = true; }
-      else if (avg < .017 && pr < MAX_PR && !perf.lowered) { renderer.setPixelRatio(Math.min(MAX_PR, pr + .2)); perf.changes++; }
+      const MIN_PR = Math.min(MAX_PR, .75);
+      if (avg > .036) {
+        // va lento: primero baja la resolución, luego quita el acabado de cine y al final redibuja la sombra con menos frecuencia
+        perf.changes++; perf.lowered = true;
+        if (pr > MIN_PR + .01) renderer.setPixelRatio(Math.max(MIN_PR, pr - .25));
+        else if (composer) { composer = null; QL = Math.max(QL, 2); }
+        else QL = 3;
+        QL = Math.max(QL, 1); try { localStorage.setItem('bx_ql', String(QL)); } catch (e) {}
+      } else if (avg < .017 && pr < MAX_PR && !perf.lowered) { renderer.setPixelRatio(Math.min(MAX_PR, pr + .2)); perf.changes++; }
+      else if (avg < .02 && !perf.lowered && QL > 0) { QL--; try { localStorage.setItem('bx_ql', String(QL)); } catch (e) {} }
       perf.acc = 0; perf.n = 0;
     }
   }
@@ -3078,7 +3097,7 @@ function loopBody() {
   snapShadow(sc);
   updateNightAndBlobs(dt);
 
-  if (state === 'play' && (mmTimer += dt) > .05) { mmTimer = 0; drawMinimap(); }
+  if (state === 'play' && (mmTimer += dt) > .1) { mmTimer = 0; drawMinimap(); }
   if (world && (lodTimer += dt) > .25) {
     lodTimer = 0; const cp = camera.position;
     for (const it of world.lod) {
@@ -3088,6 +3107,7 @@ function loopBody() {
     updateCull(cp);
   }
   if (gradePass) gradePass.uniforms.time.value = (t * 60) % 1000;
+  if (++shadowTick >= (QL >= 3 ? 3 : 2) || state !== 'play') { shadowTick = 0; sun.shadow.needsUpdate = true; }
   for (const g of pendingGroups) g.visible = false;
   updateHumanLOD();
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);

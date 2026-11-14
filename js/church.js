@@ -233,44 +233,6 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     acts.push({ x: wx, z: wz - .9, y: y0, label: '💧 Tomar agua del dispensador', fn: () => fx('water'), r: 1.3 });
   }
 
-  // --- árbol de Navidad en el lobby (solo en temporada: 1 nov – 31 ene, o con ?navidad=1) ---
-  // entre el baño de damas y la entrada al santuario, sin estorbar el paso; luces que titilan y estrella arriba
-  const xmasLights = [];
-  {
-    const m = new Date().getMonth(); let on = m === 10 || m === 11 || m === 0;
-    try { const q = new URLSearchParams(location.search).get('navidad'); if (q === '1') on = true; else if (q === '0') on = false; } catch (e) {}
-    if (on) {
-      const tx = cx - 5.3, tz = Z0 + 5.2, ty = y0 + .1;
-      const pot = new THREE.Mesh(new THREE.CylinderGeometry(.42, .34, .45, 16), mat(0x8a1c24, { roughness: .5 })); pot.position.set(tx, ty + .225, tz); pot.castShadow = true; group.add(pot);
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.08, .1, .4, 8), mat(0x5a3a1e)); trunk.position.set(tx, ty + .6, tz); group.add(trunk);
-      const leafM = mat(0x1f5a32, { roughness: .85 });
-      [[1.05, 1.1, .85], [.85, 1, 1.45], [.62, .9, 2.0], [.38, .75, 2.5]].forEach(([rad, h, y]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(rad, h, 14), leafM); c.position.set(tx, ty + y, tz); c.castShadow = true; group.add(c); });
-      // estrella dorada (Mateo 2:9-10)
-      const st = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? .1 : .24; st[k ? 'lineTo' : 'moveTo'](Math.cos(a) * rr, Math.sin(a) * rr); }
-      const star = new THREE.Mesh(new THREE.ExtrudeGeometry(st, { depth: .05, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffc030, emissiveIntensity: 1.2, metalness: .4, roughness: .3 }));
-      star.position.set(tx, ty + 3.05, tz - .025); group.add(star); xmasLights.push({ star });
-      // luces en espiral (3 colores que se turnan) y bolas
-      const cols = [0xff4040, 0xffd040, 0x40a0ff], lm = cols.map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.5 }));
-      const bulb = new THREE.SphereGeometry(.045, 6, 4);
-      for (let k = 0; k < 42; k++) {
-        const f = k / 42, y = .45 + f * 2.05, rad = 1.0 * (1 - f) + .1, a = f * Math.PI * 9;
-        const b = new THREE.Mesh(bulb, lm[k % 3]); b.position.set(tx + Math.cos(a) * rad, ty + y, tz + Math.sin(a) * rad); group.add(b);
-      }
-      const ballG = new THREE.SphereGeometry(.08, 10, 8), ballM = [0xc0392b, 0xd4a72c, 0xe8e8f0].map(c => mat(c, { metalness: .6, roughness: .25 }));
-      for (let k = 0; k < 14; k++) {
-        const f = (k + .5) / 14, y = .5 + f * 1.7, rad = 1.0 * (1 - f) + .02, a = k * 2.4;
-        const b = new THREE.Mesh(ballG, ballM[k % 3]); b.position.set(tx + Math.cos(a) * rad, ty + y - .05, tz + Math.sin(a) * rad); group.add(b);
-      }
-      // regalos debajo
-      [[.4, .3, .35, 0x2e7d4f, .75, .35], [.32, .26, .32, 0x2a4a9a, -.7, .45], [.3, .22, .3, 0xd4a72c, .2, .85]].forEach(([w, h, d, c, ox, oz]) => {
-        box(w, h, d, mat(c, { roughness: .5 }), tx + ox, ty + h / 2, tz + oz);
-        box(w + .02, h + .02, .06, mat(0xf2f0e8), tx + ox, ty + h / 2, tz + oz, { cast: false });
-      });
-      solid(tx - 1.05, tx + 1.05, tz - 1.05, tz + 1.05, y0 + 3.2);
-      xmasLights[0].mats = lm;
-    }
-  }
-
   // --- SANTUARIO: tarima, pantalla gigante, luces, banda, predicador ---
   const SZ = Z1 - 6.5, SH = .9;                                   // inicio de la tarima y su altura
   box(HW * 2 - .6, SH, Z1 - SZ, mat(0x15131a, { roughness: .5 }), cx, y0 + SH / 2, (SZ + Z1) / 2); solid(X0, X1, SZ, Z1, y0 + SH);
@@ -431,8 +393,6 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
         recep.hips.position.y = .93 + Math.sin(t * 1.8) * .004;
         for (const e of recep.eyes) e.scale.y = (t % 3.7) < .12 ? .15 : 1;
       }
-      // luces del árbol de Navidad: los tres colores se turnan y la estrella brilla suave
-      if (xmasLights.length) { const X = xmasLights[0], ph = Math.floor(t * 1.6) % 3; X.mats.forEach((m, i) => { m.emissiveIntensity = i === ph ? 2.4 : .5; }); X.star.material.emissiveIntensity = 1 + Math.sin(t * 2) * .35; X.star.rotation.y = Math.sin(t * .6) * .5; }
       if ((lt += dt) > 4) { lt = 0; li = (li + 1) % lyrics.length; }
       // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
