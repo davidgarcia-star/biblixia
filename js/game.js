@@ -744,6 +744,27 @@ async function buildWorld(cfg) {
     }
     for (let j = 0; j <= N; j++) coinSpots.push([sc, streetCenters[j], 0]);
   }
+  // Tapas de alcantarilla de hierro fundido: un disco apenas elevado (sin superposición plana) en un carril de cada tramo de calle
+  {
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    g.fillStyle = '#5a5b5e'; g.fillRect(0, 0, 128, 128);
+    g.strokeStyle = '#2f3033'; g.lineWidth = 5;
+    for (const rr of [60, 46, 22]) { g.beginPath(); g.arc(64, 64, rr, 0, Math.PI * 2); g.stroke(); }
+    g.lineWidth = 3; for (let k = 0; k < 12; k++) { const a = k * Math.PI / 6; g.beginPath(); g.moveTo(64 + Math.cos(a) * 22, 64 + Math.sin(a) * 22); g.lineTo(64 + Math.cos(a) * 46, 64 + Math.sin(a) * 46); g.stroke(); }
+    g.fillStyle = '#76777a'; g.font = 'bold 15px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('AGUA', 64, 64);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const iron = new THREE.MeshStandardMaterial({ color: 0x2c2d30, roughness: .6, metalness: .55 });
+    const top = new THREE.MeshStandardMaterial({ map: tex, roughness: .55, metalness: .5 });
+    const spots = [];
+    for (let i = 0; i <= N; i++) for (let j = 0; j < N; j++) {
+      const sc = streetCenters[i], a = O + j * PITCH + STREET, side = (i + j) & 1 ? 1.7 : -1.7, t = a + BLOCK * ((i * 3 + j) % 2 ? .3 : .7);
+      spots.push([t, sc + side], [sc - side, t]);
+    }
+    const mh = new THREE.InstancedMesh(new THREE.CylinderGeometry(.42, .44, .03, 20), [iron, top, iron], spots.length);
+    const o = new THREE.Object3D();
+    spots.forEach(([x, z], k) => { o.position.set(x, .015, z); o.rotation.set(0, k * 1.3, 0); o.updateMatrix(); mh.setMatrixAt(k, o.matrix); });
+    mh.receiveShadow = true; group.add(mh);
+  }
 
   // Borde: edificios altos alrededor (horizonte) y muros invisibles
   const ring = [];
