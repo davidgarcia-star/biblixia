@@ -51,9 +51,9 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   box(DW, H - 3.4, T, wallM, cx, y0 + 3.4 + (H - 3.4) / 2, Z0);
   // fachada trasera por fuera: la pared del escenario es oscura por dentro, pero por fuera se veía como un bloque negro;
   // se reviste del mismo color claro que el resto del templo, con zócalo y una cruz dorada
-  // por fuera, las paredes llevan líneas verticales estrechas (una textura diminuta repetida: casi no pesa)
+  // por fuera, las paredes son gris oscuro con líneas verticales estrechas (una textura diminuta repetida: casi no pesa)
   const ribTex = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 4; const g = c.getContext('2d');
-    g.fillStyle = '#f2efe8'; g.fillRect(0, 0, 32, 4); g.fillStyle = '#c9c2b4'; g.fillRect(14, 0, 3, 4); g.fillStyle = '#ffffff'; g.fillRect(17, 0, 1, 4);
+    g.fillStyle = '#4a4d53'; g.fillRect(0, 0, 32, 4); g.fillStyle = '#2c2e33'; g.fillRect(14, 0, 3, 4); g.fillStyle = '#62666d'; g.fillRect(17, 0, 1, 4);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; return t; })();
   const ribM = w => { const t = ribTex.clone(); t.repeat.set(w / .45, 1); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .85 }); };
   const skin = (w, h, x, y, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), ribM(w)); m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true; group.add(m); };
@@ -77,7 +77,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // contorno de la «M» (u, v de 0 a 1, v hacia abajo): la misma forma para el emblema y la letra 3D
   const MPTS = [[0, 1], [0, 0], [.2, 0], [.5, .46], [.8, 0], [1, 0], [1, 1], [.79, 1], [.79, .38], [.5, .8], [.21, .38], [.21, 1]];
   // la misma «M» con un poco de curva: cada esquina se redondea (sirve para el canvas y para THREE.Shape)
-  const mPath = (p, X, Y, rad = .07) => {
+  const mPath = (p, X, Y, rad = .14) => {
     const n = MPTS.length, pt = (i, k, d) => { const a = MPTS[(i + n) % n], b = MPTS[(i + k + n) % n], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), q = Math.min(d, l / 2.2) / l; return [a[0] + dx * q, a[1] + dy * q]; };
     for (let i = 0; i < n; i++) { const [ax, ay] = pt(i, -1, rad), [bx, by] = pt(i, 1, rad), [vx, vy] = MPTS[i];
       if (i) p.lineTo(X(ax), Y(ay)); else p.moveTo(X(ax), Y(ay)); p.quadraticCurveTo(X(vx), Y(vy), X(bx), Y(by)); }
