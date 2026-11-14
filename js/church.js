@@ -69,66 +69,72 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // puertas de vidrio y fachada con letrero, emblemas «M» y horario
   const glass = new THREE.MeshStandardMaterial({ color: 0x8fc4e0, metalness: .3, roughness: .05, transparent: true, opacity: .35, depthWrite: false });
   for (const sx of [-1, 1]) { const g = box(DW / 2 - .1, 3.2, .06, glass, cx + sx * (DW / 4 + .02), y0 + 1.6, Z0 - .18, { cast: false }); g.rotation.y = sx * -1.1; g.position.x += sx * .55; g.position.z -= .5; }
-  // MORIAH CHURCH – San Cristóbal: letrero, emblemas «M», horario y una «M» gigante moderna en la pared lateral
-  const AB = '"Arial Black", system-ui, sans-serif', SU = 'system-ui, sans-serif';
-  const fit = (g, txt, wt, s, fam, maxW) => { do g.font = `${wt} ${s}px ${fam}`; while (g.measureText(txt).width > maxW && --s > 10); };
+  // MORIAH CHURCH – San Cristóbal: letrero iluminado, emblemas, horario y la «M» gigante del logo en la pared lateral
+  const SU = 'system-ui, sans-serif', SERIF = '"Optima", "Candara", "Palatino Linotype", Georgia, serif';
   const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.textAlign = 'center'; draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
-  const bgDark = (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0b1730'); gr.addColorStop(1, '#1a0b30'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.strokeRect(10, 10, w - 20, h - 20); };
-  // contorno de la «M» (u, v de 0 a 1, v hacia abajo): la misma forma para el emblema y la letra 3D
-  // «M» moderna con curvas: dos arcos redondeados (u, v de 0 a 1, v hacia arriba); sirve igual para el canvas y para THREE.Shape
-  const mPath = (p, X, Y) => {
-    const L = (u, v) => p.lineTo(X(u), Y(v)), Q = (a, b, u, v) => p.quadraticCurveTo(X(a), Y(b), X(u), Y(v));
-    p.moveTo(X(0), Y(0)); L(0, .62); Q(0, 1, .25, 1); Q(.5, 1, .5, .7); Q(.5, 1, .75, 1); Q(1, 1, 1, .62); L(1, 0); L(.8, 0);
-    L(.8, .6); Q(.8, .8, .7, .8); Q(.6, .8, .6, .6); L(.6, 0); L(.4, 0); L(.4, .6); Q(.4, .8, .3, .8); Q(.2, .8, .2, .6); L(.2, 0); p.closePath();
-  };
+  const bgDark = (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2b2c31'); gr.addColorStop(1, '#17181c'); g.fillStyle = gr; g.fillRect(0, 0, w, h); };
+  const WARM = '#fff4dc', HALO = 'rgba(255,196,110,.9)';
+  // «M» del logo de Moriah: una pincelada con dos picos curvos (el derecho más alto) y puntas afinadas.
+  // Se calcula una vez como polígono (u, v de 0 a 1, v hacia arriba) y sirve para el canvas y para la letra 3D.
+  const MLOGO = (() => {
+    const P = [[.02, .04], [.1, .36], [.24, .66], [.34, .62], [.43, .36], [.52, .2], [.62, .5], [.74, .9], [.86, .96], [.96, .74], [.99, .4], [.96, .04]];
+    const W = [.02, .16, .15, .08, .05, .07, .19, .19, .13, .14, .11, .02];
+    const crv = new THREE.CatmullRomCurve3(P.map(([u, v]) => new THREE.Vector3(u, v, 0)), false, 'centripetal');
+    const N = 90, L = [], R = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p = crv.getPoint(t), d = crv.getTangent(t), f = t * (P.length - 1), k = Math.min(P.length - 2, f | 0), w = (W[k] + (W[k + 1] - W[k]) * (f - k)) / 2;
+      L.push([p.x - d.y * w, p.y + d.x * w]); R.push([p.x + d.y * w, p.y - d.x * w]);
+    }
+    return L.concat(R.reverse());
+  })();
+  const mPath = (p, X, Y) => { MLOGO.forEach(([u, v], k) => p[k ? 'lineTo' : 'moveTo'](X(u), Y(v))); p.closePath(); };
+  const glowFill = (g, draw, blur) => { g.save(); g.shadowColor = HALO; g.shadowBlur = blur; g.fillStyle = WARM; draw(); g.restore(); g.fillStyle = WARM; draw(); };
+  // letrero de la fachada como el real: «M» del logo + ORIAH, y CHURCH espaciado debajo, con luz cálida sobre fondo oscuro
   const stx = canvasTex(1024, 256, g => {
     bgDark(g, 1024, 256);
-    g.fillStyle = '#ffd34d'; fit(g, 'MORIAH CHURCH', 900, 104, AB, 940); g.fillText('MORIAH CHURCH', 512, 112);
-    g.fillStyle = '#7fd8ff'; fit(g, 'SAN CRISTÓBAL', 800, 40, SU, 900); g.fillText('SAN CRISTÓBAL', 512, 166);
-    g.fillStyle = '#e9e0ff'; fit(g, 'EPICENTRO DE AVIVAMIENTO PARA LAS NACIONES', 700, 36, SU, 940); g.fillText('EPICENTRO DE AVIVAMIENTO PARA LAS NACIONES', 512, 218);
+    g.font = `600 112px ${SERIF}`; const ow = g.measureText('ORIAH').width, mw = 150, x0 = 512 - (mw + ow) / 2;
+    glowFill(g, () => { g.beginPath(); mPath(g, u => x0 + u * mw, v => 152 - v * 128); g.fill(); }, 26);
+    g.textAlign = 'left'; glowFill(g, () => g.fillText('ORIAH', x0 + mw - 4, 150), 26);
+    g.font = `600 30px ${SERIF}`; const ch = 'CHURCH', sp = 22; let cw = 0; for (const c of ch) cw += g.measureText(c).width + sp;
+    let xx = x0 + mw + ow / 2 - (cw - sp) / 2; for (const c of ch) { glowFill(g, () => g.fillText(c, xx, 192), 14); xx += g.measureText(c).width + sp; }
+    g.textAlign = 'center'; g.fillStyle = 'rgba(255,236,200,.85)'; g.font = `600 22px ${SU}`; g.fillText('SAN CRISTÓBAL · EPICENTRO DE AVIVAMIENTO PARA LAS NACIONES', 512, 238);
   });
-  const sign = box(12, 3, .2, new THREE.MeshStandardMaterial({ map: stx, emissive: 0xffffff, emissiveMap: stx, emissiveIntensity: .6 }), cx, y0 + H - 2.1, Z0 - .3, { cast: false }); sign.rotation.y = Math.PI;
-  // emblemas redondos con la «M» a los lados del letrero (una sola textura para los dos)
+  const sign = box(12, 3, .2, new THREE.MeshStandardMaterial({ map: stx, emissive: 0xffffff, emissiveMap: stx, emissiveIntensity: .7 }), cx, y0 + H - 2.1, Z0 - .3, { cast: false }); sign.rotation.y = Math.PI;
+  // emblemas redondos con la «M» del logo a los lados del letrero (una sola textura para los dos)
   const embTex = canvasTex(256, 256, g => {
-    const gr = g.createRadialGradient(128, 110, 10, 128, 128, 128); gr.addColorStop(0, '#24345e'); gr.addColorStop(1, '#0b1124'); g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
-    g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.beginPath(); g.arc(128, 128, 116, 0, 7); g.stroke();
-    const mg = g.createLinearGradient(0, 60, 0, 196); mg.addColorStop(0, '#ffe27a'); mg.addColorStop(1, '#ff9a2e'); g.fillStyle = mg;
-    g.beginPath(); mPath(g, u => 58 + u * 140, v => 190 - v * 124); g.fill();
+    g.fillStyle = '#1d1e23'; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
+    glowFill(g, () => { g.beginPath(); mPath(g, u => 50 + u * 156, v => 196 - v * 136); g.fill(); }, 22);
   });
-  const emb = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshStandardMaterial({ map: embTex, emissive: 0xffffff, emissiveMap: embTex, emissiveIntensity: .45 }));
+  const emb = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshStandardMaterial({ map: embTex, emissive: 0xffffff, emissiveMap: embTex, emissiveIntensity: .6 }));
   emb.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .42); emb.rotation.y = Math.PI; group.add(emb);
   const emb2 = emb.clone(); emb2.position.x = cx + 8.2; group.add(emb2);
-  // horario de servicios junto a la puerta
+  // horario de servicios junto a la puerta (mismo estilo: fondo oscuro y luz cálida)
   const schTex = canvasTex(512, 400, g => {
     bgDark(g, 512, 400);
-    g.fillStyle = '#ffd34d'; fit(g, 'HORARIO DE SERVICIOS', 900, 40, AB, 450); g.fillText('HORARIO DE SERVICIOS', 256, 72);
-    g.fillStyle = '#f5c542'; g.fillRect(60, 92, 392, 4);
+    g.fillStyle = WARM; g.font = `700 38px ${SERIF}`; g.fillText('HORARIO DE SERVICIOS', 256, 70);
+    g.fillStyle = 'rgba(255,196,110,.8)'; g.fillRect(70, 92, 372, 3);
     [['MIÉRCOLES', '8:00 PM'], ['VIERNES', '8:00 PM'], ['DOMINGO', '10:00 AM']].forEach(([d, h], k) => {
-      const y = 158 + k * 72; g.font = `800 40px ${SU}`;
+      const y = 158 + k * 72; g.font = `700 40px ${SU}`;
       g.textAlign = 'left'; g.fillStyle = '#ffffff'; g.fillText(d, 52, y);
-      g.textAlign = 'right'; g.fillStyle = '#7fd8ff'; g.fillText(h, 460, y);
+      g.textAlign = 'right'; g.fillStyle = '#ffd08a'; g.fillText(h, 460, y);
     });
-    g.textAlign = 'center'; g.fillStyle = '#e9e0ff'; g.font = `italic 600 28px ${SU}`; g.fillText('¡Te esperamos!', 256, 370);
+    g.textAlign = 'center'; g.fillStyle = 'rgba(255,236,200,.85)'; g.font = `italic 600 28px ${SU}`; g.fillText('¡Te esperamos!', 256, 370);
   });
-  box(3.1, 2.5, .08, mat(0xd9b24a, { metalness: .6, roughness: .35 }), cx - 5, y0 + 2.3, Z0 - .2, { cast: false });
+  box(3.1, 2.5, .08, mat(0x101114, { roughness: .4 }), cx - 5, y0 + 2.3, Z0 - .2, { cast: false });
   const sch = new THREE.Mesh(new THREE.PlaneGeometry(3, 2.34), new THREE.MeshStandardMaterial({ map: schTex, emissive: 0xffffff, emissiveMap: schTex, emissiveIntensity: .5 }));
   sch.position.set(cx - 5, y0 + 2.3, Z0 - .25); sch.rotation.y = Math.PI; group.add(sch);
-  // «M» gigante y moderna en la pared lateral: panel de vidrio oscuro, letra dorada en 3D con contorno de neón y franjas de luz
-  const neonM = new THREE.MeshStandardMaterial({ color: 0x0a2a40, emissive: 0x34c8ff, emissiveIntensity: 1.8 });
+  // «M» gigante del logo en la pared lateral: panel oscuro, letra en relieve con luz cálida y un halo detrás
+  const mGlow = new THREE.MeshStandardMaterial({ color: 0xfff1d6, roughness: .4, emissive: 0xffd9a0, emissiveIntensity: 1.1 });
   {
-    const px = X1 + T / 2, mz = cz + 1.5, MW = 7.2, MH = 6;
-    const mShape = s => { const sh = new THREE.Shape(); mPath(sh, u => (u - .5) * MW * s, v => v * MH * s - (s - 1) * MH / 2); return sh; };
-    box(.12, 8.2, 11, mat(0x10141c, { metalness: .5, roughness: .15 }), px + .06, y0 + 4.5, mz, { cast: false });
-    for (const dz of [-5.35, 5.35]) box(.06, 8.2, .14, neonM, px + .14, y0 + 4.5, mz + dz, { cast: false });   // franjas de luz
-    const glow = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1.1), { depth: .12, bevelEnabled: false, curveSegments: 14 }), neonM);
-    glow.position.set(px + .12, y0 + 1.9, mz); glow.rotation.y = Math.PI / 2; group.add(glow);
-    const gold = new THREE.MeshStandardMaterial({ color: 0xffc94a, metalness: .25, roughness: .3, emissive: 0xd08a1a, emissiveIntensity: .55 });
-    const m3 = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1), { depth: .45, bevelEnabled: true, bevelSize: .06, bevelThickness: .06, bevelSegments: 1, curveSegments: 14 }), gold);
-    m3.position.set(px + .24, y0 + 1.9, mz); m3.rotation.y = Math.PI / 2; m3.castShadow = true; group.add(m3);
-    const nameTex = canvasTex(1024, 128, g => { g.fillStyle = '#ffffff'; fit(g, 'MORIAH CHURCH', 900, 92, AB, 980); g.fillText('MORIAH CHURCH', 512, 98); });
-    const nm = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, toneMapped: false }));
-    nm.position.set(px + .14, y0 + 1.05, mz); nm.rotation.y = Math.PI / 2; group.add(nm);
-    solid(X1, px + .85, mz - 5.5, mz + 5.5, y0 + 9);
+    const px = X1 + T / 2, mz = cz + 1.5, MW = 8, MH = 6.4;
+    const sh = new THREE.Shape(); mPath(sh, u => (u - .5) * MW, v => v * MH);
+    box(.12, 8.4, 11, mat(0x1d1e23, { roughness: .5 }), px + .06, y0 + 4.5, mz, { cast: false });
+    const haloTex = canvasTex(256, 256, g => { const gr = g.createRadialGradient(128, 128, 10, 128, 128, 128); gr.addColorStop(0, 'rgba(255,190,100,.55)'); gr.addColorStop(1, 'rgba(255,190,100,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256); });
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(10, 8), new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, depthWrite: false, toneMapped: false }));
+    halo.position.set(px + .13, y0 + 4.5, mz); halo.rotation.y = Math.PI / 2; group.add(halo);
+    const m3 = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .35, bevelEnabled: true, bevelSize: .04, bevelThickness: .04, bevelSegments: 1 }), mGlow);
+    m3.position.set(px + .18, y0 + 1.3, mz); m3.rotation.y = Math.PI / 2; group.add(m3);
+    solid(X1, px + .65, mz - 5.5, mz + 5.5, y0 + 9);
   }
   // letrero luminoso verde de «SALIDA» por dentro, sobre la puerta principal (como en los templos reales)
   {
@@ -426,7 +432,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
-      neonM.emissiveIntensity = 1.6 + Math.sin(t * 2) * .5;   // el neón de la «M» late suave
+      mGlow.emissiveIntensity = 1 + Math.sin(t * 1.5) * .15;   // la luz de la «M» respira suave
       for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
       // cada golpe (|sin(8t)| llega a 0) hace temblar los platillos, que se calman poco a poco
       cymbals.forEach((cy, i) => { const ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = .2 + Math.sin(t * 38 + i) * amp; cy.rotation.z = Math.cos(t * 31 + i) * amp * .6; });
