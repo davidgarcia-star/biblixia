@@ -2382,11 +2382,11 @@ function drawBigMap() {
   if (W2.clocks) for (const c of W2.clocks) if (!c.taken) drawClockIcon(g, X(c.x), Z(c.z), 6);
   g.font = '18px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
   if (W2.house) { g.fillText('🏠', X(W2.house.cx), Z(W2.house.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('Mi casa', X(W2.house.cx), Z(W2.house.cz) + 16); g.font = '18px system-ui'; }
-  if (W2.church) { g.fillText('⛪', X(W2.church.cx), Z(W2.church.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('MIPROAA', X(W2.church.cx), Z(W2.church.cz) + 16); }
+  if (W2.church) { g.fillText('⛪', X(W2.church.cx), Z(W2.church.cz)); g.font = '600 11px system-ui'; g.fillStyle = '#fff'; g.fillText('MORIAH', X(W2.church.cx), Z(W2.church.cz) + 16); }
   for (const n of W2.npcs) { g.fillStyle = n.given ? 'rgba(160,200,255,.5)' : n.treasure ? '#ff7ab6' : '#6fd0ff'; g.beginPath(); g.arc(X(n.x), Z(n.z), 4, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 1; g.stroke(); }
   // jugador
   g.save(); g.translate(X(P.pos.x), Z(P.pos.z)); g.rotate(-P.heading + Math.PI); g.fillStyle = '#ff4040'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -11); g.lineTo(8, 9); g.lineTo(0, 4); g.lineTo(-8, 9); g.closePath(); g.fill(); g.stroke(); g.restore();
-  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Mi casa</span><span>⛪ MIPROAA</span><span>🔒 Lugar bloqueado</span>`;
+  $('bigmapLegend').innerHTML = `<span><i style="background:#ff4040"></i>Tú</span><span><i style="background:#ffd34d"></i>Monedas (${W2.coins.filter(c => !c.taken).length})</span><span><i style="background:#6fd0ff"></i>Personajes con regalo</span><span><i style="background:#ff7ab6"></i>Regalos de lugares</span><span>⏰ Relojes (+15 s)</span><span>🏠 Mi casa</span><span>⛪ Moriah Church</span><span>🔒 Lugar bloqueado</span>`;
 }
 
 /* ---------- Personajes: hablar y recibir regalos ---------- */
@@ -2432,7 +2432,7 @@ function updateZone(dt) {
     setTimeout(() => { toast('🙏 Reverencia ante la presencia del SEÑOR', '#ffe9a8'); sound.life('worship'); }, 200);
   }
   P.inHoly = holy;
-  // al entrar al templo MIPROAA: salta de alegría, se arroja de rodillas y adora moviendo la cabeza
+  // al entrar al templo Moriah Church: salta de alegría, se arroja de rodillas y adora moviendo la cabeza
   const church = world.zones.some(q => q.id === 'iglesia' && P.pos.x > q.minX && P.pos.x < q.maxX && P.pos.z > q.minZ && P.pos.z < q.maxZ);
   if (church && !P.inChurch && !P.praise && !P.kneel && !P.driving && !P.car) {
     P.praise = { t: 0, dur: 6.6, j: 0 }; P.speed = 0;

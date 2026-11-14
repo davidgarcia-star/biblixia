@@ -4,7 +4,7 @@ import { pace } from './pace.js';
 import { nameSprite } from './characters.js';
 
 /* =========================================================
-   IGLESIA MIPROAA (en todos los niveles)
+   IGLESIA MORIAH CHURCH – SAN CRISTÓBAL (en todos los niveles)
    Lobby con recepción y baños, santuario con tarima, pantalla grande,
    grupo de alabanza (batería, guitarra, bajo, teclado y cantantes),
    predicador y congregación adorando: manos arriba, saltando, llorando de rodillas.
@@ -56,21 +56,65 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   { const gold = mat(0xd9b24a, { metalness: .6, roughness: .35, emissive: 0x3a2a08 });
     box(.4, 3.4, .12, gold, cx, y0 + H - 3.6, Z1 + T / 2 + .13, { cast: false }); box(2, .4, .12, gold, cx, y0 + H - 2.9, Z1 + T / 2 + .13, { cast: false }); }
   const roof = box(HW * 2 + .8, .4, HD * 2 + .8, mat(0x3a3f47), cx, y0 + H + .2, cz, { cast: false }); blockers.push(roof);
-  // puertas de vidrio y fachada con letrero y logo
+  // puertas de vidrio y fachada con letrero, emblemas «M» y horario
   const glass = new THREE.MeshStandardMaterial({ color: 0x8fc4e0, metalness: .3, roughness: .05, transparent: true, opacity: .35, depthWrite: false });
   for (const sx of [-1, 1]) { const g = box(DW / 2 - .1, 3.2, .06, glass, cx + sx * (DW / 4 + .02), y0 + 1.6, Z0 - .18, { cast: false }); g.rotation.y = sx * -1.1; g.position.x += sx * .55; g.position.z -= .5; }
-  const signC = document.createElement('canvas'); signC.width = 1024; signC.height = 256; const sg = signC.getContext('2d');
-  const grd = sg.createLinearGradient(0, 0, 1024, 0); grd.addColorStop(0, '#0b1730'); grd.addColorStop(1, '#1a0b30'); sg.fillStyle = grd; sg.fillRect(0, 0, 1024, 256);
-  sg.strokeStyle = '#f5c542'; sg.lineWidth = 10; sg.strokeRect(10, 10, 1004, 236);
-  sg.fillStyle = '#ffd34d'; sg.font = '900 120px "Arial Black", system-ui, sans-serif'; sg.textAlign = 'center'; sg.fillText('MIPROAA', 512, 140);
-  sg.fillStyle = '#e9e0ff'; sg.font = '600 40px system-ui, sans-serif'; sg.fillText('Ministerio Profético Ardiendo Por El Avivamiento', 512, 210);
-  const stx = new THREE.CanvasTexture(signC); stx.colorSpace = THREE.SRGBColorSpace;
+  // MORIAH CHURCH – San Cristóbal: letrero, emblemas «M», horario y una «M» gigante moderna en la pared lateral
+  const AB = '"Arial Black", system-ui, sans-serif', SU = 'system-ui, sans-serif';
+  const fit = (g, txt, wt, s, fam, maxW) => { do g.font = `${wt} ${s}px ${fam}`; while (g.measureText(txt).width > maxW && --s > 10); };
+  const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.textAlign = 'center'; draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+  const bgDark = (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0b1730'); gr.addColorStop(1, '#1a0b30'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.strokeRect(10, 10, w - 20, h - 20); };
+  // contorno de la «M» (u, v de 0 a 1, v hacia abajo): la misma forma para el emblema y la letra 3D
+  const MPTS = [[0, 1], [0, 0], [.2, 0], [.5, .46], [.8, 0], [1, 0], [1, 1], [.79, 1], [.79, .38], [.5, .8], [.21, .38], [.21, 1]];
+  const stx = canvasTex(1024, 256, g => {
+    bgDark(g, 1024, 256);
+    g.fillStyle = '#ffd34d'; fit(g, 'MORIAH CHURCH', 900, 104, AB, 940); g.fillText('MORIAH CHURCH', 512, 112);
+    g.fillStyle = '#7fd8ff'; fit(g, 'SAN CRISTÓBAL', 800, 40, SU, 900); g.fillText('SAN CRISTÓBAL', 512, 166);
+    g.fillStyle = '#e9e0ff'; fit(g, 'EPICENTRO DE AVIVAMIENTO PARA LAS NACIONES', 700, 36, SU, 940); g.fillText('EPICENTRO DE AVIVAMIENTO PARA LAS NACIONES', 512, 218);
+  });
   const sign = box(12, 3, .2, new THREE.MeshStandardMaterial({ map: stx, emissive: 0xffffff, emissiveMap: stx, emissiveIntensity: .6 }), cx, y0 + H - 2.1, Z0 - .3, { cast: false }); sign.rotation.y = Math.PI;
-  const logoTex = new THREE.TextureLoader().load('img/logo.png'); logoTex.colorSpace = THREE.SRGBColorSpace;
-  const logoBg = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: .35 })); logoBg.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .42); logoBg.rotation.y = Math.PI; group.add(logoBg); const lb2 = logoBg.clone(); lb2.position.x = cx + 8.2; group.add(lb2);
-  const logo = new THREE.Mesh(new THREE.CircleGeometry(1.2, 40), new THREE.MeshStandardMaterial({ map: logoTex, transparent: true, emissive: 0xffffff, emissiveMap: logoTex, emissiveIntensity: .25 }));
-  logo.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .45); logo.rotation.y = Math.PI; group.add(logo);
-  const logo2 = logo.clone(); logo2.position.x = cx + 8.2; group.add(logo2);
+  // emblemas redondos con la «M» a los lados del letrero (una sola textura para los dos)
+  const embTex = canvasTex(256, 256, g => {
+    const gr = g.createRadialGradient(128, 110, 10, 128, 128, 128); gr.addColorStop(0, '#24345e'); gr.addColorStop(1, '#0b1124'); g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
+    g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.beginPath(); g.arc(128, 128, 116, 0, 7); g.stroke();
+    const mg = g.createLinearGradient(0, 60, 0, 196); mg.addColorStop(0, '#ffe27a'); mg.addColorStop(1, '#ff9a2e'); g.fillStyle = mg;
+    g.beginPath(); MPTS.forEach(([u, v], k) => g[k ? 'lineTo' : 'moveTo'](58 + u * 140, 66 + v * 124)); g.closePath(); g.fill();
+  });
+  const emb = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshStandardMaterial({ map: embTex, emissive: 0xffffff, emissiveMap: embTex, emissiveIntensity: .45 }));
+  emb.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .42); emb.rotation.y = Math.PI; group.add(emb);
+  const emb2 = emb.clone(); emb2.position.x = cx + 8.2; group.add(emb2);
+  // horario de servicios junto a la puerta
+  const schTex = canvasTex(512, 400, g => {
+    bgDark(g, 512, 400);
+    g.fillStyle = '#ffd34d'; fit(g, 'HORARIO DE SERVICIOS', 900, 40, AB, 450); g.fillText('HORARIO DE SERVICIOS', 256, 72);
+    g.fillStyle = '#f5c542'; g.fillRect(60, 92, 392, 4);
+    [['MIÉRCOLES', '8:00 PM'], ['VIERNES', '8:00 PM'], ['DOMINGO', '10:00 AM']].forEach(([d, h], k) => {
+      const y = 158 + k * 72; g.font = `800 40px ${SU}`;
+      g.textAlign = 'left'; g.fillStyle = '#ffffff'; g.fillText(d, 52, y);
+      g.textAlign = 'right'; g.fillStyle = '#7fd8ff'; g.fillText(h, 460, y);
+    });
+    g.textAlign = 'center'; g.fillStyle = '#e9e0ff'; g.font = `italic 600 28px ${SU}`; g.fillText('¡Te esperamos!', 256, 370);
+  });
+  box(3.1, 2.5, .08, mat(0xd9b24a, { metalness: .6, roughness: .35 }), cx - 5, y0 + 2.3, Z0 - .2, { cast: false });
+  const sch = new THREE.Mesh(new THREE.PlaneGeometry(3, 2.34), new THREE.MeshStandardMaterial({ map: schTex, emissive: 0xffffff, emissiveMap: schTex, emissiveIntensity: .5 }));
+  sch.position.set(cx - 5, y0 + 2.3, Z0 - .25); sch.rotation.y = Math.PI; group.add(sch);
+  // «M» gigante y moderna en la pared lateral: panel de vidrio oscuro, letra dorada en 3D con contorno de neón y franjas de luz
+  const neonM = new THREE.MeshStandardMaterial({ color: 0x0a2a40, emissive: 0x34c8ff, emissiveIntensity: 1.8 });
+  {
+    const px = X1 + T / 2, mz = cz + 1.5, MW = 7.2, MH = 6;
+    const mShape = s => { const sh = new THREE.Shape(); MPTS.forEach(([u, v], k) => sh[k ? 'lineTo' : 'moveTo']((u - .5) * MW * s, (1 - v) * MH * s - (s - 1) * MH / 2)); sh.closePath(); return sh; };
+    box(.12, 8.2, 11, mat(0x10141c, { metalness: .5, roughness: .15 }), px + .06, y0 + 4.5, mz, { cast: false });
+    for (const dz of [-5.35, 5.35]) box(.06, 8.2, .14, neonM, px + .14, y0 + 4.5, mz + dz, { cast: false });   // franjas de luz
+    const glow = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1.1), { depth: .12, bevelEnabled: false }), neonM);
+    glow.position.set(px + .12, y0 + 1.9, mz); glow.rotation.y = Math.PI / 2; group.add(glow);
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffc94a, metalness: .25, roughness: .3, emissive: 0xd08a1a, emissiveIntensity: .55 });
+    const m3 = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1), { depth: .45, bevelEnabled: true, bevelSize: .06, bevelThickness: .06, bevelSegments: 1 }), gold);
+    m3.position.set(px + .24, y0 + 1.9, mz); m3.rotation.y = Math.PI / 2; m3.castShadow = true; group.add(m3);
+    const nameTex = canvasTex(1024, 128, g => { g.fillStyle = '#ffffff'; fit(g, 'MORIAH CHURCH', 900, 92, AB, 980); g.fillText('MORIAH CHURCH', 512, 98); });
+    const nm = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, toneMapped: false }));
+    nm.position.set(px + .14, y0 + 1.05, mz); nm.rotation.y = Math.PI / 2; group.add(nm);
+    solid(X1, px + .85, mz - 5.5, mz + 5.5, y0 + 9);
+  }
   // letrero luminoso verde de «SALIDA» por dentro, sobre la puerta principal (como en los templos reales)
   {
     const ec = document.createElement('canvas'); ec.width = 256; ec.height = 96; const eg = ec.getContext('2d');
@@ -225,12 +269,12 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // a media resolución (se dibuja igual, en coordenadas de 1024×512): 4 veces menos para subir a la tarjeta gráfica
   const scr = document.createElement('canvas'); scr.width = 512; scr.height = 256; const sc = scr.getContext('2d'); sc.scale(.5, .5);
   const scrTex = new THREE.CanvasTexture(scr); scrTex.colorSpace = THREE.SRGBColorSpace;
-  const lyrics = ['SANTO, SANTO, SANTO', 'DIGNO ERES, SEÑOR', 'GLORIA A DIOS EN LAS ALTURAS', '¡ALELUYA!', 'CRISTO VIVE', 'MIPROAA · ARDIENDO POR EL AVIVAMIENTO'];
+  const lyrics = ['SANTO, SANTO, SANTO', 'DIGNO ERES, SEÑOR', 'GLORIA A DIOS EN LAS ALTURAS', '¡ALELUYA!', 'CRISTO VIVE', 'MORIAH CHURCH · EPICENTRO DE AVIVAMIENTO'];
   const drawScreen = (i, t) => {
     const g2 = sc.createLinearGradient(0, 0, 1024, 512); g2.addColorStop(0, `hsl(${(t * 20) % 360},70%,22%)`); g2.addColorStop(1, `hsl(${(t * 20 + 120) % 360},70%,12%)`); sc.fillStyle = g2; sc.fillRect(0, 0, 1024, 512);
     for (let k = 0; k < 40; k++) { sc.fillStyle = `rgba(255,230,160,${.1 + .1 * Math.sin(t * 2 + k)})`; sc.beginPath(); sc.arc((k * 97 + t * 30) % 1024, (k * 53) % 512, 3 + (k % 5), 0, 7); sc.fill(); }
     sc.fillStyle = '#fff'; sc.font = '900 76px "Arial Black", system-ui, sans-serif'; sc.textAlign = 'center'; sc.fillText(lyrics[i], 512, 270);
-    sc.fillStyle = '#ffd34d'; sc.font = '700 30px system-ui'; sc.fillText('MIPROAA', 512, 470); scrTex.needsUpdate = true;
+    sc.fillStyle = '#ffd34d'; sc.font = '700 30px system-ui'; sc.fillText('MORIAH CHURCH', 512, 470); scrTex.needsUpdate = true;
   };
   drawScreen(0, 0);
   box(15.5, 6.3, .3, mat(0x050508), cx, y0 + SH + 4.2, Z1 - .5);
@@ -331,8 +375,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   acts.push({ x: cx, z: SZ - 4.5, y: y0, label: '🙌 Adorar a Dios', fn: () => fx('worship'), r: 2.5 });
 
   const zones = [
-    { id: 'iglesia', name: 'MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios, donde la congregación adora al SEÑOR con todo el corazón!', ref: 'Salmo 95:6' },
-    { id: 'iglesia-lobby', name: 'Lobby de MIPROAA', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros.', ref: 'Salmo 122:1' },
+    { id: 'iglesia', name: 'MORIAH CHURCH – San Cristóbal · Epicentro de Avivamiento para las Naciones', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios! Servicios: miércoles y viernes 8:00 PM · domingo 10:00 AM.', ref: 'Salmo 95:6' },
+    { id: 'iglesia-lobby', name: 'Lobby de Moriah Church', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros.', ref: 'Salmo 122:1' },
   ];
   let li = 0, lt = 0, scrT = 0;
   return {
@@ -367,6 +411,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
+      neonM.emissiveIntensity = 1.6 + Math.sin(t * 2) * .5;   // el neón de la «M» late suave
       for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
       // cada golpe (|sin(8t)| llega a 0) hace temblar los platillos, que se calman poco a poco
       cymbals.forEach((cy, i) => { const ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = .2 + Math.sin(t * 38 + i) * amp; cy.rotation.z = Math.cos(t * 31 + i) * amp * .6; });
