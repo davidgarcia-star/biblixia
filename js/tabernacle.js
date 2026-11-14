@@ -332,7 +332,13 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
         const paso = c < 1.6 ? Math.sin(c * 11) * .35 * Math.sin(c / 1.6 * Math.PI) : 0;
         m.o.userData.legs.forEach((l, j) => { l.rotation.x = (j === 0 || j === 3 ? 1 : -1) * paso; });
       }
-      for (const f of flames) f.scale.y = 1 + Math.sin(t * 20 + f.position.z * 30) * .2;
+      // las siete llamas del candelabro chisporrotean y se mecen un poquito, cada una a su ritmo, como aceite ardiendo de verdad
+      for (const f of flames) {
+        const k = f.position.z * 30;
+        f.scale.y = 1 + Math.sin(t * 20 + k) * .2 + Math.sin(t * 47 + k * 1.7) * .06;
+        f.scale.x = f.scale.z = 1 - Math.sin(t * 20 + k) * .08;
+        f.rotation.x = Math.sin(t * 3.1 + k) * .09 + Math.sin(t * 8.3 + k * .6) * .03;
+      }
       for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
