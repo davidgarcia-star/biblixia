@@ -74,6 +74,11 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const starSh = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + Math.PI / 2, r2 = k % 2 ? .45 : 1.2; k ? starSh.lineTo(Math.cos(a) * r2, Math.sin(a) * r2) : starSh.moveTo(Math.cos(a) * r2, Math.sin(a) * r2); }
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
     const sg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffe9a0 })); sg.scale.set(9, 9, 1); sg.position.set(px, 13, pz); P.add(sg);
+    // haz de luz suave que baja de la estrella sobre el establo: «se detuvo sobre el lugar donde estaba el niño» (Mateo 2:9)
+    const beamG = new THREE.CylinderGeometry(.25, 2.6, 6.6, 24, 1, true);
+    { const pos = beamG.attributes.position, col = new Float32Array(pos.count * 3); for (let k = 0; k < pos.count; k++) { const v = .35 + .65 * (pos.getY(k) / 6.6 + .5); col[k * 3] = v; col[k * 3 + 1] = v * .92; col[k * 3 + 2] = v * .6; } beamG.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
+    const beam = new THREE.Mesh(beamG, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }));
+    beam.position.set(px, 13 - 3.4, pz); beam.renderOrder = 2; P.add(beam);
     out.zones.push({ id: 'belen', name: 'Belén: el nacimiento de Jesús', minX: px - w / 2, maxX: px + w / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'En Belén nació Jesús y fue acostado en un pesebre.',
       ref: 'Miqueas 5:2; Lucas 2:4-14; Mateo 2:9-11' });
