@@ -235,6 +235,23 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const btn = cyl(.013, .013, .01, mat(0xd9dde2, { metalness: .7, roughness: .3 }), bx, by - .03, bz - .018, 12); btn.rotation.x = Math.PI / 2;
       houseUpd.push(t => { ringM.emissiveIntensity = .7 + (Math.sin(t * 1.6) * .5 + .5) * 1.1; });
     }
+    { // corona navideña en la pared oscura junto a la puerta (solo en temporada: 1 nov – 31 ene, o con ?navidad=1)
+      const m = new Date().getMonth(); let on = m === 10 || m === 11 || m === 0;
+      try { const q = new URLSearchParams(location.search).get('navidad'); if (q === '1') on = true; else if (q === '0') on = false; } catch (e) {}
+      if (on) {
+        const wx = cx - 1.15, wy = fy + 1.5, wz = Z0 - T / 2 - .045;
+        const leafG = new THREE.TorusGeometry(.2, .065, 8, 22), leaf = new THREE.Mesh(leafG, mat(0x1d5a30, { roughness: .9 }));
+        leaf.position.set(wx, wy, wz); leaf.castShadow = true; group.add(leaf);
+        const sprigM = mat(0x2a7340, { roughness: .85 }), sprigG = new THREE.ConeGeometry(.035, .12, 5);
+        for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2, s = new THREE.Mesh(sprigG, sprigM); s.position.set(wx + Math.cos(a) * .2, wy + Math.sin(a) * .2, wz - .03); s.rotation.z = a + (k % 2 ? .6 : -.6); group.add(s); }
+        const berryM = mat(0xc01f2a, { roughness: .35 }), berryG = new THREE.SphereGeometry(.022, 8, 6);
+        for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2 + .3, b = new THREE.Mesh(berryG, berryM); b.position.set(wx + Math.cos(a) * .2, wy + Math.sin(a) * .2, wz - .07); group.add(b); }
+        // lazo rojo abajo, con sus dos cintas
+        const bowM = mat(0xb3121f, { roughness: .45 });
+        for (const s of [-1, 1]) { const lo = box(.12, .07, .025, bowM, wx + s * .065, wy - .2, wz - .085, { cast: false }); lo.rotation.z = s * .35; const cinta = box(.035, .16, .015, bowM, wx + s * .045, wy - .3, wz - .08, { cast: false }); cinta.rotation.z = s * .25; }
+        box(.045, .05, .03, bowM, wx, wy - .2, wz - .095, { cast: false });
+      }
+    }
     box(1.6, .35, .06, winGlass, cx + 4.6, fy + H - .55, Z0 - .12, { cast: false });   // ventanita alta del baño
     // revestimiento exterior: panel de madera vertical a la derecha de la puerta y franja negra
     for (let k = 0; k < 16; k++) box(.07, H - .2, .05, woodM, cx + DW / 2 + .2 + k * .14, fy + H / 2, Z0 - T / 2 - .04, { cast: false });
