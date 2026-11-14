@@ -440,6 +440,11 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   }
   S.updateMatrixWorld(true);
   group.add(bakeStatic(S));
+  // Humo tenue que sube de las fogatas y se deshace en el aire (Éxodo 16:23)
+  const smokeM = new THREE.MeshLambertMaterial({ color: 0x9a948c, transparent: true, opacity: .24, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.2, 1), puffs = [];
+  for (const f of fires) if (f.userData.b === 1) for (let k = 0; k < 4; k++) {
+    const pf = new THREE.Mesh(smokeG, smokeM); pf.userData = { x: f.position.x, z: f.position.z, o: k / 4, k: f.userData.k + k }; pf.renderOrder = 2; FL.add(pf); puffs.push(pf);
+  }
   group.add(FL);
   return {
     // las llamas de las fogatas parpadean y se mecen como fuego de verdad
@@ -449,6 +454,12 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
         const sy = 1 + Math.sin(t * 13 + k) * .18 + Math.sin(t * 29 + k * 3) * .1;
         f.scale.set(b * (1 - (sy - 1) * .4), b * sy, b * (1 - (sy - 1) * .4));
         f.rotation.set(Math.sin(t * 5 + k) * .12, t * 2 + k, Math.cos(t * 6 + k) * .12);
+      }
+      for (const pf of puffs) {
+        const u = pf.userData, ph = (t * .22 + u.o) % 1; // 0 = recién salido, 1 = se deshizo
+        const drift = ph * ph * .9;
+        pf.position.set(u.x + Math.sin(u.k + t * .7) * .12 + drift, .55 + ph * 3.2, u.z + Math.cos(u.k * 1.3 + t * .5) * .12 + drift * .4);
+        pf.scale.setScalar((.6 + ph * 2.2) * Math.sin(Math.PI * Math.min(1, ph * 1.15)) + .001);
       }
     },
   };
