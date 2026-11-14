@@ -51,7 +51,17 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   box(DW, H - 3.4, T, wallM, cx, y0 + 3.4 + (H - 3.4) / 2, Z0);
   // fachada trasera por fuera: la pared del escenario es oscura por dentro, pero por fuera se veía como un bloque negro;
   // se reviste del mismo color claro que el resto del templo, con zócalo y una cruz dorada
-  box(HW * 2 + T, H, .06, wallM, cx, y0 + H / 2, Z1 + T / 2 + .04, { cast: false });
+  // por fuera, las paredes llevan líneas verticales estrechas (una textura diminuta repetida: casi no pesa)
+  const ribTex = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 4; const g = c.getContext('2d');
+    g.fillStyle = '#f2efe8'; g.fillRect(0, 0, 32, 4); g.fillStyle = '#c9c2b4'; g.fillRect(14, 0, 3, 4); g.fillStyle = '#ffffff'; g.fillRect(17, 0, 1, 4);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; return t; })();
+  const ribM = w => { const t = ribTex.clone(); t.repeat.set(w / .45, 1); t.needsUpdate = true; return new THREE.MeshStandardMaterial({ map: t, roughness: .85 }); };
+  const skin = (w, h, x, y, z, ry) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), ribM(w)); m.position.set(x, y, z); m.rotation.y = ry; m.receiveShadow = true; group.add(m); };
+  box(HW * 2 + T, H, .06, ribM(HW * 2 + T), cx, y0 + H / 2, Z1 + T / 2 + .04, { cast: false });
+  for (const sx of [-1, 1]) skin(HD * 2 + T, H, cx + sx * (HW + T / 2 + .006), y0 + H / 2, cz, sx * Math.PI / 2);                  // laterales
+  { const fz = Z0 - T / 2 - .006, sw = HW - DW / 2 + T / 2;
+    for (const sx of [-1, 1]) skin(sw, H, cx + sx * (DW / 2 + sw / 2), y0 + H / 2, fz, Math.PI);                                       // frente, a los lados de la puerta
+    skin(DW, H - 3.4, cx, y0 + 3.4 + (H - 3.4) / 2, fz, Math.PI); }                                                                    // sobre la puerta
   box(HW * 2 + T + .04, .5, .1, mat(0x9a948a, { roughness: .95 }), cx, y0 + .25, Z1 + T / 2 + .1, { cast: false });
   { const gold = mat(0xd9b24a, { metalness: .6, roughness: .35, emissive: 0x3a2a08 });
     box(.4, 3.4, .12, gold, cx, y0 + H - 3.6, Z1 + T / 2 + .13, { cast: false }); box(2, .4, .12, gold, cx, y0 + H - 2.9, Z1 + T / 2 + .13, { cast: false }); }
@@ -65,7 +75,12 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.textAlign = 'center'; draw(g); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
   const bgDark = (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, '#0b1730'); gr.addColorStop(1, '#1a0b30'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.strokeRect(10, 10, w - 20, h - 20); };
   // contorno de la «M» (u, v de 0 a 1, v hacia abajo): la misma forma para el emblema y la letra 3D
-  const MPTS = [[0, 1], [0, 0], [.2, 0], [.5, .46], [.8, 0], [1, 0], [1, 1], [.79, 1], [.79, .38], [.5, .8], [.21, .38], [.21, 1]];
+  // «M» moderna con curvas: dos arcos redondeados (u, v de 0 a 1, v hacia arriba); sirve igual para el canvas y para THREE.Shape
+  const mPath = (p, X, Y) => {
+    const L = (u, v) => p.lineTo(X(u), Y(v)), Q = (a, b, u, v) => p.quadraticCurveTo(X(a), Y(b), X(u), Y(v));
+    p.moveTo(X(0), Y(0)); L(0, .62); Q(0, 1, .25, 1); Q(.5, 1, .5, .7); Q(.5, 1, .75, 1); Q(1, 1, 1, .62); L(1, 0); L(.8, 0);
+    L(.8, .6); Q(.8, .8, .7, .8); Q(.6, .8, .6, .6); L(.6, 0); L(.4, 0); L(.4, .6); Q(.4, .8, .3, .8); Q(.2, .8, .2, .6); L(.2, 0); p.closePath();
+  };
   const stx = canvasTex(1024, 256, g => {
     bgDark(g, 1024, 256);
     g.fillStyle = '#ffd34d'; fit(g, 'MORIAH CHURCH', 900, 104, AB, 940); g.fillText('MORIAH CHURCH', 512, 112);
@@ -78,7 +93,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     const gr = g.createRadialGradient(128, 110, 10, 128, 128, 128); gr.addColorStop(0, '#24345e'); gr.addColorStop(1, '#0b1124'); g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 124, 0, 7); g.fill();
     g.strokeStyle = '#f5c542'; g.lineWidth = 10; g.beginPath(); g.arc(128, 128, 116, 0, 7); g.stroke();
     const mg = g.createLinearGradient(0, 60, 0, 196); mg.addColorStop(0, '#ffe27a'); mg.addColorStop(1, '#ff9a2e'); g.fillStyle = mg;
-    g.beginPath(); MPTS.forEach(([u, v], k) => g[k ? 'lineTo' : 'moveTo'](58 + u * 140, 66 + v * 124)); g.closePath(); g.fill();
+    g.beginPath(); mPath(g, u => 58 + u * 140, v => 190 - v * 124); g.fill();
   });
   const emb = new THREE.Mesh(new THREE.CircleGeometry(1.3, 40), new THREE.MeshStandardMaterial({ map: embTex, emissive: 0xffffff, emissiveMap: embTex, emissiveIntensity: .45 }));
   emb.position.set(cx - 8.2, y0 + H - 2.1, Z0 - .42); emb.rotation.y = Math.PI; group.add(emb);
@@ -102,13 +117,13 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const neonM = new THREE.MeshStandardMaterial({ color: 0x0a2a40, emissive: 0x34c8ff, emissiveIntensity: 1.8 });
   {
     const px = X1 + T / 2, mz = cz + 1.5, MW = 7.2, MH = 6;
-    const mShape = s => { const sh = new THREE.Shape(); MPTS.forEach(([u, v], k) => sh[k ? 'lineTo' : 'moveTo']((u - .5) * MW * s, (1 - v) * MH * s - (s - 1) * MH / 2)); sh.closePath(); return sh; };
+    const mShape = s => { const sh = new THREE.Shape(); mPath(sh, u => (u - .5) * MW * s, v => v * MH * s - (s - 1) * MH / 2); return sh; };
     box(.12, 8.2, 11, mat(0x10141c, { metalness: .5, roughness: .15 }), px + .06, y0 + 4.5, mz, { cast: false });
     for (const dz of [-5.35, 5.35]) box(.06, 8.2, .14, neonM, px + .14, y0 + 4.5, mz + dz, { cast: false });   // franjas de luz
-    const glow = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1.1), { depth: .12, bevelEnabled: false }), neonM);
+    const glow = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1.1), { depth: .12, bevelEnabled: false, curveSegments: 14 }), neonM);
     glow.position.set(px + .12, y0 + 1.9, mz); glow.rotation.y = Math.PI / 2; group.add(glow);
     const gold = new THREE.MeshStandardMaterial({ color: 0xffc94a, metalness: .25, roughness: .3, emissive: 0xd08a1a, emissiveIntensity: .55 });
-    const m3 = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1), { depth: .45, bevelEnabled: true, bevelSize: .06, bevelThickness: .06, bevelSegments: 1 }), gold);
+    const m3 = new THREE.Mesh(new THREE.ExtrudeGeometry(mShape(1), { depth: .45, bevelEnabled: true, bevelSize: .06, bevelThickness: .06, bevelSegments: 1, curveSegments: 14 }), gold);
     m3.position.set(px + .24, y0 + 1.9, mz); m3.rotation.y = Math.PI / 2; m3.castShadow = true; group.add(m3);
     const nameTex = canvasTex(1024, 128, g => { g.fillStyle = '#ffffff'; fit(g, 'MORIAH CHURCH', 900, 92, AB, 980); g.fillText('MORIAH CHURCH', 512, 98); });
     const nm = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, toneMapped: false }));
