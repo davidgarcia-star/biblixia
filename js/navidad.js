@@ -188,7 +188,16 @@
 
   function cartel() {
     var d = document.createElement('div'); d.className = 'nv-cartel'; d.setAttribute('role', 'note');
-    var verso = '<p>«He aquí, la virgen concebirá y dará a luz un hijo, y le pondrán por nombre Emmanuel, que traducido significa: Dios con nosotros.»</p><small>Mateo 1:23 (LBLA)</small>';
+    // un versículo navideño distinto cada día (LBLA)
+    var VERSOS = [
+      ['He aquí, la virgen concebirá y dará a luz un hijo, y le pondrán por nombre Emmanuel, que traducido significa: Dios con nosotros.', 'Mateo 1:23'],
+      ['Porque os ha nacido hoy, en la ciudad de David, un Salvador, que es Cristo el Señor.', 'Lucas 2:11'],
+      ['Gloria a Dios en las alturas, y en la tierra paz entre los hombres en quienes Él se complace.', 'Lucas 2:14'],
+      ['Y el Verbo se hizo carne, y habitó entre nosotros, y vimos su gloria, gloria como del unigénito del Padre, lleno de gracia y de verdad.', 'Juan 1:14']
+    ];
+    var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
+    var v = VERSOS[dia % VERSOS.length];
+    var verso = '<p>«' + v[0] + '»</p><small>' + v[1] + ' (LBLA)</small>';
     d.innerHTML = (anoNuevo ? '<b>🎄 ¡Feliz Navidad y próspero ' + anio + '! 🎆</b>' : '<b>🎄 ¡Feliz Navidad! 🎁</b>') + verso;
     return d;
   }

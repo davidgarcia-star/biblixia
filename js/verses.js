@@ -103,7 +103,7 @@ export const VERSES = [
   ["Hay un tiempo señalado para todo, y hay un tiempo para cada suceso bajo el cielo.", "Eclesiastés 3:1"],
   ["Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.", "Isaías 9:6"],
   ["Al de firme propósito guardarás en perfecta paz, porque en ti confía.", "Isaías 26:3"],
-  ["Sécase la hierba, marchítase la flor, mas la palabra de nuestro Dios permanece para siempre.", "Isaías 40:8"],
+  ["Se seca la hierba, se marchita la flor, mas la palabra de nuestro Dios permanece para siempre.", "Isaías 40:8"],
   ["Cuando pases por las aguas, yo estaré contigo, y si por los ríos, no te cubrirán; cuando pases por el fuego, no te quemarás, ni la llama te abrasará.", "Isaías 43:2"],
   ["Mas Él fue herido por nuestras transgresiones, molido por nuestras iniquidades. El castigo, por nuestra paz, cayó sobre Él, y por sus heridas hemos sido sanados.", "Isaías 53:5"],
   ["Porque mis pensamientos no son vuestros pensamientos, ni vuestros caminos mis caminos —declara el SEÑOR.", "Isaías 55:8"],
