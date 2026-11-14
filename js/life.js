@@ -352,6 +352,16 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       }
       const rib = new THREE.Mesh(new THREE.BoxGeometry(.012, .003, .2), mat(0xb3202a, { roughness: .6 })); rib.position.set(.01, .05, .12); rib.rotation.y = .15; bb.add(rib);
       bb.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
+      // taza de café humeante sobre un posavasos de corcho, junto a la Biblia abierta (para leer la Palabra con un cafecito)
+      const mx = cx - 3.62, mz = Z1 - 2.28, ty = fy + .48, mugM = mat(0x2f6f78, { roughness: .4 });
+      const parts = [
+        cyl(.07, .07, .008, mat(0xb08a5a, { roughness: 1 }), mx, ty + .004, mz, 16),
+        cyl(.045, .04, .095, mugM, mx, ty + .056, mz, 14),
+        cyl(.041, .041, .004, mat(0x3a2414, { roughness: .2 }), mx, ty + .094, mz, 14)
+      ];
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(.024, .007, 6, 12), mugM); handle.position.set(mx + .052, ty + .058, mz); group.add(handle); parts.push(handle);
+      for (const p of parts) { p.castShadow = false; p.receiveShadow = true; p.raycast = () => {}; }
+      steam(mx, ty + .17, mz);
     }
     {
       // planta grande en maceta (ficus de hoja de violín) en la esquina, junto al sofá y el ventanal
