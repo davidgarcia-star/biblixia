@@ -704,6 +704,23 @@ async function buildWorld(cfg) {
       const top = new THREE.Mesh(new THREE.TorusGeometry(.9, .12, 12, 40), M.gold); top.position.set(cx, CURB + 3.1, cz); top.userData.spin = true; group.add(top);
       addBox(cx - fr, cx + fr, cz - fr, cz + fr, CURB + .7);
       addBox(cx - .5, cx + .5, cz - .5, cz + .5, CURB + 3);
+      { // ocho chorros de agua que salen de la columna en arco y caen al estanque, con un aro de espuma donde salpican
+        if (!W.fountain) {
+          const c = document.createElement('canvas'); c.width = 64; c.height = 8; const g = c.getContext('2d');
+          for (let x = 0; x < 64; x++) { const a = .35 + .35 * Math.sin(x / 64 * Math.PI * 6) + .3 * Math.sin(x / 64 * Math.PI * 14); g.fillStyle = `rgba(235,248,255,${Math.max(.15, Math.min(1, a)).toFixed(2)})`; g.fillRect(x, 0, 1, 8); }
+          const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(3, 1); tex.colorSpace = THREE.SRGBColorSpace;
+          const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(.34, 2.4, 0), new THREE.Vector3(1.8, 3.05, 0), new THREE.Vector3(2.75, .66, 0));
+          W.fountain = {
+            tex, geo: new THREE.TubeGeometry(curve, 20, .045, 6, false),
+            mat: new THREE.MeshStandardMaterial({ map: tex, color: 0xd8f1ff, emissive: 0x6fa8c8, emissiveIntensity: .25, roughness: .1, transparent: true, opacity: .7, depthWrite: false }),
+            foamGeo: new THREE.RingGeometry(2.55, 2.95, 40), foam: [],
+            foamMat: new THREE.MeshStandardMaterial({ color: 0xf2fbff, roughness: .6, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+          };
+        }
+        const F = W.fountain;
+        for (let k = 0; k < 8; k++) { const j = new THREE.Mesh(F.geo, F.mat); j.position.set(cx, CURB, cz); j.rotation.y = k * Math.PI / 4 + Math.PI / 8; j.renderOrder = 2; group.add(j); }
+        const fm = new THREE.Mesh(F.foamGeo, F.foamMat); fm.rotation.x = -Math.PI / 2; fm.position.set(cx, CURB + .675, cz); fm.renderOrder = 2; group.add(fm); F.foam.push(fm);
+      }
       // Bancos
       for (const [bx, bz, rot] of [[cx, cz - 6.5, 0], [cx, cz + 6.5, 0], [cx - 6.5, cz, 1], [cx + 6.5, cz, 1]]) {
         const bw = rot ? .6 : 2.4, bd = rot ? 2.4 : .6;
@@ -2987,6 +3004,7 @@ function loopBody() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
+    if (world.fountain) { world.fountain.tex.offset.x = -t * 1.4; const s = 1 + Math.sin(t * 5) * .025; for (const f of world.fountain.foam) f.scale.set(s, s, 1); world.fountain.foamMat.opacity = .38 + Math.sin(t * 3.3) * .08; }
     if (world.fireflies) world.fireflies.update(t);
     if (world.camp) world.camp.update(t);
     if (world.priests) {
