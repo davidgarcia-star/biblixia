@@ -207,6 +207,25 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
       solid(kx - .3, kx + .3, kz - .3, kz + .3, ky + .2);
     }
+    { // dos mariposas que revolotean alrededor de los arbustos de los maceteros de la entrada, batiendo las alas
+      const wingG = new THREE.CircleGeometry(.055, 10); wingG.translate(.05, 0, 0);
+      for (const [px, col, ph] of [[cx - 1.6, 0xf2a33a, 0], [cx + 1.55, 0xf4f1e6, 2.1]]) {
+        const bfM = new THREE.MeshStandardMaterial({ color: col, roughness: .7, side: THREE.DoubleSide });
+        const bf = new THREE.Group(), wings = [];
+        const bodyB = new THREE.Mesh(new THREE.CylinderGeometry(.007, .007, .07, 5), mat(0x1c1a18)); bodyB.rotation.x = Math.PI / 2; bf.add(bodyB);
+        for (const s of [-1, 1]) { const piv = new THREE.Group(); const w = new THREE.Mesh(wingG, bfM); w.rotation.x = -Math.PI / 2; w.scale.set(s, 1, 1); piv.add(w); bf.add(piv); wings.push([piv, s]); }
+        bf.traverse(o => { if (o.isMesh) { o.castShadow = false; o.raycast = () => {}; } });
+        group.add(bf);
+        const pz = Z0 - .5, by = fy + 1.25;
+        houseUpd.push(t => {
+          const a = t * .9 + ph, r0 = .45 + Math.sin(t * .7 + ph) * .15;           // vuelo en lazos irregulares sobre el arbusto
+          bf.position.set(px + Math.cos(a) * r0, by + Math.sin(t * 2.3 + ph) * .14, pz + Math.sin(a * 1.3) * r0 * .8);
+          bf.rotation.y = -a * 1.15 + Math.PI;
+          const f = Math.sin(t * 22 + ph) * .9 + .3;                                 // aleteo rápido
+          for (const [piv, s] of wings) piv.rotation.z = s * f;
+        });
+      }
+    }
     { // timbre con videocámara junto a la puerta: placa negra brillante, lente y aro de luz azul que respira suavemente
       const bx = cx + 1.05, bz = Z0 - T / 2 - .085, by = fy + 1.3;     // sobre el panel de madera, debajo del aplique
       box(.075, .17, .03, mat(0x15171a, { roughness: .15, metalness: .4 }), bx, by, bz, { cast: false });
@@ -256,7 +275,9 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // de noche las lámparas del techo brillan más cálidas y se ven desde la calle a través del ventanal (applyTime las ajusta)
     M.homeLamps = [lampM]; if (M.lamp && M.lamp.emissiveIntensity > 5) lampM.emissiveIntensity = 4.5;
     for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
-    sign('MI CASA', '', cx, fy + H - .25, Z0 - .14, Math.PI);
+    // letrero de pie sobre el borde del alero de la entrada (antes quedaba metido bajo el alero y el techo, y se cortaba)
+    sign('MI CASA', '', cx, fy + H + .01, Z0 - 1.86, Math.PI).scale.setScalar(.8);
+    box(2.12, .04, .06, darkM, cx, fy + H - .25, Z0 - 1.83, { cast: false });         // listón que lo sostiene
     const glass = winGlass;
     // patio trasero: terraza de madera y piscina (no se puede caminar dentro)
     const pX = cx - 2, pZ = Z1 + 5, pW = 8, pD = 3.6;
