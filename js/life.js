@@ -639,6 +639,32 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
     {
+      // vitrina de vidrio sobre el mostrador con panes dulces, croissants y bizcochitos en dos niveles
+      const vx = cx - 2.75, vz = Z1 - 2, vb = y0 + 1.10, VW = .95, VH = .42, VD = .6;
+      box(VW, .04, VD, mat(0x2a2420, { roughness: .4 }), vx, vb + .02, vz, { cast: false });                 // base oscura
+      box(VW - .04, .012, VD - .06, mat(0xe8e2d4, { roughness: .5 }), vx, vb + .24, vz, { cast: false });      // repisa del medio
+      box(VW, .02, VD, mat(0x2a2420, { roughness: .4 }), vx, vb + VH + .01, vz, { cast: false });              // tapa
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(.02, VH, .02, frameM, vx + sx * (VW / 2 - .01), vb + VH / 2, vz + sz * (VD / 2 - .01), { cast: false });
+      const vid = new THREE.Mesh(new THREE.BoxGeometry(VW - .02, VH - .02, VD - .02), new THREE.MeshStandardMaterial({ color: 0xdff2ff, transparent: true, opacity: .16, roughness: .05, metalness: .1, depthWrite: false }));
+      vid.position.set(vx, vb + VH / 2, vz); vid.renderOrder = 2; group.add(vid);
+      const panM = mat(0xc98a3e, { roughness: .7 }), panM2 = mat(0xe0a858, { roughness: .65 }), bizM = mat(0xf3e6d0, { roughness: .6 }), fresaM = mat(0xc0283a, { roughness: .4 });
+      const bolita = new THREE.SphereGeometry(1, 10, 8);
+      const pieza = (m, x, y, z, sx, sy, sz, ry = 0) => { const p = new THREE.Mesh(bolita, m); p.scale.set(sx, sy, sz); p.position.set(x, y, z); p.rotation.y = ry; group.add(p); return p; };
+      for (let k = 0; k < 4; k++) {                                 // nivel de abajo: panes dulces redondos y croissants
+        const px = vx - .33 + k * .22;
+        pieza(panM, px, vb + .075, vz - .1, .07, .035, .07);
+        const cr = pieza(panM2, px + .02, vb + .07, vz + .14, .085, .03, .04, .5 + k * .3);
+        pieza(panM2, cr.position.x - .05, vb + .065, cr.position.z + .02, .03, .022, .028);
+        pieza(panM2, cr.position.x + .05, vb + .065, cr.position.z - .02, .03, .022, .028);
+      }
+      for (let k = 0; k < 4; k++) {                                 // nivel de arriba: bizcochitos con merengue y una fresa
+        const px = vx - .33 + k * .22, py = vb + .25;
+        cyl(.05, .045, .05, bizM, px, py + .03, vz, 12);
+        pieza(bizM, px, py + .065, vz, .045, .025, .045);
+        pieza(fresaM, px, py + .095, vz, .015, .015, .015);
+      }
+    }
+    {
       // pizarra del menú colgada del techo sobre el mostrador, escrita con tiza
       const c = document.createElement('canvas'); c.width = 512; c.height = 256; const g = c.getContext('2d');
       g.fillStyle = '#23302a'; g.fillRect(0, 0, 512, 256);
