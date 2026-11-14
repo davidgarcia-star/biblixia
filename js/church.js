@@ -41,10 +41,10 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     return b;
   };
 
-  // --- piso, paredes y techo ---
+  // --- piso, paredes (negras por dentro) y techo ---
   box(HW * 2, .1, HD * 2, mat(0x3a3236, { roughness: .8 }), cx, y0 + .05, cz, { cast: false });                 // alfombra
   solid(X0, X1, Z0, Z1, y0 + .1);
-  const wallM = mat(0xf2efe8, { roughness: .9 }), darkM = mat(0x1c1a22, { roughness: .8 });
+  const wallM = mat(0x0d0d10, { roughness: .85 }), darkM = mat(0x1c1a22, { roughness: .8 });
   const wall = (ax, az, bx, bz, h = H, m = wallM) => { const w = Math.abs(bx - ax) || T, d = Math.abs(bz - az) || T; const o = box(w, h, d, m, (ax + bx) / 2, y0 + h / 2, (az + bz) / 2); blockers.push(o); solid(ax - T / 2, bx + T / 2, az - T / 2, bz + T / 2, 999); return o; };
   const DW = 3.2;
   wall(X0, Z1, X1, Z1, H, darkM); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1); wall(X0, Z0, cx - DW / 2, Z0); wall(cx + DW / 2, Z0, X1, Z0);
@@ -296,13 +296,19 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   drawScreen(0, 0);
   box(15.5, 6.3, .3, mat(0x050508), cx, y0 + SH + 4.2, Z1 - .5);
   const screen = box(15, 6, .05, new THREE.MeshBasicMaterial({ map: scrTex }), cx, y0 + SH + 4.2, Z1 - .67, { cast: false, recv: false }); screen.rotation.y = Math.PI;
-  // luces de escenario (haces de colores)
-  const beams = [];
-  const beamGeo = new THREE.ConeGeometry(1.4, 7, 20, 1, true); beamGeo.translate(0, -3.5, 0);
-  [0xff3a8a, 0x3ab8ff, 0xffd34d, 0x8a5aff, 0x3affb0].forEach((c, i) => {
-    const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const b = new THREE.Mesh(beamGeo, m); b.position.set(cx - 8 + i * 4, y0 + H - .3, SZ - 1); group.add(b); beams.push({ b, ph: i * 1.3 });
-    box(.5, .4, .5, mat(0x111111, { metalness: .8 }), cx - 8 + i * 4, y0 + H - .3, SZ - 1, { cast: false });
+  // luces que se mueven: haces de colores sobre la tarima y por todo el techo del templo (paredes negras para que resalten);
+  // geometría y 6 materiales compartidos, sin luces reales, para que no pese
+  const beams = [], beamMats = [];
+  const beamGeo = new THREE.ConeGeometry(1.4, 7, 16, 1, true); beamGeo.translate(0, -3.5, 0);
+  for (let k = 0; k < 6; k++) beamMats.push(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .17, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+  const housingM = mat(0x111111, { metalness: .8 });
+  const spots = [];
+  for (let i = 0; i < 5; i++) spots.push([cx - 8 + i * 4, SZ - 1]);                                   // tarima
+  for (const z of [cz - 5, cz, cz + 5]) for (const dx of [-10, -4, 4, 10]) spots.push([cx + dx, z]);    // techo del santuario
+  spots.forEach(([x, z], i) => {
+    const b = new THREE.Mesh(beamGeo, beamMats[i % 6]); b.position.set(x, y0 + H - .3, z); group.add(b);
+    beams.push({ b, ph: i * 1.3, sp: .5 + (i % 4) * .22 });
+    box(.5, .4, .5, housingM, x, y0 + H - .3, z, { cast: false });
   });
   // polvo dorado que flota lentamente dentro de los haces de luz del escenario
   const MOTES = 90, moteBase = new Float32Array(MOTES * 4), motePos = new Float32Array(MOTES * 3);
@@ -429,7 +435,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
       neonM.emissiveIntensity = 1.6 + Math.sin(t * 2) * .5;   // el neón de la «M» late suave
-      for (const b of beams) { b.b.rotation.z = Math.sin(t * .7 + b.ph) * .45; b.b.rotation.x = Math.cos(t * .5 + b.ph) * .3; }
+      for (const b of beams) { b.b.rotation.z = Math.sin(t * b.sp * 1.4 + b.ph) * .55; b.b.rotation.x = Math.cos(t * b.sp + b.ph) * .4; }
+      beamMats.forEach((m, k) => m.color.setHSL((t * .06 + k / 6) % 1, 1, .55));   // los colores van cambiando
       // cada golpe (|sin(8t)| llega a 0) hace temblar los platillos, que se calman poco a poco
       cymbals.forEach((cy, i) => { const ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = .2 + Math.sin(t * 38 + i) * amp; cy.rotation.z = Math.cos(t * 31 + i) * amp * .6; });
       for (const d of dance) {
