@@ -386,6 +386,19 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.5, .1, .6, mat(0x9aa4ae, { metalness: .8, roughness: .2 }), X0 + .45, fy + .93, cz + 2.2);          // fregadero
     cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
+    { // estufa: tope de vitrocerámica negra con 4 hornillas, perillas al frente, ventana y tirador del horno, y una olla tapada
+      const sx = X0 + .45, sz = cz - 1, front = X0 + .75, glassM = mat(0x0c0d10, { roughness: .12, metalness: .3 });
+      const ringM = mat(0x3a1a14, { roughness: .5 }), knobM = mat(0x1a1b1e, { roughness: .4 }), steelM = mat(0xc0c8d0, { metalness: .9, roughness: .22 });
+      box(.54, .012, .64, glassM, sx, fy + .906, sz, { cast: false });
+      for (const [dx, dz, r0] of [[-.12, -.15, .09], [-.12, .15, .07], [.12, -.15, .07], [.12, .15, .09]]) cyl(r0, r0, .004, ringM, sx + dx, fy + .914, sz + dz, 20).castShadow = false;
+      for (const dz of [-.24, -.08, .08, .24]) { const k = cyl(.025, .025, .03, knobM, front + .012, fy + .82, sz + dz, 12); k.rotation.z = Math.PI / 2; k.castShadow = false; }
+      box(.006, .32, .5, glassM, front + .003, fy + .42, sz, { cast: false });                                  // ventana del horno
+      const hd = cyl(.012, .012, .5, steelM, front + .04, fy + .66, sz, 8); hd.rotation.x = Math.PI / 2; hd.castShadow = false; // tirador
+      const potM = mat(0x9aa2aa, { metalness: .85, roughness: .3 });
+      cyl(.085, .08, .12, potM, sx - .12, fy + .976, sz - .15, 18);                                            // olla sobre la hornilla grande
+      cyl(.088, .088, .012, potM, sx - .12, fy + 1.042, sz - .15, 18).castShadow = false;                      // tapa
+      cyl(.012, .016, .025, knobM, sx - .12, fy + 1.06, sz - .15, 8).castShadow = false;                       // agarradera de la tapa
+    }
     { // nevera de acero: junta entre congelador y refrigerador, y dos tiradores verticales de acero inoxidable
       const steelM = mat(0xc8ced4, { metalness: .9, roughness: .22 });
       box(.006, .012, .66, mat(0x8a9096, { roughness: .5 }), X0 + .763, fy + 1.3, cz - 1.9, { cast: false });
