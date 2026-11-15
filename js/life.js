@@ -398,6 +398,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       cyl(.085, .08, .12, potM, sx - .12, fy + .976, sz - .15, 18);                                            // olla sobre la hornilla grande
       cyl(.088, .088, .012, potM, sx - .12, fy + 1.042, sz - .15, 18).castShadow = false;                      // tapa
       cyl(.012, .016, .025, knobM, sx - .12, fy + 1.06, sz - .15, 8).castShadow = false;                       // agarradera de la tapa
+      // paño de cocina a cuadros colgado del tirador del horno
+      const tc = document.createElement('canvas'); tc.width = tc.height = 64; const tg = tc.getContext('2d');
+      tg.fillStyle = '#f4efe4'; tg.fillRect(0, 0, 64, 64); tg.fillStyle = 'rgba(178,34,52,.75)';
+      for (let k = 0; k < 64; k += 16) { tg.fillRect(k, 0, 8, 64); tg.fillRect(0, k, 64, 8); }
+      const tt = new THREE.CanvasTexture(tc); tt.colorSpace = THREE.SRGBColorSpace; tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(2, 3);
+      const towel = new THREE.Mesh(new THREE.BoxGeometry(.008, .34, .2), new THREE.MeshStandardMaterial({ map: tt, roughness: .95 }));
+      towel.position.set(front + .055, fy + .5, sz + .1); towel.castShadow = false; towel.raycast = () => {}; group.add(towel);
+    }
+    { // jarra de cerámica con cucharas de madera sobre el mueble de la cocina
+      const jx = X0 + .32, jz = cz + 1.35, top = fy + .945, woodM = mat(0xa8784a, { roughness: .75 });
+      cyl(.06, .052, .15, mat(0xe9e3d6, { roughness: .35 }), jx, top + .075, jz, 16).castShadow = false;
+      [[-.02, .01, .18], [.02, -.015, -.15], [0, .02, .05]].forEach(([dx, dz, tilt]) => {
+        const h = cyl(.007, .007, .26, woodM, jx + dx, top + .2, jz + dz, 6); h.rotation.z = tilt; h.castShadow = false;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(.022, 10, 6).scale(1, 1.4, .45), woodM);
+        head.position.set(jx + dx - Math.sin(tilt) * .14, top + .33, jz + dz); head.castShadow = false; group.add(head);
+      });
     }
     { // nevera de acero: junta entre congelador y refrigerador, y dos tiradores verticales de acero inoxidable
       const steelM = mat(0xc8ced4, { metalness: .9, roughness: .22 });
