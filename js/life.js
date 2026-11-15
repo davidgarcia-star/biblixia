@@ -447,6 +447,18 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const shade = new THREE.Mesh(new THREE.CylinderGeometry(.09, .15, .2, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffd48a, emissiveIntensity: .75, roughness: .9, side: THREE.DoubleSide }));
       shade.position.set(nx + .06, fy + 1.02, nz + .03); shade.castShadow = false; group.add(shade);
       solid(nx - .25, nx + .25, nz - .22, nz + .22, fy + .67);
+      {
+        // la Biblia sobre la mesita de noche: tapas de cuero negro, cantos dorados y una cruz dorada en la portada
+        // («Lámpara es a mis pies tu palabra, y luz para mi camino», Salmo 119:105)
+        const bib = new THREE.Group(), coverM = mat(0x17140f, { roughness: .55 }), goldM = mat(0xd4ad4f, { metalness: .85, roughness: .3 });
+        const part = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); bib.add(o); };
+        part(.15, .006, .21, coverM, 0, .003, 0); part(.15, .006, .21, coverM, 0, .039, 0); part(.008, .042, .21, coverM, -.071, .021, 0);
+        part(.14, .03, .2, goldM, .003, .021, 0);                               // hojas con canto dorado
+        part(.012, .002, .09, goldM, .006, .043, 0); part(.05, .002, .012, goldM, .006, .043, -.018); // cruz en la tapa
+        bib.position.set(nx - .12, fy + .67, nz - .06); bib.rotation.y = .28;
+        bib.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
+        group.add(bib);
+      }
     }
     {
       // pantuflas de felpa en el piso junto a la cama, listas para levantarse (decorativas, sin colisión)
