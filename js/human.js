@@ -315,7 +315,8 @@ export function createHuman(opt = {}) {
   }
   let skirt = null;
   if (skirtOn) {
-    skirt = mesh(latheUp([[.31, -.76], [.308, -.73], [.28, -.55], [.245, -.38], [.21, -.22], [.18, -.09], [.165, .02], [.158, .075], [.15, .08]], 56), skirtM, hips, 0, 0, 0);
+    // falda/vestido a la altura de la rodilla (la rodilla está a -0,44): ya no llega a los tobillos
+    skirt = mesh(latheUp([[.262, -.5], [.26, -.475], [.245, -.38], [.218, -.24], [.188, -.1], [.168, .02], [.158, .075], [.15, .08]], 56), skirtM, hips, 0, 0, 0);
     skirt.scale.set(1, 1, .86);
     mesh(new THREE.CylinderGeometry(.16, .16, .035, 32), skirtM, hips, 0, .065, 0).scale.set(1, 1, .82);
   }

@@ -24,7 +24,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const person = (opts, x, z, ry, pose, { y = y0 + .1, anim = null } = {}) => {   // y0 + .1: sobre la alfombra (antes los pies quedaban enterrados)
     const f = opts.gender ? opts.gender === 'f' : r() < .5;
     const h = createHuman({ detail: .45, gender: f ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: [0x22243a, 0x1a1a1e, 0x2b3a57][(r() * 3) | 0],
-      skirt: [0x22243a, 0x7a3b6e, 0x2d3a6a][(r() * 3) | 0], legwear: f ? ['falda', 'vestido', 'pantalon'][(r() * 3) | 0] : 'pantalon', topStyle: STYLES[(r() * STYLES.length) | 0],
+      skirt: [0x22243a, 0x7a3b6e, 0x2d3a6a][(r() * 3) | 0], legwear: f ? ['falda', 'vestido', 'pantalon', 'pantalon'][(r() * 4) | 0] : 'pantalon', topStyle: STYLES[(r() * STYLES.length) | 0],
       hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e][(r() * 3) | 0], tie: 0x8a1c24, name: '', ...opts });
     const A = h.arms;
     if (pose === 'up') { A[0].shoulder.rotation.set(-2.75, 0, -.35); A[1].shoulder.rotation.set(-2.75, 0, .35); A[0].elbow.rotation.x = A[1].elbow.rotation.x = -.25; h.head.rotation.x = -.35; }
@@ -236,13 +236,15 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // --- SANTUARIO: tarima, pantalla gigante, luces, banda, predicador ---
   const SZ = Z1 - 6.5, SH = .9;                                   // inicio de la tarima y su altura
   box(HW * 2 - .6, SH, Z1 - SZ, mat(0x15131a, { roughness: .5 }), cx, y0 + SH / 2, (SZ + Z1) / 2); solid(X0, X1, SZ, Z1, y0 + SH);
-  addRamp(cx - 1.5, cx + 1.5, SZ - 2.4, SZ, y0 + .1, y0 + SH);   // escalones al centro
-  // escalones macizos (bloque desde el piso hasta la huella) con borde claro: ya no quedan láminas flotando
-  { const stepM = mat(0x2a2630, { roughness: .6 }), noseM = mat(0xd8d0c0);
-    for (let k = 0; k < 4; k++) {
-      const top = y0 + .1 + (k + 1) * (SH - .1) / 4, z = SZ - 2.4 + (k + .5) * .6;
-      box(3, top - y0 - .01, .6, stepM, cx, y0 + (top - y0 - .01) / 2, z, { cast: false });
-      box(3.02, .05, .62, noseM, cx, top - .015, z, { cast: false });
+  // escaleras en las dos esquinas del frente de la tarima (ya no en el medio): bloques macizos con borde claro
+  { const stepM = mat(0x2a2630, { roughness: .6 }), noseM = mat(0xd8d0c0), SW = 2.4;
+    for (const sx of [X0 + .4 + SW / 2, X1 - .4 - SW / 2]) {
+      addRamp(sx - SW / 2, sx + SW / 2, SZ - 2.4, SZ, y0 + .1, y0 + SH);
+      for (let k = 0; k < 4; k++) {
+        const top = y0 + .1 + (k + 1) * (SH - .1) / 4, z = SZ - 2.4 + (k + .5) * .6;
+        box(SW, top - y0 - .01, .6, stepM, sx, y0 + (top - y0 - .01) / 2, z, { cast: false });
+        box(SW + .02, .05, .62, noseM, sx, top - .015, z, { cast: false });
+      }
     } }
   // pantalla LED con letras de alabanza
   // a media resolución (se dibuja igual, en coordenadas de 1024×512): 4 veces menos para subir a la tarjeta gráfica
@@ -357,7 +359,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // personas de rodillas en el altar frente a la tarima
   [-6.5, -4.5, 4.5, 6.5].forEach((dx, k) => { const z = SZ - 3.2 + (k % 2) * .4; person({}, cx + dx, z, 0, k % 2 ? 'cry' : 'kneelUp', { anim: k % 2 ? 'sob' : 'bow' }); solid(cx + dx - .35, cx + dx + .35, z - .35, z + .35, y0 + 1.2); });
   // frente al altar, algunos caen al piso tocados por el Espíritu, se quedan tendidos un rato y se levantan
-  [-9.5, -2.5, 2.5, 9.5].forEach((dx, k) => { const z = SZ - 1.6; person({}, cx + dx, z, 0, 'up', { anim: 'fall' }); dance[dance.length - 1].ph = k * 2.4; });
+  [-8, -2.5, 2.5, 8].forEach((dx, k) => { const z = SZ - 1.6; person({}, cx + dx, z, 0, 'up', { anim: 'fall' }); dance[dance.length - 1].ph = k * 2.4; });
 
   // --- acción: adorar ---
   acts.push({ x: cx, z: SZ - 4.5, y: y0, label: '🙌 Adorar a Dios', fn: () => fx('worship'), r: 2.5 });

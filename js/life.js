@@ -15,7 +15,7 @@ const STYLES = ['camiseta', 'camisa', 'abrigo', 'mangalarga', 'chaqueta', 'traje
 function person(r, { kid = false, detail = .45, gender } = {}) {
   const f = gender ? gender === 'f' : r() < .5;
   const o = { detail, gender: f ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * BOTS.length) | 0],
-    skirt: BOTS[(r() * BOTS.length) | 0], legwear: f ? ['falda', 'pantalon', 'vestido'][(r() * 3) | 0] : 'pantalon', topStyle: kid ? 'camiseta' : STYLES[(r() * STYLES.length) | 0],
+    skirt: BOTS[(r() * BOTS.length) | 0], legwear: f ? ['falda', 'pantalon', 'vestido', 'pantalon'][(r() * 4) | 0] : 'pantalon', topStyle: kid ? 'camiseta' : STYLES[(r() * STYLES.length) | 0],
     hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e, 0x2a1a10][(r() * 4) | 0], tie: 0x8a1c24, shoes: 0xf2f2f0, name: '' };
   const h = createHuman(o); if (kid) h.root.scale.setScalar(.62 + r() * .1);
   return h;
