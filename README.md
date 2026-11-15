@@ -84,3 +84,9 @@ También se puede compilar con [Bun](https://bun.sh/): `bun build-bun.mjs`.
 - **Banda completa en Moriah Church** con instrumentos reales: batería con logo en el bombo, guitarra eléctrica, acústica, bajo, piano de cola, teclado de dos pisos, congas, saxofón, trompeta y trombón, cantantes, coro y danzarinas con banderas. Más gente brincando frente a la tarima, en el pasillo y personas tendidas en el piso.
 - **Gente más variada**: tonos de piel equilibrados (más personas morenas y negras) y algunas personas más gorditas, dentro y fuera de la iglesia.
 - **Iglesia más rápida**: la gente bajo techo ya no proyecta sombra del sol y desde 11 m se dibuja su versión sencilla (de ~4.200 a ~2.400 piezas por cuadro dentro del templo).
+
+## 📱 Redes sociales
+- YouTube: https://www.youtube.com/@PROFETALUISDAVIDGARCIA.OFICIAL
+- Facebook: https://www.facebook.com/david.estebangarcia.58/
+- Instagram: https://www.instagram.com/luis_david_garcia/
+- TikTok: https://www.tiktok.com/@miproaa
