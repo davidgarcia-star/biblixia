@@ -292,6 +292,11 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // de noche las lámparas del techo brillan más cálidas y se ven desde la calle a través del ventanal (applyTime las ajusta)
     M.homeLamps = [lampM]; if (M.lamp && M.lamp.emissiveIntensity > 5) lampM.emissiveIntensity = 4.5;
     for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
+    // luz empotrada bajo el alero de la entrada (aro negro + difusor cálido): de noche ilumina la llegada a la puerta
+    for (const lz of [Z0 - .65, Z0 - 1.4]) {
+      cyl(.13, .13, .02, darkM, cx, fy + H - .45, lz, 20).castShadow = false;
+      cyl(.1, .1, .02, lampM, cx, fy + H - .462, lz, 20).castShadow = false;
+    }
     // letrero de pie sobre el borde del alero de la entrada (antes quedaba metido bajo el alero y el techo, y se cortaba)
     sign('MI CASA', '', cx, fy + H + .01, Z0 - 1.86, Math.PI).scale.setScalar(.8);
     box(2.12, .04, .06, darkM, cx, fy + H - .25, Z0 - 1.83, { cast: false });         // listón que lo sostiene
