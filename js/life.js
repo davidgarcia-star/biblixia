@@ -586,6 +586,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const mugMs = [mat(0xf7f4ee, { roughness: .35 }), mat(0xc0392b, { roughness: .35 }), mat(0x2a5ab8, { roughness: .35 })], cafM = mat(0x3a2414, { roughness: .2 });
       const penMs = [mat(0x2a5ab8, { roughness: .5 }), mat(0xd03a2a, { roughness: .5 }), mat(0x1a1a1e, { roughness: .5 })];
       const asaG = new THREE.TorusGeometry(.024, .006, 6, 12, Math.PI); asaG.rotateZ(-Math.PI / 2);
+      const binG = new THREE.CylinderGeometry(.13, .1, .3, 14, 1, true), binM = new THREE.MeshStandardMaterial({ color: 0x2a2d33, metalness: .6, roughness: .45, side: THREE.DoubleSide });
+      const paperG = new THREE.IcosahedronGeometry(.045, 0), paperM = mat(0xf4f2ec, { roughness: .95, flatShading: true });
       const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
       desks.forEach(([dx, dz], k) => {
         box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
@@ -602,6 +604,12 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           const hx = dx + .64, hz = dz + .22;
           cyl(.032, .032, .085, pcM, hx, ty + .0425, hz, 10);
           penMs.forEach((pm, q) => { const pen = cyl(.005, .005, .14, pm, hx + (q - 1) * .014, ty + .1, hz + (q % 2 ? .01 : -.008), 5); pen.rotation.z = (q - 1) * .18; pen.castShadow = false; }); }
+        // papelera de malla metálica junto al escritorio, con una bola de papel arrugado adentro
+        { const px = dx + 1.08, pz = dz + .15;
+          const bin = new THREE.Mesh(binG, binM); bin.position.set(px, y + .15, pz); bin.castShadow = true; group.add(bin);
+          cyl(.1, .1, .008, binM, px, y + .004, pz, 14).castShadow = false;                     // fondo de la papelera
+          const ball = new THREE.Mesh(paperG, paperM); ball.position.set(px + .02, y + .05, pz - .01); ball.rotation.set(k, k * 2, 0); group.add(ball);
+          solid(px - .13, px + .13, pz - .13, pz + .13, y + .3, y); }
         if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
       });
       // dispensador de agua en cada piso
