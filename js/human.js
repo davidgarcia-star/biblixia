@@ -252,6 +252,10 @@ function nameTexture(name, color) {
 }
 
 // ---------- Constructor ----------
+// tonos de piel de la gente del juego (República Dominicana): equilibrados, con más morenos y personas negras
+export const PEOPLE_SKINS = [0xf1cbb0, 0xe2b28e, 0xc99069, 0xb07650, 0x96603e, 0x7e4e30, 0x683f25, 0x56321d, 0x452716, 0x3a2012];
+// ~1 de cada 4 adultos es más gordito
+export const randomStout = r => r() < .26 ? 1.12 + r() * .26 : 1;
 export function createHuman(opt = {}) {
   const o = Object.assign({
     gender: 'm', outfit: 'modern', skin: 0xb57c57, hairColor: 0x1d130c, hair: 'short', eye: 0x5a3a22,
@@ -561,6 +565,14 @@ export function createHuman(opt = {}) {
   }
   // Unir las piezas que se mueven juntas (mismo hueso y mismo material): ~55 piezas → ~20 (mucho más rápido de dibujar)
   compactParts(root, new Set([...eyes, skirt].filter(Boolean)));
+  // persona más gordita (stout: 1.1 a 1.4): cadera, cintura y barriga más anchas; la cabeza, los brazos y los pies quedan normales
+  if (o.stout > 1) {
+    const k = o.stout, kz = k * 1.06, belly = 1 + (k - 1) * .6, sq = Math.sqrt(k);
+    hips.scale.set(k, 1, kz); spine.scale.set(1, 1, belly);
+    neck.scale.set(1 / k, 1, 1 / (kz * belly));
+    for (const a of arms) a.shoulder.scale.set(1 / sq, 1, 1 / (kz * belly) * sq);      // brazos un poco más gruesos
+    for (const l of legs) { l.thigh.scale.set(sq / k, 1, sq / kz); l.ankle.scale.set(1 / sq, 1, 1 / sq); }
+  }
   const H = { root, hips, spine, chest, neck, head, legs, arms, eyes, skirt, skinSkirt: o._skinSkirt || null, phase: 0, swimPh: 0, opts: o, staff: !!o.staff };
   root.userData.isHuman = true; root.userData.hum = H;
   return H;

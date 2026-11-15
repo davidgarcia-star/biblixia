@@ -1,15 +1,16 @@
 import * as THREE from 'three';
-import { createHuman, bakeStatic } from './human.js';
+import { createHuman, bakeStatic, PEOPLE_SKINS, randomStout } from './human.js';
 import { pace } from './pace.js';
 import { nameSprite } from './characters.js';
+import { buildBand } from './band.js';
 
 /* =========================================================
    IGLESIA MORIAH CHURCH – SAN CRISTÓBAL (en todos los niveles)
    Lobby con recepción y baños, santuario con tarima, pantalla grande,
-   grupo de alabanza (batería, guitarra, bajo, teclado y cantantes),
+   banda completa (batería, guitarras, bajo, piano, teclados, congas, vientos), cantantes, coro y danzarinas,
    predicador y congregación adorando: saltan, mueven la cabeza, se arrodillan, se postran y caen al piso.
    ========================================================= */
-const SKINS = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
+const SKINS = PEOPLE_SKINS;
 const TOPS = [0x1f5c70, 0x7a3b6e, 0xc0392b, 0x2e2e38, 0xe0a31a, 0x2e7d4f, 0x2a4a9a, 0xe87aa0, 0xf2f0e8, 0x8a5a2a];
 const STYLES = ['camisa', 'camiseta', 'mangalarga', 'traje', 'chaqueta'];
 
@@ -23,20 +24,23 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   const dance = [], seats = [];
   const person = (opts, x, z, ry, pose, { y = y0 + .1, anim = null } = {}) => {   // y0 + .1: sobre la alfombra (antes los pies quedaban enterrados)
     const f = opts.gender ? opts.gender === 'f' : r() < .5;
-    const h = createHuman({ detail: .45, gender: f ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: [0x22243a, 0x1a1a1e, 0x2b3a57][(r() * 3) | 0],
+    const h = createHuman({ detail: .45, gender: f ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: [0x22243a, 0x1a1a1e, 0x2b3a57][(r() * 3) | 0],
       skirt: [0x22243a, 0x7a3b6e, 0x2d3a6a][(r() * 3) | 0], legwear: f ? ['falda', 'vestido', 'pantalon', 'pantalon'][(r() * 4) | 0] : 'pantalon', topStyle: STYLES[(r() * STYLES.length) | 0],
-      hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e][(r() * 3) | 0], tie: 0x8a1c24, name: '', ...opts });
+      hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e][(r() * 3) | 0], tie: 0x8a1c24, name: '', stout: randomStout(r), ...opts });
     const A = h.arms;
     if (pose === 'up') { A[0].shoulder.rotation.set(-2.75, 0, -.35); A[1].shoulder.rotation.set(-2.75, 0, .35); A[0].elbow.rotation.x = A[1].elbow.rotation.x = -.25; h.head.rotation.x = -.35; }
     if (pose === 'one') { A[1].shoulder.rotation.set(-2.8, 0, .3); A[1].elbow.rotation.x = -.2; h.head.rotation.x = -.3; }
     if (pose === 'cry') { for (const l of h.legs) { l.thigh.rotation.x = -1.5; l.knee.rotation.x = 2.4; } h.hips.position.y = .45; for (const a of A) { a.shoulder.rotation.x = -1.9; a.elbow.rotation.x = -2.2; } h.spine.rotation.x = .45; h.head.rotation.x = .4; }
     if (pose === 'kneelUp') { for (const l of h.legs) { l.thigh.rotation.x = -.1; l.knee.rotation.x = 1.55; } h.hips.position.y = .5; A[0].shoulder.rotation.set(-2.6, 0, -.4); A[1].shoulder.rotation.set(-2.6, 0, .4); h.head.rotation.x = -.4; }
+    if (pose === 'open') { A[0].shoulder.rotation.set(0, 0, -1.3); A[1].shoulder.rotation.set(0, 0, 1.3); A[0].elbow.rotation.x = A[1].elbow.rotation.x = -.2; }
     if (pose === 'clap') { for (const a of A) { a.shoulder.rotation.x = -1.2; a.elbow.rotation.x = -1.3; } A[0].shoulder.rotation.z = .35; A[1].shoulder.rotation.z = -.35; }
     if (pose === 'guitar') { A[0].shoulder.rotation.set(-.8, 0, .5); A[0].elbow.rotation.x = -1.4; A[1].shoulder.rotation.set(-.5, 0, -.2); A[1].elbow.rotation.x = -1.2; }
     if (pose === 'keys' || pose === 'drum') { for (const l of (pose === 'drum' ? h.legs : [])) { l.thigh.rotation.x = -1.5; l.knee.rotation.x = 1.5; } if (pose === 'drum') h.hips.position.y = .52; for (const a of A) { a.shoulder.rotation.x = -.9; a.elbow.rotation.x = -.8; } }
     if (pose === 'mic') { A[1].shoulder.rotation.set(-1.4, 0, -.1); A[1].elbow.rotation.x = -1.9; A[0].shoulder.rotation.set(-2.5, 0, -.4); h.head.rotation.x = -.15; }
     if (pose === 'preach') { A[1].shoulder.rotation.set(-2.2, 0, .5); A[1].elbow.rotation.x = -.4; A[0].shoulder.rotation.set(-.9, 0, -.2); A[0].elbow.rotation.x = -1.1; }
-    const b = bakeStatic(h.root); b.position.set(x, y, z); b.rotation.y = ry; group.add(b);
+    // bajo techo el sol no llega: la gente no proyecta sombra (la mitad de trabajo para la tarjeta gráfica)
+    // y desde 11 m se dibuja su versión sencilla de una sola pieza
+    const b = bakeStatic(h.root, [], false); b.position.set(x, y, z); b.rotation.y = ry; b.userData.noCast = true; b.userData.lodFar = 11; group.add(b);
     if (anim) dance.push({ o: b, kind: anim, y, ry, ph: r() * 6 });
     return b;
   };
@@ -289,24 +293,10 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     moteGeo.attributes.position.needsUpdate = true;
   };
   updMotes(0);
-  // banda: batería, guitarra, bajo, teclado, cantantes con micrófonos
-  const yS = y0 + SH, metal = mat(0xc0c8d0, { metalness: .9, roughness: .2 });
-  const drumX = cx, drumZ = Z1 - 2.2;
-  box(2.4, .25, 2, mat(0x2a2430), drumX, yS + .12, drumZ, { cast: false });
-  for (const [dx, dz, rr, hh] of [[0, .6, .32, .5], [-.55, .2, .18, .2], [.55, .2, .18, .2], [.9, .5, .22, .35]]) { const d = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, hh, 20), mat(0xc0392b, { metalness: .3, roughness: .3 })); d.position.set(drumX + dx, yS + .25 + (dz === .6 ? .3 : .75), drumZ - dz); d.rotation.x = dz === .6 ? Math.PI / 2 : .2; group.add(d); }
-  const cymbals = [];   // platillos: vibran al ritmo del baterista (ver update)
-  for (const cxx of [-1, 1]) { const cy = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .02, 24), mat(0xd4a72c, { metalness: 1, roughness: .2 })); cy.position.set(drumX + cxx * 1, yS + 1.3, drumZ - .1); cy.rotation.x = .2; group.add(cy); cymbals.push(cy);
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.05, 6), metal); st.position.set(drumX + cxx * 1, yS + .25 + .525, drumZ - .1); group.add(st); }   // soporte hasta la tarima
+  // banda completa con instrumentos reales, cantantes, coro y danzarinas (js/band.js)
+  const yS = y0 + SH;
   await pace();
-  person({ gender: 'm', topStyle: 'camiseta' }, drumX, drumZ + .4, Math.PI, 'drum', { y: yS + .25, anim: 'drum' });
-  const gtr = (x, col, gender) => { person({ gender, topStyle: 'camisa' }, x, Z1 - 3.2, Math.PI, 'guitar', { y: yS, anim: 'sway' }); const g = box(.85, .3, .06, mat(col, { roughness: .3 }), x - .1, yS + 1.05, Z1 - 3.5); g.rotation.z = .5; };
-  gtr(cx - 3.5, 0xb8742e, 'm'); gtr(cx + 3.5, 0x1a1a1e, 'f');
-  box(1.4, .1, .45, mat(0x111111), cx + 6.2, yS + 1, Z1 - 3.3); box(1.3, .03, .3, mat(0xf2f2f0), cx + 6.2, yS + 1.06, Z1 - 3.25);
-  person({ gender: 'm', topStyle: 'mangalarga' }, cx + 6.2, Z1 - 2.8, Math.PI, 'keys', { y: yS, anim: 'sway' });
-  for (const [x, g] of [[cx - 6, 'f'], [cx - 1.6, 'f'], [cx + 1.6, 'm']]) {
-    const st = new THREE.Mesh(new THREE.CylinderGeometry(.015, .015, 1.5, 6), metal); st.position.set(x, yS + .75, SZ + 1.4); group.add(st);
-    person({ gender: g, topStyle: g === 'f' ? 'chaqueta' : 'camisa' }, x, SZ + 1.9, Math.PI, 'mic', { y: yS, anim: 'sway' });
-  }
+  const { cymbals } = await buildBand({ group, solid, dance, r, cx, Z1, SZ, yS, SKINS, TOPS });
   await pace();
   // predicador con su púlpito de cristal
   const pulp = box(.9, 1.15, .6, glass, cx, yS + .58, SZ + .7, { cast: false });
@@ -325,16 +315,6 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   person({ gender: 'm', topStyle: 'traje', top: 0x15151a, pants: 0x15151a, tie: 0xb3122e, beard: { color: 0x1d130c, len: .04 } }, cx, SZ + 1.2, Math.PI, 'preach', { y: yS, anim: 'preach' });
   // altavoces
   for (const sx of [-1, 1]) box(.9, 2.6, .8, mat(0x0c0c0e), cx + sx * (HW - 1), yS + 1.3, Z1 - 3);
-  // monitores de piso (retorno) inclinados hacia cada cantante, con rejilla y luz de encendido azul
-  { const wedM = mat(0x111114, { roughness: .7 }), grillM = mat(0x2c2e33, { roughness: .95, metalness: .3 }), ledM = new THREE.MeshBasicMaterial({ color: 0x3aa0ff });
-    for (const x of [cx - 6, cx - 1.6, cx + 1.6]) {
-      const w = new THREE.Group(); w.position.set(x, yS + .225, SZ + .75); w.rotation.x = -.45; group.add(w);
-      const body = new THREE.Mesh(new THREE.BoxGeometry(.56, .32, .45), wedM); body.castShadow = true; body.receiveShadow = true; w.add(body);
-      const gr = new THREE.Mesh(new THREE.BoxGeometry(.5, .25, .012), grillM); gr.position.set(0, .01, .227); w.add(gr);
-      const led = new THREE.Mesh(new THREE.BoxGeometry(.025, .012, .006), ledM); led.position.set(.22, -.135, .234); w.add(led);
-      solid(x - .3, x + .3, SZ + .5, SZ + 1, yS + .4, yS);
-    } }
-
   await pace();
   // --- CONGREGACIÓN: sillas y personas adorando ---
   const chairM = mat(0x2a3a6a, { roughness: .8 });
@@ -348,8 +328,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
         if (r() >= .62) seats.push({ x: x + .27, z, y: y0 });
         else {
           // mucho movimiento: saltan, mueven la cabeza, se arrodillan y se postran hasta el piso
-          const p = r(); const pose = p < .38 ? 'up' : p < .48 ? 'one' : p < .55 ? 'clap' : p < .7 ? 'cry' : p < .86 ? 'kneelUp' : 'up';
-          const anim = pose === 'up' ? (r() < .65 ? 'jump' : 'head') : pose === 'one' ? 'head' : pose === 'clap' ? 'clap' : pose === 'cry' ? 'sob' : 'bow';
+          const p = r(); const pose = p < .45 ? 'up' : p < .55 ? 'one' : p < .63 ? 'clap' : p < .74 ? 'cry' : p < .86 ? 'kneelUp' : 'up';
+          const anim = pose === 'up' ? (r() < .82 ? 'jump' : 'head') : pose === 'one' ? (r() < .5 ? 'jump' : 'head') : pose === 'clap' ? 'clap' : pose === 'cry' ? 'sob' : 'bow';
           person({}, x + .27, z + .35, 0, pose, { anim });
         }
       }
@@ -359,7 +339,35 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // personas de rodillas en el altar frente a la tarima
   [-6.5, -4.5, 4.5, 6.5].forEach((dx, k) => { const z = SZ - 3.2 + (k % 2) * .4; person({}, cx + dx, z, 0, k % 2 ? 'cry' : 'kneelUp', { anim: k % 2 ? 'sob' : 'bow' }); solid(cx + dx - .35, cx + dx + .35, z - .35, z + .35, y0 + 1.2); });
   // frente al altar, algunos caen al piso tocados por el Espíritu, se quedan tendidos un rato y se levantan
-  [-8, -2.5, 2.5, 8].forEach((dx, k) => { const z = SZ - 1.6; person({}, cx + dx, z, 0, 'up', { anim: 'fall' }); dance[dance.length - 1].ph = k * 2.4; });
+  [-8, -5.2, -2.5, 2.5, 5.2, 8].forEach((dx, k) => { const z = SZ - 1.6 + (k % 2) * .3; person({}, cx + dx, z, 0, 'up', { anim: 'fall' }); dance[dance.length - 1].ph = k * 1.7; });
+  await pace();
+  // más personas tendidas en el piso frente al altar (de espaldas, con los brazos abiertos)
+  const taken = [-8, -5.2, -2.5, 2.5, 5.2, 8].map((dx, k) => [cx + dx, SZ - 1.6 + (k % 2) * .3 - .9]);
+  [-6.5, -4.5, 4.5, 6.5].forEach((dx, k) => taken.push([cx + dx, SZ - 3.2 + (k % 2) * .4]));       // los que están de rodillas
+  const free = (x, z, d) => taken.every(([a, b]) => Math.hypot(a - x, b - z) > d);
+  for (let k = 0, tries = 0; k < 9 && tries < 200; tries++) {
+    const x = cx + (r() - .5) * 17, z = SZ - 2.7 + r() * .9;
+    if (!free(x, z - .8, 1.3)) continue;
+    const b = person({}, x, z, 0, 'open', { y: y0 + .22 });
+    b.rotation.order = 'YXZ'; b.rotation.set(-1.52, (r() - .5) * .8, 0);
+    taken.push([x, z - .8]); solid(x - .45, x + .45, z - 1.7, z + .1, y0 + .5); k++;
+  }
+  await pace();
+  // multitud frente a la tarima: brincan, levantan las manos y aplauden
+  for (let k = 0, tries = 0; k < 22 && tries < 400; tries++) {
+    const x = cx + (r() - .5) * 17.5, z = SZ - .95 + r() * .5;
+    if (!free(x, z, .78)) continue;
+    const p = r(), pose = p < .6 ? 'up' : p < .8 ? 'one' : 'clap';
+    person({}, x, z, (r() - .5) * .5, pose, { anim: pose === 'clap' ? 'clap' : r() < .8 ? 'jump' : 'head' });
+    taken.push([x, z]); solid(x - .28, x + .28, z - .28, z + .28, 999); k++;
+    if (k % 6 === 0) await pace();
+  }
+  // y en el pasillo del centro, entre las sillas, también brincan
+  for (let k = 0; k < 4; k++) {
+    const z = LZ + 3.3 + k * 1.7, x = cx + (k % 2 ? .8 : -.8);
+    if (z > SZ - 3.5) break;
+    person({}, x, z, 0, 'up', { anim: 'jump' }); solid(x - .28, x + .28, z - .28, z + .28, 999);
+  }
 
   // --- acción: adorar ---
   acts.push({ x: cx, z: SZ - 4.5, y: y0, label: '🙌 Adorar a Dios', fn: () => fx('worship'), r: 2.5 });
@@ -403,7 +411,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       for (const b of beams) { b.b.rotation.z = Math.sin(t * b.sp * 1.4 + b.ph) * .55; b.b.rotation.x = Math.cos(t * b.sp + b.ph) * .4; }
       beamMats.forEach((m, k) => m.color.setHSL((t * .06 + k / 6) % 1, 1, .55));   // los colores van cambiando
       // cada golpe (|sin(8t)| llega a 0) hace temblar los platillos, que se calman poco a poco
-      cymbals.forEach((cy, i) => { const ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = .2 + Math.sin(t * 38 + i) * amp; cy.rotation.z = Math.cos(t * 31 + i) * amp * .6; });
+      cymbals.forEach((cy, i) => { const b0 = cy.userData.b0 || (cy.userData.b0 = [cy.rotation.x, cy.rotation.z]), ph = (t * 8 / Math.PI + i * .5) % 1, amp = .09 * Math.exp(-ph * 4); cy.rotation.x = b0[0] + Math.sin(t * 38 + i) * amp; cy.rotation.z = b0[1] + Math.cos(t * 31 + i) * amp * .6; });
       for (const d of dance) {
         if (d.kind === 'jump') d.o.position.y = d.y + Math.max(0, Math.sin(t * 7 + d.ph)) * .5;
         else if (d.kind === 'head') { d.o.rotation.x = Math.sin(t * 9 + d.ph) * .14; d.o.rotation.z = Math.sin(t * 4.5 + d.ph) * .05; }   // mueve la cabeza al ritmo
@@ -416,6 +424,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
         else if (d.kind === 'clap') d.o.position.y = d.y + Math.abs(Math.sin(t * 4 + d.ph)) * .03;
         else if (d.kind === 'sob') d.o.rotation.x = Math.sin(t * 7 + d.ph) * .02;
         else if (d.kind === 'drum') d.o.position.y = d.y + Math.abs(Math.sin(t * 8)) * .03;
+        else if (d.kind === 'flag') { d.o.rotation.y = d.ry + Math.sin(t * 2.2 + d.ph) * .7; d.o.position.y = d.y + Math.max(0, Math.sin(t * 4.4 + d.ph)) * .12; }   // danzan girando con la bandera
         else if (d.kind === 'preach') d.o.rotation.y = d.ry + Math.sin(t * .6) * .35;
       }
     },

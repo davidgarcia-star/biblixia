@@ -35,6 +35,7 @@ Necesita un servidor web (usa módulos de JavaScript). Con GitHub Pages: *Settin
 - `js/characters.js` – personajes bíblicos, mensajes y regalos
 - `js/tabernacle.js` – el tabernáculo y el campamento
 - `js/scenes.js` – el arca de Noé, los animales, David y Goliat
+- `js/band.js` – banda de alabanza de la iglesia (instrumentos, cantantes, coro y danzarinas)
 - `js/verses.js` – versículos (LBLA)
 - `js/vendor/` – three.js (licencia MIT)
 
@@ -75,3 +76,7 @@ También se puede compilar con [Bun](https://bun.sh/): `bun build-bun.mjs`.
 - **Conducir más fácil en el celular**: botones ◀ IZQUIERDA y ▶ DERECHA en lugar del volante; ACELERAR y RETROCEDER siguen igual.
 - **Minimapa más pequeño** para que no tape la pantalla (tócalo para ver el mapa completo).
 - **Adán y Eva en el auto**: cuando uno maneja, el otro se sienta a su lado y se baja por la otra puerta.
+- **Escaleras sólidas en todo el juego**: de lado son un objeto macizo (antes se atravesaban como si fueran transparentes); se suben por el frente o brincando.
+- **Banda completa en Moriah Church** con instrumentos reales: batería con logo en el bombo, guitarra eléctrica, acústica, bajo, piano de cola, teclado de dos pisos, congas, saxofón, trompeta y trombón, cantantes, coro y danzarinas con banderas. Más gente brincando frente a la tarima, en el pasillo y personas tendidas en el piso.
+- **Gente más variada**: tonos de piel equilibrados (más personas morenas y negras) y algunas personas más gorditas, dentro y fuera de la iglesia.
+- **Iglesia más rápida**: la gente bajo techo ya no proyecta sombra del sol y desde 11 m se dibuja su versión sencilla (de ~4.200 a ~2.400 piezas por cuadro dentro del templo).

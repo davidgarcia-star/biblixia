@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createHuman, animateHuman, bakeStatic } from './human.js';
+import { createHuman, animateHuman, bakeStatic, PEOPLE_SKINS, randomStout } from './human.js';
 import { pace } from './pace.js';
 import { buildFood, buildChairs, buildBedroomTV, buildBathroom } from './hogar.js';
 
@@ -7,7 +7,7 @@ import { buildFood, buildChairs, buildBedroomTV, buildBathroom } from './hogar.j
    VIDA EN LA CIUDAD: peatones, niños, comerciantes,
    la casa del jugador y un edificio de oficinas con varios pisos.
    ========================================================= */
-const SKINS = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
+const SKINS = PEOPLE_SKINS;
 const TOPS = [0x1f5c70, 0x7a3b6e, 0xc0392b, 0x2e2e38, 0xe0a31a, 0x2e7d4f, 0x2a4a9a, 0xe87aa0, 0xf2f0e8, 0x8a5a2a];
 const BOTS = [0x2b3a57, 0x22243a, 0x1a1a1e, 0x6a4a2a, 0x5a6a3a, 0xe8dcc0];
 const STYLES = ['camiseta', 'camisa', 'abrigo', 'mangalarga', 'chaqueta', 'traje'];
@@ -16,7 +16,7 @@ function person(r, { kid = false, detail = .45, gender } = {}) {
   const f = gender ? gender === 'f' : r() < .5;
   const o = { detail, gender: f ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * BOTS.length) | 0],
     skirt: BOTS[(r() * BOTS.length) | 0], legwear: f ? ['falda', 'pantalon', 'vestido', 'pantalon'][(r() * 4) | 0] : 'pantalon', topStyle: kid ? 'camiseta' : STYLES[(r() * STYLES.length) | 0],
-    hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e, 0x2a1a10][(r() * 4) | 0], tie: 0x8a1c24, shoes: 0xf2f2f0, name: '' };
+    hair: f ? 'long' : 'short', hairColor: [0x1d130c, 0x3a2314, 0x5a3a1e, 0x2a1a10][(r() * 4) | 0], tie: 0x8a1c24, shoes: 0xf2f2f0, name: '', stout: kid ? 1 : randomStout(r) };
   const h = createHuman(o); if (kid) h.root.scale.setScalar(.62 + r() * .1);
   return h;
 }
@@ -61,7 +61,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     m.position.set(x, y, z); m.rotation.y = ry; group.add(m); return m;
   };
   const staticHuman = (opts, x, y, z, ry, pose) => {
-    const h = createHuman({ detail: .5, ...opts });
+    const h = createHuman({ detail: .5, stout: randomStout(r), ...opts });
     if (pose === 'sit') { for (const l of h.legs) { l.thigh.rotation.x = -1.5; l.knee.rotation.x = 1.5; } h.hips.position.y = .52; for (const a of h.arms) { a.shoulder.rotation.x = -.6; a.elbow.rotation.x = -.7; } }
     if (pose === 'work') { for (const a of h.arms) { a.shoulder.rotation.x = -.7; a.elbow.rotation.x = -.9; } }
     const b = bakeStatic(h.root); b.position.set(x, y, z); b.rotation.y = ry; group.add(b);
@@ -556,7 +556,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           const hx = dx + .64, hz = dz + .22;
           cyl(.032, .032, .085, pcM, hx, ty + .0425, hz, 10);
           penMs.forEach((pm, q) => { const pen = cyl(.005, .005, .14, pm, hx + (q - 1) * .014, ty + .1, hz + (q % 2 ? .01 : -.008), 5); pen.rotation.z = (q - 1) * .18; pen.castShadow = false; }); }
-        if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * 6) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
+        if (r() < .75) staticHuman({ gender: r() < .5 ? 'f' : 'm', skin: SKINS[(r() * SKINS.length) | 0], top: TOPS[(r() * TOPS.length) | 0], pants: BOTS[(r() * 3) | 0], topStyle: ['camisa', 'traje', 'mangalarga'][(r() * 3) | 0], legwear: 'pantalon', hair: r() < .5 ? 'long' : 'short' }, dx, y, dz - .6, 0, 'sit');
       });
       // dispensador de agua en cada piso
       const wx = X1 - 1, wz = Z1 - 1;
@@ -640,8 +640,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         solid(bx - bw / 2 - .1, bx + bw / 2 + .1, bz - .32, bz + .32, by + bh / 2, y);
       }
       // trabajadores de pie conversando
-      if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * 6) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
-      if (i > 0) staticHuman({ gender: 'f', skin: SKINS[(r() * 6) | 0], top: 0xc0392b, topStyle: 'chaqueta', pants: 0x22243a, legwear: 'pantalon', hair: 'long' }, cx + 6, y, cz + 1.5, 1.6);
+      if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * SKINS.length) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
+      if (i > 0) staticHuman({ gender: 'f', skin: SKINS[(r() * SKINS.length) | 0], top: 0xc0392b, topStyle: 'chaqueta', pants: 0x22243a, legwear: 'pantalon', hair: 'long' }, cx + 6, y, cz + 1.5, 1.6);
     }
     // planta baja: cafetería con barista
     const y0 = fy(0);
@@ -765,7 +765,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const lt = new THREE.CanvasTexture(lc); lt.colorSpace = THREE.SRGBColorSpace;
       add(new THREE.PlaneGeometry(1.6, .4), new THREE.MeshStandardMaterial({ map: lt, emissive: 0xffffff, emissiveMap: lt, emissiveIntensity: .3 }), 0, 2.0, -.62).rotation.y = Math.PI;
       // comerciante detrás del puesto
-      const v = createHuman({ detail: .5, gender: si % 2 ? 'm' : 'f', skin: SKINS[(r() * 6) | 0], top: S.col, topStyle: 'camiseta', pants: 0x3a3d45, legwear: 'pantalon', hair: si % 2 ? 'short' : 'long' });
+      const v = createHuman({ detail: .5, gender: si % 2 ? 'm' : 'f', skin: SKINS[(r() * SKINS.length) | 0], top: S.col, topStyle: 'camiseta', pants: 0x3a3d45, legwear: 'pantalon', hair: si % 2 ? 'short' : 'long' });
       for (const a of v.arms) { a.shoulder.rotation.x = -.5; a.elbow.rotation.x = -.8; }
       const vb = bakeStatic(v.root); vb.position.set(0, 0, .95); vb.rotation.y = Math.PI; g.add(vb);
       const wx = cx, wz = sz + (ry ? 1.6 : -1.6);

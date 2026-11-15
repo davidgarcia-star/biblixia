@@ -7,7 +7,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VERSES } from './verses.js';
-import { createHuman, animateHuman, bakeStatic, bakeInPlace, bakeColored, FAR_MAT, physM } from './human.js';
+import { createHuman, animateHuman, bakeStatic, bakeInPlace, bakeColored, FAR_MAT, physM, PEOPLE_SKINS, randomStout } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
 import { buildArk, buildJordan, buildValley } from './scenes.js';
 import { buildPlaces } from './places.js';
@@ -1058,13 +1058,13 @@ async function buildWorld(cfg) {
     // Gente en la playa: familias sobre toallas bajo sombrillas, personas conversando, bañistas en la orilla y niños jugando
     {
       W.beachFolk = []; W.kids = W.kids || [];
-      const BSK = [0xf1cbb0, 0xe8b896, 0xc68e6a, 0xa8714f, 0x8a5636, 0x5e3a24];
+      const BSK = PEOPLE_SKINS;
       const shirts = [0xe74c3c, 0x2e86de, 0xf1c40f, 0x16a085, 0xffffff, 0xff7f50, 0x8e44ad, 0x1abc9c];
       const shorts = [0x1f3a5f, 0x2c3e50, 0x6d8a9e, 0xc0a080, 0x34495e];
       const spots = [O - 30, O - 22, O - 14].flatMap(x => [Zc - 46, Zc - 26, Zc + 22, Zc + 44, Zc + 70].map(z => [x + (r() - .5) * 4, z + (r() - .5) * 8])).filter(([, z]) => z > O + 6 && z < O + T + SZ - 6);
       const umbCols = [0xe74c3c, 0x2e86de, 0xf1c40f, 0x16a085, 0xff7f50];
       const poleM = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: .5, metalness: .3 });
-      const person = (k, extra = {}) => createHuman({ detail: .45, gender: k % 2 ? 'f' : 'm', skin: BSK[(r() * 6) | 0], top: shirts[(r() * shirts.length) | 0], topStyle: 'camiseta', pants: shorts[(r() * shorts.length) | 0], hair: k % 2 ? (r() < .5 ? 'long' : 'ponytail') : 'short', hairColor: [0x1d130c, 0x3a2314, 0x6a4a2a, 0x0e0a08][(r() * 4) | 0], ...extra });
+      const person = (k, extra = {}) => createHuman({ detail: .45, gender: k % 2 ? 'f' : 'm', skin: BSK[(r() * BSK.length) | 0], stout: randomStout(r), top: shirts[(r() * shirts.length) | 0], topStyle: 'camiseta', pants: shorts[(r() * shorts.length) | 0], hair: k % 2 ? (r() < .5 ? 'long' : 'ponytail') : 'short', hairColor: [0x1d130c, 0x3a2314, 0x6a4a2a, 0x0e0a08][(r() * 4) | 0], ...extra });
       spots.slice(0, 7).forEach(([x, z], i) => {
         // sombrilla y toalla
         const um = new THREE.Group(); um.position.set(x, 0, z); group.add(um);
@@ -1423,6 +1423,7 @@ async function buildHumanLOD(W, fast = false) {
     for (const k of ['hips', 'spine', 'chest', 'neck', 'head']) cp(h[k], lo[k]);
     for (let i = 0; i < 2; i++) { for (const k of ['thigh', 'knee', 'ankle']) cp(h.legs[i] && h.legs[i][k], lo.legs[i] && lo.legs[i][k]); for (const k of ['shoulder', 'elbow', 'hand']) cp(h.arms[i] && h.arms[i][k], lo.arms[i] && lo.arms[i][k]); }
     const far = bakeColored(lo.root); far.visible = false;
+    if (root.userData.noCast) far.traverse(m => { if (m.isMesh) m.castShadow = false; });
     const near = root.children.slice();
     root.add(far); root.userData.hasLOD = true; delete root.userData.bakedHum;
     W.humanLOD.push({ root, far, near, isFar: false });
@@ -1434,7 +1435,8 @@ function updateHumanLOD() {
   for (const e of world.humanLOD) {
     if (!e.root.visible) continue;
     _lv.setFromMatrixPosition(e.root.matrixWorld);
-    const d = Math.hypot(_lv.x - cp.x, _lv.z - cp.z), far = e.isFar ? d > LOD_FAR - 3 : d > LOD_FAR;
+    // cada grupo puede pasar antes a su versión sencilla (la gente de la iglesia: es mucha y está bajo techo)
+    const lf = e.root.userData.lodFar || LOD_FAR, d = Math.hypot(_lv.x - cp.x, _lv.z - cp.z), far = e.isFar ? d > lf - 2 : d > lf;
     if (far !== e.isFar) { e.isFar = far; for (const c of e.near) c.visible = !far; }
     e.far.visible = far && d < LOD_HIDE;
   }
@@ -1722,9 +1724,9 @@ function updateMate(dt, t) {
         sp = Math.min(MT.swim ? swimSp : d > 7 ? (P.turbo ? TURBO : RUN) : d > 3.5 ? RUN * .9 : WALK, (d - 1.6) * 3.2);
         if (inWater && !MT.swim) sp *= .6;
         const ux = dx / d, uz = dz / d, nx = MT.pos.x + ux * sp * dt, nz = MT.pos.z + uz * sp * dt;
-        if (!blocked(nx, nz, MT.pos.y, true, mateGender())) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
-        else if (!blocked(nx, MT.pos.z, MT.pos.y, true, mateGender())) MT.pos.x = nx;
-        else if (!blocked(MT.pos.x, nz, MT.pos.y, true, mateGender())) MT.pos.z = nz;
+        if (!blocked(nx, nz, MT.pos.y, true, mateGender(), MT.pos)) { MT.pos.x = nx; MT.pos.z = nz; MT.stuck = 0; }
+        else if (!blocked(nx, MT.pos.z, MT.pos.y, true, mateGender(), MT.pos)) MT.pos.x = nx;
+        else if (!blocked(MT.pos.x, nz, MT.pos.y, true, mateGender(), MT.pos)) MT.pos.z = nz;
         else { MT.stuck += dt; sp = 0; }
         let df = Math.atan2(ux, uz) - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 8);
       } else { let df = P.heading - MT.heading; df = Math.atan2(Math.sin(df), Math.cos(df)); MT.heading += df * Math.min(1, dt * 2); }
@@ -1814,7 +1816,16 @@ function avisoBano(tag) {
   const now = performance.now(); if (now - avisoBanoT < 2500) return; avisoBanoT = now;
   sound.hurt(); toast(tag === 'bano-f' ? '🚺 Este baño es solo para damas' : '🚹 Este baño es solo para caballeros', '#ffd34d');
 }
-function blocked(x, z, y, swimmer = false, gender = null) {
+// Escaleras y rampas sólidas en todo el juego: solo se entra por el frente (el lado bajo) o desde arriba;
+// de lado son un objeto macizo (antes se atravesaban como si fueran transparentes). Se pueden subir brincando.
+// `from` = posición actual: si ya está sobre la rampa, sigue caminando por ella sin trabarse.
+const onRamp = (c, p) => p && p.x + RADIUS > c.minX && p.x - RADIUS < c.maxX && p.z + RADIUS > c.minZ && p.z - RADIUS < c.maxZ;
+function rampBlocks(c, x, z, y, from) {
+  if (onRamp(c, from)) return false;
+  if (Math.min(c.ramp.y0, c.ramp.y1) > y + 1.75) return false;     // rampa de un piso de arriba: se pasa por debajo
+  return topOf(c, z) > y + STEP;
+}
+function blocked(x, z, y, swimmer = false, gender = null, from = null) {
   const sw = swimmer && canSwim();
   const g = gender || (save.player && save.player.gender) || 'm';
   if (world.npcs && y < 2) for (const n of world.npcs) if (!n.treasure && !n.ship && Math.hypot(x - n.x, z - n.z) < RADIUS + .28) return true;
@@ -1825,7 +1836,7 @@ function blocked(x, z, y, swimmer = false, gender = null) {
     if (sw && c.tag === 'sea') continue;
     const bano = c.tag === 'bano-f' || c.tag === 'bano-m';
     if (bano && (c.tag === 'bano-f') === (g === 'f')) continue;
-    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) continue; if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) { if (bano && !gender) avisoBano(c.tag); return true; } }
+    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) { if (rampBlocks(c, x, z, y, from)) return true; continue; } if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) { if (bano && !gender) avisoBano(c.tag); return true; } }
   }
   return false;
 }
@@ -2564,8 +2575,8 @@ function update(dt) {
 
   fwdHeld = !!(keys.KeyW || keys.ArrowUp);
   // Movimiento con colisiones por eje
-  const nx = P.pos.x + vx * dt; if (!blocked(nx, P.pos.z, P.pos.y, true)) P.pos.x = nx;
-  const nz = P.pos.z + vz * dt; if (!blocked(P.pos.x, nz, P.pos.y, true)) P.pos.z = nz;
+  const nx = P.pos.x + vx * dt; if (!blocked(nx, P.pos.z, P.pos.y, true, null, P.pos)) P.pos.x = nx;
+  const nz = P.pos.z + vz * dt; if (!blocked(P.pos.x, nz, P.pos.y, true, null, P.pos)) P.pos.z = nz;
 
   // Agarrarse del borde y subir: en el aire, empujando hacia adelante (flecha arriba / W / joystick)
   if (P.climb) { climbStep(dt); jumpPressed = false; return; }
@@ -2624,7 +2635,7 @@ function update(dt) {
     b.obj.getWorldPosition(tmpV);
     if (Math.abs(tmpV.y - P.pos.y) > 1.6) continue;
     const dx = P.pos.x - tmpV.x, dz = P.pos.z - tmpV.z, d = Math.hypot(dx, dz), min = b.r + RADIUS;
-    if (d < min && d > 1e-4) { const push = (min - d); const nx2 = P.pos.x + dx / d * push, nz2 = P.pos.z + dz / d * push; if (!blocked(nx2, nz2, P.pos.y)) { P.pos.x = nx2; P.pos.z = nz2; } P.speed *= .6; }
+    if (d < min && d > 1e-4) { const push = (min - d); const nx2 = P.pos.x + dx / d * push, nz2 = P.pos.z + dz / d * push; if (!blocked(nx2, nz2, P.pos.y, false, null, P.pos)) { P.pos.x = nx2; P.pos.z = nz2; } P.speed *= .6; }
   }
   // Sonidos de los animales: fuertes de cerca, suaves de lejos
   if (world.ark) for (const a of world.ark.lodItems.concat(world.ark.insideItems)) {
