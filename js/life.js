@@ -594,6 +594,26 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           bl.castShadow = true; group.add(bl);
         }
         solid(px - .25, px + .25, pz - .25, pz + .25, y + pH + .5, y); }
+      // extintor rojo sobre su soporte de piso, con manguera negra, manómetro y letrero «EXTINTOR» (seguridad de la oficina)
+      { const ex = X1 - .45, ez = Z1 - 2.1, redM = mat(0xc4161c, { roughness: .32, metalness: .15 }), blkM = mat(0x16171a, { roughness: .5 }), steelM = mat(0xb8bdc4, { metalness: .85, roughness: .25 });
+        box(.34, .025, .34, blkM, ex, y + .013, ez, { cast: false });                                   // base del soporte
+        box(.035, 1.75, .035, steelM, ex + .14, y + .875, ez);                                          // poste del soporte
+        box(.05, .05, .2, steelM, ex + .1, y + .72, ez, { cast: false });                               // gancho que sostiene el extintor
+        cyl(.085, .085, .5, redM, ex, y + .32, ez, 18);                                                  // cuerpo del cilindro
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(.085, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), redM); dome.position.set(ex, y + .57, ez); dome.castShadow = true; group.add(dome);
+        cyl(.03, .035, .07, blkM, ex, y + .68, ez, 10);                                                  // válvula
+        box(.16, .018, .035, blkM, ex - .05, y + .73, ez, { cast: false }).rotation.z = .25;             // palanca
+        const gauge = cyl(.022, .022, .012, mat(0xf2f2ee, { roughness: .4 }), ex - .035, y + .68, ez, 12); gauge.rotation.z = Math.PI / 2; gauge.castShadow = false; // manómetro
+        const hose = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(ex - .02, y + .66, ez + .03), new THREE.Vector3(ex - .1, y + .55, ez + .07), new THREE.Vector3(ex - .1, y + .3, ez + .07), new THREE.Vector3(ex - .09, y + .16, ez + .05)]), 12, .012, 6), blkM); group.add(hose); // manguera
+        box(.005, .14, .1, mat(0xf4f1ea, { roughness: .6 }), ex - .086, y + .34, ez, { cast: false });   // etiqueta de instrucciones
+        const c = document.createElement('canvas'); c.width = 128; c.height = 160; const g = c.getContext('2d');
+        g.fillStyle = '#c4161c'; g.fillRect(0, 0, 128, 160); g.fillStyle = '#fff'; g.textAlign = 'center';
+        g.beginPath(); g.moveTo(64, 22); g.bezierCurveTo(30, 60, 40, 96, 64, 104); g.bezierCurveTo(88, 96, 98, 60, 64, 22); g.fill();   // llama
+        g.font = '800 22px system-ui, sans-serif'; g.fillText('EXTINTOR', 64, 140);
+        const st = new THREE.CanvasTexture(c); st.colorSpace = THREE.SRGBColorSpace;
+        const plate = new THREE.Mesh(new THREE.PlaneGeometry(.2, .25), new THREE.MeshStandardMaterial({ map: st, roughness: .5, emissive: 0x330000 }));
+        plate.position.set(ex + .115, y + 1.6, ez); plate.rotation.y = -Math.PI / 2; group.add(plate);
+        solid(ex - .18, ex + .18, ez - .18, ez + .18, y + 1.75, y); }
       // fotocopiadora con bandejas de papel, tapa oscura y panel de control con pantallita verde
       if (i > 0) {
         const kx = X0 + .9, kz = Z1 - 2.6, cpM = mat(0xdcdcd8, { roughness: .45 }), dkM = mat(0x3a3d44, { roughness: .4 });
