@@ -166,6 +166,24 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
       wall.position.set(px + sx * (gap / 2 + (ww / 2 - gap / 2 - 1) / 2), 4.5, pz + 2); P.add(wall); out.live.push({ kind: 'wave', obj: wall, base: 4.5 });
       addBox(px + (sx < 0 ? -ww / 2 : gap / 2), px + (sx < 0 ? -gap / 2 : ww / 2), pz + 2 - L2 / 2, pz + 2 + L2 / 2, 999);
     }
+    // peces que nadan dentro de las paredes de agua, a la vista desde el camino seco (Éxodo 15:8)
+    const fishGeo = new THREE.SphereGeometry(.22, 10, 6).scale(.45, .55, 1.6), tailGeo = new THREE.ConeGeometry(.17, .3, 4).rotateX(-Math.PI / 2).scale(.25, 1, 1);
+    const fishMats = [0xc9d3dc, 0xe0a040, 0x5a7f9a, 0xd8664a].map(c => std({ color: c, roughness: .4, metalness: .25 }));
+    const fishes = [];
+    for (let k = 0; k < 14; k++) {
+      const sx = k % 2 ? 1 : -1, f = new THREE.Group(), m = fishMats[k % fishMats.length];
+      const body = new THREE.Mesh(fishGeo, m), tail = new THREE.Mesh(tailGeo, m); tail.position.z = -.42; f.add(body, tail);
+      const sc = .8 + rnd() * .7; f.scale.setScalar(sc); f.traverse(o => { o.castShadow = false; });
+      P.add(f);
+      fishes.push({ f, tail, x: px + sx * (gap / 2 + .5 + rnd() * 1.6), y: 1.2 + rnd() * 6, z0: pz + 2, L: L2 / 2 - 3, ph: rnd() * 6.28, sp: (.06 + rnd() * .05) * (rnd() < .5 ? 1 : -1) });
+    }
+    out.live.push({ kind: 'fn', update(t) {
+      for (const q of fishes) {
+        const a = t * q.sp + q.ph, z = q.z0 + Math.sin(a) * q.L, dir = Math.cos(a) * Math.sign(q.sp) >= 0 ? 1 : -1;
+        q.f.position.set(q.x + Math.sin(t * .7 + q.ph) * .15, q.y + Math.sin(t * 1.1 + q.ph) * .25, z);
+        q.f.rotation.y = dir > 0 ? 0 : Math.PI; q.tail.rotation.y = Math.sin(t * 9 + q.ph) * .45;
+      }
+    } });
     const sea = std({ color: 0xd8c49a, roughness: 1 });
     const path = new THREE.Mesh(new THREE.PlaneGeometry(gap, L2), sea); path.rotation.x = -Math.PI / 2; path.position.set(px, .12, pz + 2); P.add(path);
     for (let k = 0; k < 18; k++) { const st = add(new THREE.SphereGeometry(.2 + rnd() * .2, 8, 6), std({ color: 0x8a7a68 }), px + (rnd() - .5) * gap, .05, pz + 2 + (rnd() - .5) * L2); st.scale.y = .4; }
