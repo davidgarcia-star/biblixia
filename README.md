@@ -1,5 +1,9 @@
 # BIBLIXIA – ¡Aprende, juega y vive la Biblia!
 
+## ▶ [Jugar BIBLIXIA ahora](https://davidgarcia-star.github.io/biblixia/)
+
+Para jugar, abre: https://davidgarcia-star.github.io/biblixia/
+
 Juego bíblico en 3D. Recorre una ciudad moderna, el desierto con el **tabernáculo** y la zona del **arca de Noé** y el **valle de Ela**. Recoge monedas antes de que se acabe el tiempo: cada moneda muestra un versículo de **La Biblia de las Américas (LBLA)**. Habla con profetas, apóstoles y personajes de la Biblia y recibe sus regalos.
 
 Creado por **Luis David Esteban García** · MIPROAA Ministerio Profético Ardiendo Por El Avivamiento.
