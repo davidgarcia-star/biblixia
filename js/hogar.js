@@ -311,6 +311,11 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   add(g, new THREE.BoxGeometry(.86, .96, .015), M(0xc9a24a, { metalness: .6, roughness: .3 }), lX, fl + 1.55, bz1 - e - .008, { cast: false });
   add(g, new THREE.BoxGeometry(.8, .9, .01), S.mirror, lX, fl + 1.55, bz1 - e - .02, { cast: false });
   add(g, new THREE.CylinderGeometry(.03, .025, .09, 12), M(0xffffff, { roughness: .3 }), lX + .3, fl + .87, lZ - .1, { cast: false }); // jabón líquido
+  // dosificador del jabón: etiqueta verde, cuello, cabezal de bomba y pico que apunta hacia el lavamanos
+  add(g, new THREE.CylinderGeometry(.0295, .027, .035, 12, 1, true), M(0x6fae7c, { roughness: .5, side: THREE.DoubleSide }), lX + .3, fl + .865, lZ - .1, { cast: false });
+  add(g, new THREE.CylinderGeometry(.007, .007, .03, 8), S.metal, lX + .3, fl + .93, lZ - .1, { cast: false });
+  add(g, new THREE.CylinderGeometry(.015, .015, .014, 12), S.metal, lX + .3, fl + .951, lZ - .1, { cast: false });
+  add(g, new THREE.BoxGeometry(.044, .009, .01), S.metal, lX + .3 - .028, fl + .951, lZ - .1, { cast: false });
   for (const [c, dx] of [[0x2a8ad0, -.02], [0xe03a5a, .02]]) { const cep = add(g, new THREE.CylinderGeometry(.005, .005, .17, 6), M(c), lX - .32 + dx, fl + .92, lZ - .1, { cast: false }); cep.rotation.z = dx * 6; }
   add(g, new THREE.CylinderGeometry(.03, .026, .09, 12), S.glass, lX - .32, fl + .87, lZ - .1, { cast: false });
   // tubo de pasta dental acostado junto al vaso de los cepillos
