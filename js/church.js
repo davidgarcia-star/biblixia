@@ -147,6 +147,24 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     const ep = new THREE.Mesh(new THREE.PlaneGeometry(.9, .34), new THREE.MeshBasicMaterial({ map: et, toneMapped: false }));
     ep.position.set(cx, y0 + 3.8, Z0 + T / 2 + .075); group.add(ep);
   }
+  // extintor rojo colgado en la pared junto a la puerta principal (por dentro), con soporte, manguera negra
+  // y su letrero rojo «EXTINTOR» encima, como exigen las normas de seguridad en los templos reales
+  {
+    const ex = cx + 2.6, wz = Z0 + T / 2, fl = y0 + .1;
+    const red = mat(0xc4161c, { roughness: .35, metalness: .2 }), blk = mat(0x141414, { roughness: .6 });
+    box(.12, .3, .03, mat(0x8a8d92, { roughness: .4, metalness: .6 }), ex, fl + 1.05, wz + .015, { cast: false });           // soporte metálico
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(.085, .085, .5, 16), red); body.position.set(ex, fl + .95, wz + .115); group.add(body);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(.085, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), red); dome.position.set(ex, fl + 1.2, wz + .115); group.add(dome);
+    box(.05, .08, .05, blk, ex, fl + 1.31, wz + .115, { cast: false });                                                      // válvula
+    box(.16, .02, .04, blk, ex + .03, fl + 1.36, wz + .115, { cast: false });                                                // palanca
+    const hose = new THREE.Mesh(new THREE.CylinderGeometry(.014, .014, .42, 8), blk); hose.position.set(ex - .1, fl + 1.08, wz + .14); hose.rotation.z = .12; group.add(hose);
+    box(.1, .1, .004, mat(0xf2f2ee, { roughness: .6 }), ex, fl + .92, wz + .2, { cast: false });                             // etiqueta blanca
+    const xc = document.createElement('canvas'); xc.width = 256; xc.height = 96; const xg = xc.getContext('2d');
+    xg.fillStyle = '#c4161c'; xg.fillRect(0, 0, 256, 96); xg.fillStyle = '#fff'; xg.font = '900 40px "Arial Black", system-ui, sans-serif';
+    xg.textAlign = 'center'; xg.textBaseline = 'middle'; xg.fillText('EXTINTOR', 128, 50);
+    const xt = new THREE.CanvasTexture(xc); xt.colorSpace = THREE.SRGBColorSpace;
+    const xs = new THREE.Mesh(new THREE.PlaneGeometry(.5, .19), new THREE.MeshBasicMaterial({ map: xt })); xs.position.set(ex, fl + 1.75, wz + .006); group.add(xs);
+  }
 
   // --- LOBBY (al frente): recepción, sofás, baños de damas y caballeros ---
   const LZ = Z0 + 7;                                              // pared que separa el lobby del santuario
