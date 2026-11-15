@@ -730,6 +730,24 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
     {
+      // caja registradora sobre el mostrador (pantallita verde hacia el cliente) y frasco de propinas de vidrio con monedas
+      const rx = cx - 3.9, rz = Z1 - 1.95, top = y0 + 1.10, rgM = mat(0x2b2e34, { roughness: .45 }), rgL = mat(0x4a4f58, { roughness: .4 });
+      box(.38, .1, .32, rgM, rx, top + .05, rz, { cast: false });                                          // gaveta del dinero
+      const kp = box(.34, .05, .2, rgL, rx, top + .13, rz + .04, { cast: false }); kp.rotation.x = -.35;      // teclado inclinado hacia la barista
+      for (let a = 0; a < 3; a++) for (let b = 0; b < 4; b++) {                                            // teclitas
+        const kk = box(.04, .012, .03, mat(b === 3 ? 0x3aa05a : 0xe8e6e0, { roughness: .5 }), rx - .1 + b * .065, top + .16 - a * .016, rz + .09 - a * .045, { cast: false }); kk.rotation.x = -.35; }
+      box(.03, .14, .03, rgM, rx, top + .22, rz - .1, { cast: false });                                     // poste de la pantalla
+      box(.2, .07, .025, rgM, rx, top + .32, rz - .1, { cast: false });
+      box(.17, .045, .004, new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x3ad07a, emissiveIntensity: 1.2 }), rx, top + .32, rz - .114, { cast: false });
+      const jx = cx - 3.4, jz = Z1 - 2.2;
+      const jar = new THREE.Mesh(new THREE.CylinderGeometry(.065, .06, .16, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xe6f4ff, transparent: true, opacity: .3, roughness: .05, side: THREE.DoubleSide, depthWrite: false }));
+      jar.position.set(jx, top + .08, jz); jar.renderOrder = 2; group.add(jar);
+      cyl(.06, .06, .006, mat(0xdfe8ee, { roughness: .2 }), jx, top + .003, jz, 16).castShadow = false;       // fondo del frasco
+      const coinM = mat(0xd4a93a, { metalness: .8, roughness: .3 }), coinG = new THREE.CylinderGeometry(.016, .016, .004, 12);
+      for (let k = 0; k < 9; k++) { const cn = new THREE.Mesh(coinG, coinM); cn.position.set(jx + Math.cos(k * 2.4) * .03 * (k % 3) / 2, top + .01 + k * .005, jz + Math.sin(k * 2.4) * .03 * (k % 3) / 2); cn.rotation.set(k * .3, 0, k * .2); group.add(cn); }
+      const bill = box(.07, .004, .035, mat(0x7fae6a, { roughness: .8 }), jx + .01, top + .07, jz, { cast: false }); bill.rotation.set(.2, .6, 1.2);   // billete doblado
+    }
+    {
       // vitrina de vidrio sobre el mostrador con panes dulces, croissants y bizcochitos en dos niveles
       const vx = cx - 2.75, vz = Z1 - 2, vb = y0 + 1.10, VW = .95, VH = .42, VD = .6;
       box(VW, .04, VD, mat(0x2a2420, { roughness: .4 }), vx, vb + .02, vz, { cast: false });                 // base oscura
