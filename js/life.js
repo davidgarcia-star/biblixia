@@ -783,6 +783,29 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       officeUpd.push(ck.userData.update);
       W.office = { cx, cz };
     }
+    {
+      // letrero luminoso «ABIERTO» colgado detrás del vidrio de la entrada: se lee desde la calle y por dentro dice «¡Bienvenidos!»
+      const neon = (txt, sub, col) => {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 112; const g = c.getContext('2d');
+        const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }; // (sin roundRect: funciona en navegadores viejos)
+        g.fillStyle = '#101216'; rr(4, 4, 248, 104, 18); g.fill();
+        g.strokeStyle = col; g.lineWidth = 5; g.shadowColor = col; g.shadowBlur = 12; rr(12, 12, 232, 88, 14); g.stroke();
+        g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 40px system-ui, sans-serif'; g.fillText(txt, 128, sub ? 48 : 57);
+        if (sub) { g.shadowBlur = 6; g.fillStyle = col; g.font = '700 15px system-ui, sans-serif'; g.fillText(sub, 128, 82); }
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+      };
+      const sx = cx + 3.4, sy = y0 + 2.15, sz = Z0 + .4;
+      const outM = new THREE.MeshBasicMaterial({ map: neon('ABIERTO', '☕ Cafetería', '#ff3b6b') });
+      const inM = new THREE.MeshBasicMaterial({ map: neon('¡Bienvenidos!', '', '#3bd6ff') });
+      const geo = new THREE.PlaneGeometry(1.2, .53);
+      const pOut = new THREE.Mesh(geo, outM); pOut.position.set(sx, sy, sz - .006); pOut.rotation.y = Math.PI; group.add(pOut);
+      const pIn = new THREE.Mesh(geo, inM); pIn.position.set(sx, sy, sz + .006); group.add(pIn);
+      box(1.25, .58, .008, mat(0x101216, { roughness: .5 }), sx, sy, sz, { cast: false });
+      const topY = fy(1) - .3;
+      for (const dx of [-.4, .4]) cyl(.004, .004, topY - (sy + .27), frameM, sx + dx, (topY + sy + .27) / 2, sz, 4);
+      // brilla con un pulso suave, como un letrero de neón de verdad (sin parpadeos bruscos)
+      officeUpd.push(t => { const k = .82 + Math.sin(t * 2.2) * .12; outM.color.setScalar(k); inM.color.setScalar(.9 + Math.sin(t * 1.7 + 1) * .08); });
+    }
     act(cx - 4, Z1 - 3.1, y0, '☕ Comprar un café', () => life.fx('coffee'));
     act(cx - 3, Z1 - 3.1, y0, '🥐 Comprar un pan dulce', () => life.fx('eat'), 1.1);
     for (const [tx, tz] of [[cx - 4, cz], [cx, cz + 1]]) { box(.9, .05, .9, mat(0xf2efe8), tx, y0 + .75, tz); cyl(.05, .05, .72, frameM, tx, y0 + .38, tz, 8); solid(tx - .45, tx + .45, tz - .45, tz + .45, y0 + .78, y0); }

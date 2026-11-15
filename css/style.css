@@ -183,7 +183,7 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
   animation: bob 3.6s ease-in-out infinite;
 }
 .logo-plate.small { width: 84px; height: 84px; box-shadow: 0 6px 20px rgba(244,197,66,.4), 0 0 0 3px rgba(244,197,66,.55); }
-.brand-logo { width: 82%; height: 82%; object-fit: contain; display: block; }
+.brand-logo { width: 74%; height: 74%; object-fit: contain; display: block; }
 /* ===== Luces alrededor del logo MIPROAA ===== */
 .logo-aura {
   --s: 150px;
