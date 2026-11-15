@@ -671,6 +671,13 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         }
         solid(bx - bw / 2 - .1, bx + bw / 2 + .1, bz - .32, bz + .32, by + bh / 2, y);
       }
+      // reloj redondo colgado del techo frente a los escritorios: marca la hora real del dispositivo
+      if (i > 0) {
+        const kx = cx - 1, kz = cz + 6.8, ky = y + 2.55, ck = makeClock(.3), topY = y + FH - .3;
+        ck.position.set(kx, ky, kz); ck.rotation.y = Math.PI; group.add(ck);
+        for (const dx of [-.16, .16]) cyl(.005, .005, topY - (ky + .28), frameM, kx + dx, (topY + ky + .28) / 2, kz, 4).castShadow = false;
+        officeUpd.push(ck.userData.update);
+      }
       // trabajadores de pie conversando
       if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * SKINS.length) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
       if (i > 0) staticHuman({ gender: 'f', skin: SKINS[(r() * SKINS.length) | 0], top: 0xc0392b, topStyle: 'chaqueta', pants: 0x22243a, legwear: 'pantalon', hair: 'long' }, cx + 6, y, cz + 1.5, 1.6);
