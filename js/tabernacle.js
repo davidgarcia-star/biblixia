@@ -240,7 +240,13 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(C, 2 * C, C, M.gold, inX, C, cz);
   box(C + .06, .05, C + .06, M.gold, inX, 2 * C, cz);
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.ConeGeometry(.035, .1, 6), M.gold, inX + sx * .21, 2 * C + .07, cz + sz * .21);
-  addBox(inX - .3, inX + .3, cz - .3, cz + .3, 1.05);
+  // «Le harás dos argollas de oro debajo de su moldura… y las varas de madera de acacia, y las revestirás de oro» (Éxodo 30:4-5)
+  for (const sz of [-1, 1]) {
+    const rz = cz + sz * (C / 2 + .035);
+    for (const sx of [-1, 1]) add(new THREE.TorusGeometry(.04, .011, 6, 12).rotateY(Math.PI / 2), M.gold, inX + sx * .24, 2 * C - .14, rz, { cast: false });
+    add(new THREE.CylinderGeometry(.022, .022, 1.5, 8).rotateZ(Math.PI / 2), M.gold, inX, 2 * C - .14, rz);
+  }
+  addBox(inX - .76, inX + .76, cz - .46, cz + .46, 1.05);
   // Incienso aromático que Aarón quemaba cada mañana y cada tarde: brasas y un humo suave que sube (Éxodo 30:7-8)
   box(C * .55, .03, C * .55, M.fire, inX, 2 * C + .04, cz, { cast: false });
   const incense = [];
