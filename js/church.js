@@ -208,6 +208,24 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   };
   bath(X0 + 3, '🚺 Damas', 'bano-f'); bath(X1 - 3, '🚹 Caballeros', 'bano-m');
 
+  // Letrero iluminado de bienvenida sobre la entrada al santuario (el lobby, de paredes negras, se veía muy oscuro)
+  // con una tira de luz cálida debajo: «Yo me alegré cuando me dijeron: Vamos a la casa del SEÑOR» (Salmo 122:1, LBLA)
+  {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 1024, 0); gr.addColorStop(0, '#0b1730'); gr.addColorStop(.5, '#16204a'); gr.addColorStop(1, '#1a0b30');
+    g.fillStyle = gr; g.fillRect(0, 0, 1024, 256); g.strokeStyle = '#f5c542'; g.lineWidth = 8; g.strokeRect(8, 8, 1008, 240);
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = 'rgba(255,210,110,.8)'; g.shadowBlur = 18;
+    g.fillStyle = '#ffe9a8'; g.font = '900 92px "Arial Black", system-ui, sans-serif'; g.fillText('BIENVENIDOS', 512, 98);
+    g.shadowBlur = 0; g.fillStyle = '#ffffff'; let s = 34; do g.font = `italic 600 ${s}px system-ui, sans-serif`; while (g.measureText('«Yo me alegré cuando me dijeron: Vamos a la casa del SEÑOR.»').width > 960 && --s > 18);
+    g.fillText('«Yo me alegré cuando me dijeron: Vamos a la casa del SEÑOR.»', 512, 178);
+    g.fillStyle = '#f5c542'; g.font = '700 24px system-ui, sans-serif'; g.fillText('Salmo 122:1 (LBLA)', 512, 222);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    const sw = 5.2, sh = 1.3, sz = LZ - T / 2 - .055;
+    box(sw + .12, sh + .12, .04, mat(0xd4a72c, { metalness: .7, roughness: .3 }), cx, y0 + 5.3, LZ - T / 2 - .02, { cast: false, recv: false });   // marco dorado
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), new THREE.MeshBasicMaterial({ map: t })); sg.position.set(cx, y0 + 5.3, sz); sg.rotation.y = Math.PI; group.add(sg);
+    box(5.6, .05, .06, new THREE.MeshBasicMaterial({ color: 0xffd99a }), cx, y0 + 4.25, LZ - T / 2 - .03, { cast: false, recv: false });         // tira de luz cálida
+  }
+
   // Alfolí de diezmos y ofrendas junto a la entrada del santuario: mueble de madera con ranura y placa dorada,
   // y un cuadro en la pared con 2 Corintios 9:7 (LBLA)
   {
