@@ -663,3 +663,6 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 .screen,.cpanel{scrollbar-width:thin;scrollbar-color:rgba(245,197,66,.65) transparent}
 .screen::-webkit-scrollbar,.cpanel::-webkit-scrollbar{width:8px}.screen::-webkit-scrollbar-thumb,.cpanel::-webkit-scrollbar-thumb{background:rgba(245,197,66,.6);border-radius:8px}.screen::-webkit-scrollbar-track,.cpanel::-webkit-scrollbar-track{background:transparent}
 @media (max-height:520px){.topbar .chip-txt,.topbar .chip-lbl{display:none}.topbar .chip{padding:6px 10px}}
+
+/* Modo liviano: sin desenfoques sobre el 3D (en celulares modestos causaban congelamientos) */
+html.bx-lite *,html.bx-lite *::before,html.bx-lite *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}

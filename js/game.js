@@ -79,6 +79,9 @@ function equipoModesto() {
 }
 const LITE = GFX_PREF === '1' || (GFX_PREF === 'auto' && equipoModesto());
 const LR = LITE ? .6 : 1; // en modo liviano lo lejano se oculta antes
+// En modo liviano se quitan los desenfoques (blur) de los paneles: en celulares modestos el navegador
+// tenía que volver a desenfocar el 3D en cada cuadro y el juego a veces se congelaba
+try { document.documentElement.classList.toggle('bx-lite', LITE); } catch (e) {}
 // Botón «Gráficos»: Automático → Liviano → Normal (se guarda y recarga el juego)
 (() => {
   const b = document.getElementById('tbGfx'); if (!b) return;
@@ -3014,9 +3017,14 @@ const shootingStar = (() => {
   };
 })();
 // Si algo falla en un cuadro, se registra y el juego sigue dibujando (antes un error repetido dejaba la imagen congelada)
-let loopErrs = 0;
+let loopErrs = 0, lastPaint = 0;
+// Con el juego quieto (leyendo el versículo, en pausa, hablando o en resultados) no hace falta dibujar
+// el 3D 60 veces por segundo: se dibuja menos para que el celular no se caliente ni se trabe.
+const QUIETO = LITE ? { verse: 125, pause: 125, result: 125, talk: 66 } : { verse: 50, pause: 50, result: 50 };
 function loop() {
   requestAnimationFrame(loop);
+  const espera = QUIETO[state];
+  if (espera && !building) { const n = performance.now(); if (n - lastPaint < espera) return; lastPaint = n; }
   try { loopBody(); } catch (e) {
     if (loopErrs++ < 5) console.error('BIBLIXIA cuadro:', e);
     lastNow = performance.now();
@@ -3182,7 +3190,7 @@ function loopBody() {
   snapShadow(sc);
   updateNightAndBlobs(dt);
 
-  if (state === 'play' && (mmTimer += dt) > .1) { mmTimer = 0; drawMinimap(); }
+  if (state === 'play' && (mmTimer += dt) > (LITE ? .2 : .1)) { mmTimer = 0; drawMinimap(); }
   if (world && (lodTimer += dt) > .25) {
     lodTimer = 0; const cp = camera.position;
     for (const it of world.lod) {
