@@ -304,7 +304,21 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     const pX = cx - 2, pZ = Z1 + 5, pW = 8, pD = 3.6;
     box(pW + 2.4, .1, pD + 2.4, woodM, pX, fy + .06, pZ, { cast: false });
     box(pW + .4, .14, pD + .4, mat(0xe9e6df, { roughness: .5 }), pX, fy + .1, pZ, { cast: false });
-    box(pW, .02, pD, new THREE.MeshStandardMaterial({ color: 0x29a8d8, roughness: .05, metalness: .1, emissive: 0x0a3a50, emissiveIntensity: .4, transparent: true, opacity: .9 }), pX, fy + .17, pZ, { cast: false });
+    {
+      // agua de la piscina con reflejos de luz (cáusticas) que se mueven despacio, como el sol sobre el agua
+      const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+      g.fillStyle = 'rgb(4,23,32)'; g.fillRect(0, 0, 128, 128);
+      g.strokeStyle = 'rgba(150,228,255,.5)'; g.lineWidth = 2.2; g.lineCap = 'round';
+      for (let k = 0; k < 9; k++) {
+        g.beginPath(); const y0 = k * 14.2 + 4;
+        for (let x = 0; x <= 128; x += 4) { const y = y0 + Math.sin(x / 128 * Math.PI * 4 + k * 1.7) * 4 + Math.sin(x / 128 * Math.PI * 2 + k) * 2; x ? g.lineTo(x, y) : g.moveTo(x, y); }
+        g.stroke();
+      }
+      const wt = new THREE.CanvasTexture(c); wt.colorSpace = THREE.SRGBColorSpace; wt.wrapS = wt.wrapT = THREE.RepeatWrapping; wt.repeat.set(2.2, 1);
+      const waterM = new THREE.MeshStandardMaterial({ color: 0x29a8d8, emissiveMap: wt, roughness: .05, metalness: .1, emissive: 0xffffff, emissiveIntensity: 1, transparent: true, opacity: .9 });
+      box(pW, .02, pD, waterM, pX, fy + .17, pZ, { cast: false });
+      houseUpd.push(t => { wt.offset.set(t * .018, Math.sin(t * .35) * .04 + t * .01); });
+    }
     solid(pX - pW / 2, pX + pW / 2, pZ - pD / 2, pZ + pD / 2, fy + 1.4);
     {
       // flotador salvavidas rojo y blanco que se mece y va a la deriva despacio sobre el agua de la piscina
