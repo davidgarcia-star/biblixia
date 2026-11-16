@@ -82,6 +82,17 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
       const pb = bakeStatic(ps.root); const gx = px + sx4, gz = pz + sz4; pb.position.set(gx, 0, gz); pb.rotation.y = Math.atan2(px - gx, pz - .8 - gz); S.add(pb);
       addBox(gx - .4, gx + .4, gz - .4, gz + .4, 1.8);
     }
+    // lámpara de aceite de barro sobre el muro del establo, con llama que titila
+    {
+      const clay = std({ color: 0x9a5a34, roughness: .9 }), lx = px + 2.4, ly = 2.6, lz = pz - 3.1;
+      const lamp = add(new THREE.SphereGeometry(.13, 12, 8), clay, lx, ly + .06, lz); lamp.scale.set(1.3, .5, 1);
+      const spout = add(new THREE.CylinderGeometry(.03, .045, .14, 8), clay, lx + .17, ly + .08, lz); spout.rotation.z = Math.PI / 2;
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(.035, .12, 8), new THREE.MeshBasicMaterial({ color: 0xffc04a }));
+      flame.position.set(lx + .25, ly + .15, lz); P.add(flame);
+      const fg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffa040, opacity: .8 }));
+      fg.scale.set(1.1, 1.1, 1); fg.position.set(lx + .25, ly + .16, lz); P.add(fg);
+      out.live.push({ kind: 'fn', update: t => { const f = .85 + Math.sin(t * 11) * .08 + Math.sin(t * 17.3) * .07; flame.scale.set(1, f, 1); fg.material.opacity = .55 + f * .3; } });
+    }
     // estrella
     const starSh = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + Math.PI / 2, r2 = k % 2 ? .45 : 1.2; k ? starSh.lineTo(Math.cos(a) * r2, Math.sin(a) * r2) : starSh.moveTo(Math.cos(a) * r2, Math.sin(a) * r2); }
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
