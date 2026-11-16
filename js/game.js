@@ -74,7 +74,7 @@ function equipoModesto() {
     if (e) gpu = String(g.getParameter(e.UNMASKED_RENDERER_WEBGL) || '');
     const lc = g && g.getExtension('WEBGL_lose_context'); if (lc) lc.loseContext();
   } catch (e) {}
-  const gpuDebil = /PowerVR|Mali-(400|450|T\d|G31|G51|G52)|Adreno \(TM\) ([1-5]\d\d|61\d)\b|SwiftShader|llvmpipe/i.test(gpu);
+  const gpuDebil = /PowerVR|Mali-(400|450|T\d|G31|G51|G52)|Adreno \(TM\) ([1-4]\d\d|5[01]\d|61[02])\b|SwiftShader|llvmpipe/i.test(gpu);
   return gpuDebil || (mem && mem <= 3) || (android && av && av <= 9) || (android && cores && cores <= 4);
 }
 const LITE = GFX_PREF === '1' || (GFX_PREF === 'auto' && equipoModesto());
