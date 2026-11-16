@@ -656,3 +656,10 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 /* Enlace a la política de privacidad en los créditos */
 .credit-link { color: inherit; opacity: .85; text-decoration: underline; text-underline-offset: 2px; }
 .credit-link:hover { opacity: 1; }
+/* Ajuste a la pantalla (también en pantalla completa): ningún botón queda cortado ni tapado por la barra */
+.screen{overflow-y:auto;overflow-x:hidden;justify-content:safe center;padding-top:max(24px,calc(var(--tb-h,0px) + 14px));padding-bottom:max(24px,env(safe-area-inset-bottom));scrollbar-width:thin;scrollbar-color:rgba(245,197,66,.65) transparent}
+.screen.scroll,#levelsel,#help,#collection{justify-content:flex-start;padding-top:calc(var(--tb-h,0px) + 26px)}
+#splash{padding-top:calc(var(--tb-h,52px) + 14px)!important}
+.screen,.cpanel{scrollbar-width:thin;scrollbar-color:rgba(245,197,66,.65) transparent}
+.screen::-webkit-scrollbar,.cpanel::-webkit-scrollbar{width:8px}.screen::-webkit-scrollbar-thumb,.cpanel::-webkit-scrollbar-thumb{background:rgba(245,197,66,.6);border-radius:8px}.screen::-webkit-scrollbar-track,.cpanel::-webkit-scrollbar-track{background:transparent}
+@media (max-height:520px){.topbar .chip-txt,.topbar .chip-lbl{display:none}.topbar .chip{padding:6px 10px}}
