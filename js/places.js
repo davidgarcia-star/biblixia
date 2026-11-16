@@ -70,6 +70,18 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     const j1 = bakeStatic(jos.root); j1.position.set(px + 1.5, 0, pz - .4); j1.rotation.y = -1.1; S.add(j1);
     addBox(px - 1.8, px - 1, pz - 1, pz - .2, 1.8); addBox(px + 1.1, px + 1.9, pz - .8, pz, 1.8);
     for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); const sx3 = px - 6 + k * 3.5, sz3 = pz + 6 + (k % 2) * 2; sh.position.set(sx3, 0, sz3); sh.rotation.y = k; P.add(sh); addBox(sx3 - .6, sx3 + .6, sz3 - .6, sz3 + .6, 1); }
+    // pastores con su cayado que vinieron a ver al niño: «Vamos, pues, hasta Belén» (Lucas 2:15-16)
+    const staffM = std({ color: 0x6b4a2a, roughness: .9 });
+    for (const [sx4, sz4, robe, mantle, cloth, skin] of [[-2.9, 4.1, 0x8a7a5a, 0x5a4a32, 0xd8cdb0, 0xa8714f], [3.1, 4.4, 0x6a5a44, 0x9a8a6a, 0x8a3a2a, 0x8a5a3a]]) {
+      const ps = createHuman({ detail: .6, outfit: 'robe', robe, mantle, sash: 0x3a2a1a, hair: 'cloth', cloth, beard: { len: .06 }, hairColor: 0x2a1a10, skin });
+      ps.arms[1].shoulder.rotation.set(-.35, 0, .12); ps.arms[1].elbow.rotation.x = -.7;
+      ps.arms[0].shoulder.rotation.set(-.2, 0, -.05); ps.arms[0].elbow.rotation.x = -.3;
+      // cayado: vara recta con la curva arriba
+      const st = new THREE.Mesh(new THREE.CylinderGeometry(.022, .026, 1.9, 8), staffM); st.position.set(-.34, .95, .3); ps.root.add(st);
+      const hook = new THREE.Mesh(new THREE.TorusGeometry(.1, .022, 6, 12, Math.PI), staffM); hook.position.set(-.24, 1.9, .3); ps.root.add(hook);
+      const pb = bakeStatic(ps.root); const gx = px + sx4, gz = pz + sz4; pb.position.set(gx, 0, gz); pb.rotation.y = Math.atan2(px - gx, pz - .8 - gz); S.add(pb);
+      addBox(gx - .4, gx + .4, gz - .4, gz + .4, 1.8);
+    }
     // estrella
     const starSh = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + Math.PI / 2, r2 = k % 2 ? .45 : 1.2; k ? starSh.lineTo(Math.cos(a) * r2, Math.sin(a) * r2) : starSh.moveTo(Math.cos(a) * r2, Math.sin(a) * r2); }
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
