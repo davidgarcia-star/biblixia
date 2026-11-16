@@ -422,6 +422,7 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   }
   // Estandartes de las cuatro divisiones del campamento: Judá al oriente (junto al camino de la entrada), Rubén al sur,
   // Efraín al occidente y Dan al norte, «cada uno junto a su estandarte» (Números 2:2-3, 10, 18, 25)
+  const flags = [];
   const poleM = new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: .9 }), tipM = new THREE.MeshStandardMaterial({ color: 0xb08a3a, metalness: .6, roughness: .4 });
   for (const [name, col, a, dz] of [['JUDÁ', '#1f5fa8', 0, 10], ['RUBÉN', '#a3241e', Math.PI / 2, 0], ['EFRAÍN', '#2e5a2a', Math.PI, 0], ['DAN', '#b8962e', -Math.PI / 2, 0]]) {
     const x = cx + Math.cos(a) * radiusX * .78, z = cz + Math.sin(a) * radiusZ * .78 + dz; // entre el atrio y las tiendas
@@ -434,7 +435,12 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .08, 4.4, 6), poleM); pole.position.y = 2.2; pole.castShadow = true; st.add(pole);
     const tip = new THREE.Mesh(new THREE.ConeGeometry(.1, .3, 6), tipM); tip.position.y = 4.55; st.add(tip);
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, 1.7, 5), poleM); bar.rotation.z = Math.PI / 2; bar.position.set(.85, 4.15, 0); st.add(bar);
-    for (const s of [1, -1]) { const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), fm); fl.position.set(.85, 3.62, s * .012); if (s < 0) fl.rotation.y = Math.PI; st.add(fl); }
+    // la tela del estandarte queda fuera de la malla horneada para que ondee con el viento (se anima en update)
+    const sf = new THREE.Group(); sf.position.copy(st.position); sf.rotation.y = st.rotation.y; FL.add(sf);
+    for (const s of [1, -1]) {
+      const fg = new THREE.PlaneGeometry(1.6, 1, 10, 4), fl = new THREE.Mesh(fg, fm); fl.position.set(.85, 3.62, s * .012); if (s < 0) fl.rotation.y = Math.PI; sf.add(fl);
+      flags.push({ g: fg, base: Float32Array.from(fg.attributes.position.array), s, k: a * 1.9 });
+    }
     S.add(st);
     addBox(x - .3, x + .3, z - .3, z + .3, 4.4);
   }
@@ -454,6 +460,15 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
         const sy = 1 + Math.sin(t * 13 + k) * .18 + Math.sin(t * 29 + k * 3) * .1;
         f.scale.set(b * (1 - (sy - 1) * .4), b * sy, b * (1 - (sy - 1) * .4));
         f.rotation.set(Math.sin(t * 5 + k) * .12, t * 2 + k, Math.cos(t * 6 + k) * .12);
+      }
+      // los estandartes cuelgan de su vara y se mecen con la brisa del desierto: más abajo, más movimiento
+      for (const fgl of flags) {
+        const P = fgl.g.attributes.position, A = P.array, B = fgl.base;
+        for (let i = 0; i < A.length; i += 3) {
+          const xw = B[i] * fgl.s, hang = (.5 - B[i + 1]); // xw: posición a lo largo de la vara; hang: 0 arriba, 1 abajo
+          A[i + 2] = fgl.s * hang * (Math.sin(t * 2.1 + xw * 2.4 + fgl.k) * .09 + Math.sin(t * 3.7 + xw * 4.1 + fgl.k * 2) * .035);
+        }
+        P.needsUpdate = true;
       }
       for (const pf of puffs) {
         const u = pf.userData, ph = (t * .22 + u.o) % 1; // 0 = recién salido, 1 = se deshizo
