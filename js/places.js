@@ -102,6 +102,8 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     { const pos = beamG.attributes.position, col = new Float32Array(pos.count * 3); for (let k = 0; k < pos.count; k++) { const v = .35 + .65 * (pos.getY(k) / 6.6 + .5); col[k * 3] = v; col[k * 3 + 1] = v * .92; col[k * 3 + 2] = v * .6; } beamG.setAttribute('color', new THREE.BufferAttribute(col, 3)); }
     const beam = new THREE.Mesh(beamG, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: true }));
     beam.position.set(px, 13 - 3.4, pz); beam.renderOrder = 2; P.add(beam);
+    // la estrella titila: su resplandor late suave y el haz de luz «respira» (Mateo 2:9-10)
+    out.live.push({ kind: 'fn', update: t => { const tw = 1 + Math.sin(t * 2.1) * .07 + Math.sin(t * 5.3) * .04; sg.scale.set(9 * tw, 9 * tw, 1); sg.material.opacity = .82 + (tw - 1) * 1.6; beam.material.opacity = .13 + (tw - 1) * .35 + .03; } });
     out.zones.push({ id: 'belen', name: 'Belén: el nacimiento de Jesús', minX: px - w / 2, maxX: px + w / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'En Belén nació Jesús y fue acostado en un pesebre.',
       ref: 'Miqueas 5:2; Lucas 2:4-14; Mateo 2:9-11' });
