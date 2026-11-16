@@ -27,7 +27,7 @@ const LEVELS = [
   { name: 'Intermedio', grid: 3, coins: 20, goal: 14, time: 150, cars: 5,  carSpeed: 9,  plat: .30, seed: 202 },
   { name: 'Avanzado',   grid: 3, coins: 24, goal: 19, time: 160, cars: 8,  carSpeed: 11, plat: .40, seed: 303 },
   { name: 'Experto',    grid: 4, coins: 30, goal: 25, time: 185, cars: 12, carSpeed: 12, plat: .45, seed: 404 },
-  { name: 'Master',     grid: 4, coins: 36, goal: 32, time: 195, cars: 16, carSpeed: 14, plat: .55, seed: 505 },
+  { name: 'Máster',     grid: 4, coins: 36, goal: 32, time: 195, cars: 16, carSpeed: 14, plat: .55, seed: 505 },
 ];
 LEVELS.forEach((l, i) => l.idx = i);
 const BLOCK = 36, STREET = 14, PITCH = BLOCK + STREET, CURB = 0.15, DES = 140, SZ = 130, BEACH = 40, NZ = 90;
@@ -82,7 +82,8 @@ const LR = LITE ? .6 : 1; // en modo liviano lo lejano se oculta antes
 // Botón «Gráficos»: Automático → Liviano → Normal (se guarda y recarga el juego)
 (() => {
   const b = document.getElementById('tbGfx'); if (!b) return;
-  b.textContent = '⚙️ Gráficos: ' + (GFX_PREF === '1' ? 'Liviano' : GFX_PREF === '0' ? 'Normal' : LITE ? 'Auto (liviano)' : 'Auto');
+  b.innerHTML = '⚙️ <span class="chip-txt">Gráficos: </span>' + (GFX_PREF === '1' ? 'Liviano' : GFX_PREF === '0' ? 'Normal' : LITE ? 'Auto·liviano' : 'Auto');
+  b.setAttribute('aria-label', 'Calidad de gráficos: ' + b.textContent.replace('⚙️', '').replace('Gráficos:', '').trim());
   b.addEventListener('click', () => {
     const next = GFX_PREF === 'auto' ? '1' : GFX_PREF === '1' ? '0' : 'auto';
     try { if (next === 'auto') localStorage.removeItem('bx_lite'); else localStorage.setItem('bx_lite', next); } catch (e) {}

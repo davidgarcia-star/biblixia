@@ -6,10 +6,11 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0b0802">
+<meta name="color-scheme" content="dark">
 <title>BIBLIXIA – Juego bíblico 3D | ¡Aprende, juega y vive la Biblia!</title>
-<meta name="description" content="BIBLIXIA es un juego bíblico cristiano en 3D, gratis: recorre el tabernáculo, el arca de Noé y el valle de David y Goliat, recoge monedas con versículos de la Biblia (LBLA) y habla con profetas y apóstoles. Creado por Luis David Esteban García · MIPROAA.">
+<meta name="description" content="Juego bíblico cristiano en 3D, gratis: recorre el tabernáculo, el arca de Noé y el valle de David y Goliat, recoge monedas con versículos y habla con profetas.">
 <meta name="keywords" content="BIBLIXIA, Biblixia, Biblixia 3D, BIBLIXIA 3D, juego bíblico 3D, juego biblico 3D, juego bíblico, juego biblico, juegos bíblicos, juego cristiano, juego de la Biblia, Biblia 3D, tabernáculo, arca de Noé, David y Goliat, profetas, apóstoles, versículos, LBLA, MIPROAA, Luis David Esteban García">
-<meta name="author" content="Luis David Esteban García · MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento">
+<meta name="author" content="Luis David Esteban García · MIPROAA – Ministerio Profético Ardiendo por el Avivamiento">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://davidgarcia-star.github.io/biblixia/">
 <link rel="icon" href="img/favicon.ico" sizes="48x48">
@@ -36,6 +37,7 @@
 <meta name="twitter:title" content="BIBLIXIA – Juego bíblico 3D">
 <meta name="twitter:description" content="¡Aprende, juega y vive la Biblia! Tabernáculo, arca de Noé, David y Goliat, profetas y apóstoles.">
 <meta name="twitter:image" content="https://davidgarcia-star.github.io/biblixia/img/og-biblixia.jpg">
+<meta name="twitter:image:alt" content="BIBLIXIA – ¡Aprende, juega y vive la Biblia!">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -56,18 +58,18 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "author": { "@type": "Person", "@id": "https://davidgarcia-star.github.io/luisdavidgarcia/#luisdavid", "name": "Luis David Esteban García", "alternateName": ["Luis David García", "Evangelista Luis David García"], "url": "https://davidgarcia-star.github.io/luisdavidgarcia/", "sameAs": ["https://www.youtube.com/@PROFETALUISDAVIDGARCIA.OFICIAL", "https://www.facebook.com/david.estebangarcia.58/", "https://www.instagram.com/luis_david_garcia/", "https://www.tiktok.com/@miproaa"] },
     "creator": { "@id": "https://davidgarcia-star.github.io/luisdavidgarcia/#luisdavid" },
-  "publisher": { "@type": "Organization", "@id": "https://davidgarcia-star.github.io/luisdavidgarcia/#miproaa", "name": "MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento", "url": "https://davidgarcia-star.github.io/luisdavidgarcia/", "logo": "https://davidgarcia-star.github.io/luisdavidgarcia/logo.png.png", "sameAs": ["https://www.youtube.com/@PROFETALUISDAVIDGARCIA.OFICIAL", "https://www.facebook.com/david.estebangarcia.58/", "https://www.instagram.com/luis_david_garcia/", "https://www.tiktok.com/@miproaa"] }
+  "publisher": { "@type": "Organization", "@id": "https://davidgarcia-star.github.io/luisdavidgarcia/#miproaa", "name": "MIPROAA – Ministerio Profético Ardiendo por el Avivamiento", "url": "https://davidgarcia-star.github.io/luisdavidgarcia/", "logo": "https://davidgarcia-star.github.io/luisdavidgarcia/icon-512.png", "sameAs": ["https://www.youtube.com/@PROFETALUISDAVIDGARCIA.OFICIAL", "https://www.facebook.com/david.estebangarcia.58/", "https://www.instagram.com/luis_david_garcia/", "https://www.tiktok.com/@miproaa"] }
 }
 </script>
 <link rel="preload" as="image" href="img/fondo.webp" fetchpriority="high">
-<link rel="stylesheet" href="css/style.css?v=20261115a">
+<link rel="stylesheet" href="css/style.css?v=20261115b">
 <script type="importmap">{"imports":{"three":"./js/vendor/three.module.js","three/addons/":"./js/vendor/addons/"}}</script>
 </head>
 <body>
 <noscript>
   <h1>BIBLIXIA – ¡Aprende, juega y vive la Biblia!</h1>
   <p>BIBLIXIA es un juego bíblico cristiano en 3D. Recorre una ciudad moderna, el tabernáculo con su atrio, el altar de bronce, el Lugar Santo, el Lugar Santísimo y el arca del pacto; el arca de Noé con los animales y el valle de Ela, donde David enfrenta a Goliat. Recoge monedas con versículos de La Biblia de las Américas y habla con profetas y apóstoles. Para jugar, activa JavaScript.</p>
-  <p>Creado por Luis David Esteban García · MIPROAA Ministerio Profético Ardiendo Por El Avivamiento.</p>
+  <p>Creado por Luis David Esteban García · MIPROAA Ministerio Profético Ardiendo por el Avivamiento.</p>
 </noscript>
 <canvas id="game"></canvas>
 <div id="vignette" aria-hidden="true"></div>
@@ -80,7 +82,7 @@
   <button id="tbFull" class="chip" type="button" title="Pantalla completa (tecla F)">⛶ <span class="chip-txt">Pantalla completa</span></button>
   <button id="tbMusic" class="chip" type="button" title="Música instrumental">🎵 Música: Sí</button>
   <button id="tbSfx" class="chip" type="button" title="Efectos de sonido">🔊 Efectos: Sí</button>
-  <button id="tbGfx" class="chip" type="button" title="Calidad de gráficos: Liviano es para celulares con menos capacidad">⚙️ Gráficos: Auto</button>
+  <button id="tbGfx" class="chip" type="button" title="Calidad de gráficos: Liviano es para celulares con menos capacidad">⚙️ <span class="chip-txt">Gráficos: </span>Auto</button>
 </div>
 
 <!-- HUD -->
@@ -133,7 +135,7 @@
   <div class="cine" aria-hidden="true"><i class="rays"></i><i class="flare"></i><i class="bar top"></i><i class="bar bot"></i><i class="shock"></i><canvas id="embers"></canvas></div>
   <div class="portal">
   <div class="brand">
-    <div class="logo-aura"><span class="aura-halo" aria-hidden="true"></span><span class="aura-rayos" aria-hidden="true"></span><span class="aura-anillo" aria-hidden="true"></span><span class="aura-chispas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><div class="logo-plate"><img class="brand-logo" src="img/logo.png" alt="Logo de MIPROAA – Ministerio Profético Ardiendo Por El Avivamiento" width="150" height="150"></div></div>
+    <div class="logo-aura"><span class="aura-halo" aria-hidden="true"></span><span class="aura-rayos" aria-hidden="true"></span><span class="aura-anillo" aria-hidden="true"></span><span class="aura-chispas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><div class="logo-plate"><img class="brand-logo" src="img/logo.png" alt="Logo de MIPROAA – Ministerio Profético Ardiendo por el Avivamiento" width="150" height="150"></div></div>
     <p class="kicker">— Juego bíblico en 3D —</p>
     <div class="titlebox"><h1 class="biblixia" aria-label="BIBLIXIA"><span style="--i:0">B</span><span style="--i:1">I</span><span style="--i:2">B</span><span style="--i:3">L</span><span style="--i:4">I</span><span style="--i:5">X</span><span style="--i:6">I</span><span style="--i:7">A</span></h1></div>
     <p class="tagline">¡Aprende, juega y vive la Biblia!</p>
@@ -161,7 +163,7 @@
       <li><a href="https://www.tiktok.com/@miproaa" target="_blank" rel="me noopener noreferrer" aria-label="TikTok"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.6 3h-3.1v12.2a2.7 2.7 0 1 1-2.7-2.7c.3 0 .6 0 .8.1V9.4a5.9 5.9 0 1 0 5 5.8V9a7.4 7.4 0 0 0 4.3 1.4V7.3A4.4 4.4 0 0 1 16.6 3z"/></svg></a></li>
     </ul>
   </div>
-  <p class="credit">Creado por <strong>Luis David Esteban García</strong> de parte de <strong>MIPROAA</strong><br>Ministerio Profético Ardiendo Por El Avivamiento<br><span>Versículos: La Biblia de las Américas (LBLA) © The Lockman Foundation</span></p>
+  <p class="credit">Creado por <strong>Luis David Esteban García</strong> de parte de <strong>MIPROAA</strong><br>Ministerio Profético Ardiendo por el Avivamiento<br><span>Versículos: La Biblia de las Américas (LBLA) © The Lockman Foundation</span><br><a class="credit-link" href="https://davidgarcia-star.github.io/luisdavidgarcia/privacidad.html" target="_blank" rel="noopener">Política de privacidad</a></p>
   </div>
 </div>
 
@@ -169,7 +171,7 @@
   <h2>Cómo jugar</h2>
   <div class="glass help">
     <p><b>Computadora:</b> camina con <kbd>W A S D</kbd> o con las flechas <kbd>↑ ↓ ← →</kbd>; para <b>correr</b> pulsa <kbd>C</kbd> o el botón <b>CORRER</b> (o mantén <kbd>Shift</kbd>), salta con <kbd>Espacio</kbd> y <b>toma</b> regalos con <kbd>T</kbd>. Arrastra con el ratón para girar la cámara. <kbd>R</kbd> turbo ultra rápido (desde el nivel Intermedio), <kbd>Q</kbd> cambiar entre Adán y Eva (al desbloquearlos tras el nivel Intermedio), <kbd>M</kbd> mapa completo, <kbd>V</kbd> o 🎥 cambiar la vista (normal, cerca, lejos o primera persona; la rueda del ratón también acerca y aleja), <kbd>P</kbd> pausa y <kbd>F</kbd> pantalla completa.</p>
-    <p><b>Teléfono:</b> usa la bola dorada (joystick) para caminar, <b>SALTAR</b> para saltar, <b>TOMAR</b> para recibir regalos y <b>CORRER</b> para correr (tócalo otra vez para volver a caminar), <b>⚡ TURBO</b> para ir ultra rápido (desde el nivel Intermedio) , 🗺 para ver el mapa completo y 🎥 para cambiar la vista (normal, cerca, lejos o primera persona, donde solo se ven tus manos). Arrastra el dedo en la pantalla para mirar alrededor.</p>
+    <p><b>Teléfono:</b> usa la bola dorada (joystick) para caminar, <b>SALTAR</b> para saltar, <b>TOMAR</b> para recibir regalos y <b>CORRER</b> para correr (tócalo otra vez para volver a caminar), <b>⚡ TURBO</b> para ir ultra rápido (desde el nivel Intermedio), 🗺 para ver el mapa completo y 🎥 para cambiar la vista (normal, cerca, lejos o primera persona, donde solo se ven tus manos). Arrastra el dedo en la pantalla para mirar alrededor.</p>
     <p><b>⏰ Relojes:</b> en todos los niveles hay relojes azules escondidos. Tómalos para ganar <b>+15 segundos</b>. En el minimapa se ven como puntos azules con borde blanco.</p>
     <p><b>🏊 Nadar:</b> desde el nivel <b>Intermedio</b> puedes meterte al mar desde la playa y nadar. Usa CORRER o TURBO para nadar más rápido, y para salir camina de vuelta a la arena o agárrate del borde del muelle empujando hacia adelante.</p>
     <p><b>⛵ El barco:</b> el uso del barco se habilita al <b>pasar el nivel Básico</b> (desde el nivel Intermedio). Ve al muelle de la playa (al oeste), sube a la cubierta y pulsa <kbd>T</kbd> (o TOMAR) para conducirlo. En el barco hay monedas y regalos, y navegando encontrarás monedas en alta mar.</p>
@@ -307,6 +309,6 @@ window.NAVIDAD_CFG = {
 })();
 </script>
 <script src="js/cuenta.js?v=1" data-pantallas="#splash"></script>
-<script type="module" src="js/biblixia.min.js?v=20261115m"></script>
+<script type="module" src="js/biblixia.min.js?v=20261115o"></script>
 </body>
 </html>
