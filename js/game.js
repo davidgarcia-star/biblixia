@@ -47,13 +47,56 @@ const rng = seed => { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013
    RENDER
    ========================================================= */
 const canvas = $('game');
+
+// =========================================================
+// MODO LIVIANO: celulares con menos capacidad (ej. Redmi 9C, Android 11, GPU PowerVR, 2–3 GB)
+// Se ve con menos gráfica (sin sombras, sin cielo dibujado, menos nubes y menos detalle lejano)
+// pero el juego se puede jugar sin trabarse. Se detecta solo; también se puede elegir con el
+// botón «Gráficos» o con ?graficos=bajo / ?graficos=alto en la dirección.
+// =========================================================
+const GFX_PREF = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('graficos');
+    if (q === 'bajo') localStorage.setItem('bx_lite', '1');
+    else if (q === 'alto') localStorage.setItem('bx_lite', '0');
+    else if (q === 'auto') localStorage.removeItem('bx_lite');
+    return localStorage.getItem('bx_lite') || 'auto';
+  } catch (e) { return 'auto'; }
+})();
+function equipoModesto() {
+  const ua = navigator.userAgent || '', android = /Android/i.test(ua);
+  const mem = navigator.deviceMemory || 0, cores = navigator.hardwareConcurrency || 0;
+  const av = +((ua.match(/Android (\d+)/) || [])[1] || 0);
+  let gpu = '';
+  try {
+    const c = document.createElement('canvas'), g = c.getContext('webgl');
+    const e = g && g.getExtension('WEBGL_debug_renderer_info');
+    if (e) gpu = String(g.getParameter(e.UNMASKED_RENDERER_WEBGL) || '');
+    const lc = g && g.getExtension('WEBGL_lose_context'); if (lc) lc.loseContext();
+  } catch (e) {}
+  const gpuDebil = /PowerVR|Mali-(400|450|T\d|G31|G51|G52)|Adreno \(TM\) ([1-5]\d\d|61\d)\b|SwiftShader|llvmpipe/i.test(gpu);
+  return gpuDebil || (mem && mem <= 3) || (android && av && av <= 9) || (android && cores && cores <= 4);
+}
+const LITE = GFX_PREF === '1' || (GFX_PREF === 'auto' && equipoModesto());
+const LR = LITE ? .6 : 1; // en modo liviano lo lejano se oculta antes
+// Botón «Gráficos»: Automático → Liviano → Normal (se guarda y recarga el juego)
+(() => {
+  const b = document.getElementById('tbGfx'); if (!b) return;
+  b.textContent = '⚙️ Gráficos: ' + (GFX_PREF === '1' ? 'Liviano' : GFX_PREF === '0' ? 'Normal' : LITE ? 'Auto (liviano)' : 'Auto');
+  b.addEventListener('click', () => {
+    const next = GFX_PREF === 'auto' ? '1' : GFX_PREF === '1' ? '0' : 'auto';
+    try { if (next === 'auto') localStorage.removeItem('bx_lite'); else localStorage.setItem('bx_lite', next); } catch (e) {}
+    try { persist(); } catch (e) {}
+    location.reload();
+  });
+})();
 const isTouch0 = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 // Calidad automática guardada: si el equipo fue lento la vez anterior, empieza ya liviano (sin tirones al comenzar)
-let QL = 0; try { QL = Math.min(3, Math.max(0, +localStorage.getItem('bx_ql') || 0)); } catch (e) {}
+let QL = 0; if (!LITE) try { QL = Math.min(3, Math.max(0, +localStorage.getItem('bx_ql') || 0)); } catch (e) {}
 // en computadoras el suavizado de bordes lo hace el acabado (composer); así no se dibuja dos veces
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: isTouch0 || QL >= 2, powerPreference: 'high-performance', logarithmicDepthBuffer: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE && (isTouch0 || QL >= 2), powerPreference: LITE ? 'default' : 'high-performance', precision: LITE ? 'mediump' : 'highp', logarithmicDepthBuffer: false });
 const isTouch = isTouch0;
-const MAX_PR = Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
+const MAX_PR = LITE ? Math.min(devicePixelRatio, .8) : Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(QL >= 1 ? Math.max(.75, MAX_PR - .35 * QL) : MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 // Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde: guardar y recargar UNA sola vez
@@ -70,14 +113,14 @@ canvas.addEventListener('webglcontextrestored', () => { const gl = document.getE
 setTimeout(() => { try { sessionStorage.removeItem('bx_reload'); } catch (_) {} }, 60000);
 // No revisar errores de sombreadores en el sitio publicado: esa revisión obliga a esperar a cada uno
 renderer.debug.checkShaderErrors = /^(localhost|127\.)/.test(location.hostname);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !LITE;
 renderer.shadowMap.type = isTouch ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, 2600);
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, LITE ? 700 : 2600);
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -100,7 +143,7 @@ const pmrem = new THREE.PMREMGenerator(renderer); let envRT = null;
 scene.fog = new THREE.Fog(0xd8b9a0, 110, 760);
 const hemi = new THREE.HemisphereLight(0xcfe0ff, 0x4b3a2c, 0.55); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xffcf9e, 3.2);
-sun.castShadow = true;
+sun.castShadow = !LITE;
 sun.shadow.mapSize.set(isTouch ? 1024 : 2048, isTouch ? 1024 : 2048); sun.shadow.radius = 1.4;
 const SC = isTouch ? 34 : 42; Object.assign(sun.shadow.camera, { left: -SC, right: SC, top: SC, bottom: -SC, near: 1, far: 400 });
 sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
@@ -245,13 +288,13 @@ function applyTime(mode) {
   for (const sk of [sky, envSky]) { const u = sk.material.uniforms; u.sunPosition.value.copy(skyDir); u.turbidity.value = T2.turb; u.rayleigh.value = T2.ray; u.mieCoefficient.value = T2.mie; }
   sunDir.copy(T2.stars ? moonDir : skyDir); if (sunDir.y < .34) sunDir.y = .34; sunDir.normalize(); // el sol de la tarde da sombras visibles (no tan largas)
   sun.color.set(T2.sunC); sun.intensity = T2.sunI; hemi.intensity = T2.hemiI; hemi.color.set(T2.hemiS); hemi.groundColor.set(T2.hemiG);
-  renderer.toneMappingExposure = T2.exp; scene.fog.color.set(T2.fog); scene.fog.near = T2.fogN; scene.fog.far = T2.fogF;
-  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: isTouch ? 128 : 256 }); // en el celular, más liviano
+  renderer.toneMappingExposure = T2.exp; scene.fog.color.set(T2.fog); scene.fog.near = LITE ? T2.fogN * .5 : T2.fogN; scene.fog.far = LITE ? Math.min(T2.fogF, 420) : T2.fogF;
+  if (envRT) envRT.dispose(); envRT = pmrem.fromScene(envScene, 0.02, .1, 100, { size: LITE ? 32 : isTouch ? 128 : 256 }); // en el celular, más liviano
   scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
-  if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else { scene.background = null; sky.visible = true; }
+  if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else if (LITE) { scene.background = scene.fog.color; sky.visible = false; } else { scene.background = null; sky.visible = true; }
   if (world && world.ark && world.ark.rainbow) world.ark.rainbow.visible = !T2.stars;
-  stars.visible = T2.stars; birds.grp.visible = !T2.stars; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
-  skyClouds.grp.children.forEach((c, i) => { c.visible = i < T2.clouds; });
+  stars.visible = T2.stars; birds.grp.visible = !T2.stars && !LITE; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
+  skyClouds.grp.children.forEach((c, i) => { c.visible = i < (LITE ? Math.min(T2.clouds, 8) : T2.clouds); });
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
   if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? 4.5 : 2); }
@@ -281,7 +324,7 @@ const GradeShader = {
     }`
 };
 let gradePass = null;
-if (!isTouch && QL < 2) {
+if (!isTouch && !LITE && QL < 2) {
   try {
     const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: QL ? 2 : 4 });
     composer = new EffectComposer(renderer, rt);
@@ -299,10 +342,15 @@ if (!isTouch && QL < 2) {
 function canvasTex(w, h, draw, srgb = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c);
+  let src = c;
+  if (LITE && w * h > 256 * 256) { // en modo liviano las texturas usan la cuarta parte de memoria
+    const c2 = document.createElement('canvas'); c2.width = Math.max(1, w >> 1); c2.height = Math.max(1, h >> 1);
+    c2.getContext('2d').drawImage(c, 0, 0, c2.width, c2.height); src = c2;
+  }
+  const t = new THREE.CanvasTexture(src);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  t.anisotropy = LITE ? 1 : renderer.capabilities.getMaxAnisotropy();
   return t;
 }
 function noise(g, w, h, amount, alpha) {
@@ -1350,7 +1398,7 @@ async function buildWorld(cfg) {
   await idle();
   // Autos (solo en calles horizontales para evitar choques entre ellos)
   const carColors = [0xd7261e, 0x1f4fbf, 0xf1f1f1, 0x111215, 0x9aa3ad, 0x0f6d5f, 0xe0a31a];
-  for (let k = 0; k < cfg.cars; k++) { await pace();
+  for (let k = 0, nCars = LITE ? Math.ceil(cfg.cars * .5) : cfg.cars; k < nCars; k++) { await pace();
     const lane = streetCenters[(r() * streetCenters.length) | 0];
     const dir = r() < .5 ? 1 : -1;
     const car = makeCar(carColors[(r() * carColors.length) | 0]);
@@ -1403,7 +1451,7 @@ const CULL_K = isTouch ? 1 : 1.35;
 const _cb = new THREE.Box3(), _cs = new THREE.Sphere(), _ci = new THREE.Matrix4(), _cv = new THREE.Vector3();
 // pieza diminuta bajo el suelo para que el material de las personas lejanas se prepare junto con los demás
 { const g = new THREE.BoxGeometry(.01, .01, .01); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); const m = new THREE.Mesh(g, FAR_MAT); m.position.y = -40; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
-const LOD_FAR = isTouch ? 16 : 22, LOD_HIDE = isTouch ? 110 : 170, _lv = new THREE.Vector3();
+const LOD_FAR = LITE ? 10 : isTouch ? 16 : 22, LOD_HIDE = isTouch ? 110 : 170, _lv = new THREE.Vector3();
 // Personas lejanas: una versión sencilla (una sola pieza, sin dedos) en la misma postura.
 // Se prepara DESPUÉS de mostrar el mundo, de a poquito, para no alargar la carga ni congelar la pantalla.
 let lodJob = 0;
@@ -1464,7 +1512,7 @@ function updateCull(cp) {
   if (!world || !world.cull) return;
   for (const u of world.cull) {
     _cv.copy(u.c).applyMatrix4(u.o.matrixWorld);
-    const hide = Math.hypot(_cv.x - cp.x, _cv.z - cp.z) > u.range;
+    const hide = Math.hypot(_cv.x - cp.x, _cv.z - cp.z) > u.range * LR;
     if (hide !== u.hidden) { u.hidden = hide; for (const m of u.items) m.layers.set(hide ? 1 : 0); }
   }
 }
@@ -2993,17 +3041,24 @@ function loopBody() {
         else if (composer) { composer = null; QL = Math.max(QL, 2); }
         else QL = 3;
         QL = Math.max(QL, 1); try { localStorage.setItem('bx_ql', String(QL)); } catch (e) {}
+        // sigue muy lento (menos de 20 cuadros por segundo): quitar sombras ya y usar el modo liviano la próxima vez
+        if (!LITE && avg > .05 && perf.changes >= 2) {
+          sun.castShadow = false; birds.grp.visible = false;
+          try { if (localStorage.getItem('bx_lite') == null) { localStorage.setItem('bx_lite', '1'); toast('⚡ Tu teléfono va lento: la próxima vez el juego abrirá en modo liviano', '#ffd166', true); } } catch (e) {}
+        }
       } else if (avg < .017 && pr < MAX_PR && !perf.lowered) { renderer.setPixelRatio(Math.min(MAX_PR, pr + .2)); perf.changes++; }
       else if (avg < .02 && !perf.lowered && QL > 0) { QL--; try { localStorage.setItem('bx_ql', String(QL)); } catch (e) {} }
       perf.acc = 0; perf.n = 0;
     }
   }
   if (state === 'play') { applyLook(); update(dt); } else lookAcc.x = lookAcc.y = 0;
-  birds.update(dt, elapsed, camera.position);
-  meteor.update(dt);
-  fireflies.update(dt, elapsed, camera.position);
-  butterflies.update(dt, elapsed, camera.position);
-  shootingStar.update(dt, camera.position);
+  if (!LITE) { // adornos del cielo: en modo liviano no se dibujan
+    birds.update(dt, elapsed, camera.position);
+    meteor.update(dt);
+    fireflies.update(dt, elapsed, camera.position);
+    butterflies.update(dt, elapsed, camera.position);
+    shootingStar.update(dt, camera.position);
+  }
 
   if (world) {
     followShip();
@@ -3130,7 +3185,7 @@ function loopBody() {
   if (world && (lodTimer += dt) > .25) {
     lodTimer = 0; const cp = camera.position;
     for (const it of world.lod) {
-      const p = it.center || it.obj.position, far = Math.hypot(p.x - cp.x, p.z - cp.z) > it.range;
+      const p = it.center || it.obj.position, far = Math.hypot(p.x - cp.x, p.z - cp.z) > it.range * LR;
       if (it.animal) { it.obj.userData.far = far; if (far) it.obj.visible = false; } else it.obj.visible = !far;
     }
     updateCull(cp);
