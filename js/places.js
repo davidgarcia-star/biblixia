@@ -125,7 +125,14 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
         addBox(mx - Math.abs(cx2) * len / 2 - .7, mx + Math.abs(cx2) * len / 2 + .7, mz - Math.abs(sx2) * len / 2 - .7, mz + Math.abs(sx2) * len / 2 + .7, Hh);
         if (k === 6) { // casa de Rahab sobre el muro
           const hs = box(3, 2.6, 2.6, std({ color: 0xc8a878, roughness: .95 }), mx, Hh + 1.3, mz); hs.rotation.y = wl.rotation.y;
-          const cord = add(new THREE.CylinderGeometry(.04, .04, 5, 6), std({ color: 0xc8102e, emissive: 0x500010 }), mx, Hh - 1, mz - 1); cord.position.x += 0;
+          // ventana por la que bajó a los espías y el cordón escarlata atado a ella, por fuera del muro (Josué 2:15, 18)
+          const rg = new THREE.Group(); rg.position.set(mx, 0, mz); rg.rotation.y = wl.rotation.y; P.add(rg);
+          const out2 = (Math.sin(wl.rotation.y) * (mx - px) + Math.cos(wl.rotation.y) * (mz - pz)) >= 0 ? 1 : -1;
+          const win = new THREE.Mesh(new THREE.BoxGeometry(.7, .6, .06), std({ color: 0x2a1c12, roughness: 1 })); win.position.set(0, Hh + 1.5, out2 * 1.32); rg.add(win);
+          const sill = new THREE.Mesh(new THREE.BoxGeometry(.85, .08, .16), std({ color: 0x8a6a44, roughness: .9 })); sill.position.set(0, Hh + 1.18, out2 * 1.36); rg.add(sill);
+          const piv = new THREE.Group(); piv.position.set(0, Hh + 1.2, out2 * 1.4); rg.add(piv);
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 5.4, 6), std({ color: 0xc8102e, emissive: 0x500010 })); cord.position.y = -2.7; piv.add(cord);
+          out.live.push({ kind: 'fn', update: t => { piv.rotation.x = -out2 * (.05 + Math.sin(t * 1.3) * .035 + Math.sin(t * 2.9) * .015); piv.rotation.z = Math.sin(t * .9) * .03; } });
         }
       }
     }
