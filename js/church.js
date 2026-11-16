@@ -54,7 +54,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   wall(X0, Z1, X1, Z1, H, darkM); wall(X0, Z0, X0, Z1); wall(X1, Z0, X1, Z1); wall(X0, Z0, cx - DW / 2, Z0); wall(cx + DW / 2, Z0, X1, Z0);
   box(DW, H - 3.4, T, wallM, cx, y0 + 3.4 + (H - 3.4) / 2, Z0);
   // fachada trasera por fuera: la pared del escenario es oscura por dentro, pero por fuera se veía como un bloque negro;
-  // se reviste del mismo color claro que el resto del templo, con zócalo y una cruz dorada
+  // se reviste del mismo color que el resto del templo, con zócalo y una «M» gigante (antes una cruz dorada)
   // por fuera, las paredes son gris oscuro con líneas verticales estrechas (una textura diminuta repetida: casi no pesa)
   const ribTex = (() => { const c = document.createElement('canvas'); c.width = 32; c.height = 4; const g = c.getContext('2d');
     g.fillStyle = '#4a4d53'; g.fillRect(0, 0, 32, 4); g.fillStyle = '#2c2e33'; g.fillRect(14, 0, 3, 4); g.fillStyle = '#62666d'; g.fillRect(17, 0, 1, 4);
@@ -67,8 +67,6 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     for (const sx of [-1, 1]) skin(sw, H, cx + sx * (DW / 2 + sw / 2), y0 + H / 2, fz, Math.PI);                                       // frente, a los lados de la puerta
     skin(DW, H - 3.4, cx, y0 + 3.4 + (H - 3.4) / 2, fz, Math.PI); }                                                                    // sobre la puerta
   box(HW * 2 + T + .04, .5, .1, mat(0x9a948a, { roughness: .95 }), cx, y0 + .25, Z1 + T / 2 + .1, { cast: false });
-  { const gold = mat(0xd9b24a, { metalness: .6, roughness: .35, emissive: 0x3a2a08 });
-    box(.4, 3.4, .12, gold, cx, y0 + H - 3.6, Z1 + T / 2 + .13, { cast: false }); box(2, .4, .12, gold, cx, y0 + H - 2.9, Z1 + T / 2 + .13, { cast: false }); }
   const roof = box(HW * 2 + .8, .4, HD * 2 + .8, mat(0x3a3f47), cx, y0 + H + .2, cz, { cast: false }); blockers.push(roof);
   // puertas de vidrio y fachada con letrero, emblemas «M» y horario
   const glass = new THREE.MeshStandardMaterial({ color: 0x8fc4e0, metalness: .3, roughness: .05, transparent: true, opacity: .35, depthWrite: false });
@@ -135,6 +133,14 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     const nm = new THREE.Mesh(new THREE.PlaneGeometry(8, 1), new THREE.MeshBasicMaterial({ map: nameTex, transparent: true, toneMapped: false }));
     nm.position.set(px + .14, y0 + 1.05, mz); nm.rotation.y = Math.PI / 2; group.add(nm);
     solid(X1, px + .85, mz - 5.5, mz + 5.5, y0 + 9);
+    // fachada trasera: en lugar de la cruz, otra «M» gigante dorada con contorno de neón (reusa los mismos materiales)
+    const bz = Z1 + T / 2 + .08, BW = 1.25;
+    const bShape = s => { const sh = new THREE.Shape(); mPath(sh, u => (u - .5) * MW * BW * s, v => (1 - v) * MH * BW * s - (s - 1) * MH * BW / 2); return sh; };
+    const bGlow = new THREE.Mesh(new THREE.ExtrudeGeometry(bShape(1.08), { depth: .1, bevelEnabled: false, curveSegments: 8 }), neonM);
+    bGlow.position.set(cx, y0 + 1, bz); group.add(bGlow);
+    const bM = new THREE.Mesh(m3.geometry.clone().scale(BW, BW, 1), gold);
+    bM.position.set(cx, y0 + 1, bz + .06); group.add(bM);
+    solid(cx - MW * BW / 2, cx + MW * BW / 2, Z1, bz + .6, y0 + 9);
   }
   // letrero luminoso verde de «SALIDA» por dentro, sobre la puerta principal (como en los templos reales)
   {
