@@ -235,9 +235,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const btn = cyl(.013, .013, .01, mat(0xd9dde2, { metalness: .7, roughness: .3 }), bx, by - .03, bz - .018, 12); btn.rotation.x = Math.PI / 2;
       houseUpd.push(t => { ringM.emissiveIntensity = .7 + (Math.sin(t * 1.6) * .5 + .5) * 1.1; });
     }
-    { // corona navideña en la pared oscura junto a la puerta (solo en temporada: 1 nov – 31 ene, o con ?navidad=1)
-      const m = new Date().getMonth(); let on = m === 10 || m === 11 || m === 0;
-      try { const q = new URLSearchParams(location.search).get('navidad'); if (q === '1') on = true; else if (q === '0') on = false; } catch (e) {}
+    { // corona navideña en la pared oscura junto a la puerta (solo en temporada: 1 nov – 9 ene, o con ?navidad=1)
+      const on = !!(window.Navidad && window.Navidad.activo); // misma regla que navidad.js (1 nov – 9 ene)
       if (on) {
         const wx = cx - 1.15, wy = fy + 1.5, wz = Z0 - T / 2 - .045;
         const leafG = new THREE.TorusGeometry(.2, .065, 8, 22), leaf = new THREE.Mesh(leafG, mat(0x1d5a30, { roughness: .9 }));

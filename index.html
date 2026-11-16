@@ -280,14 +280,14 @@
 <div id="loading" class="screen"><div class="spinner"></div><p class="sub">Construyendo la ciudad…</p></div>
 
 <script>
-/* Navidad: adornos y villancicos del 1 de noviembre al 31 de enero */
+/* Navidad: adornos y villancicos del 1 de noviembre al 9 de enero */
 window.NAVIDAD_CFG = {
   portal: '#splash', portalDentro: '.portal', portalAntes: '.menu',
   logo: '#splash .logo-plate',
   jugando: function () { var h = document.getElementById('hud'); return !!(h && !h.classList.contains('hidden')); }
 };
 </script>
-<script src="js/navidad.js?v=4"></script>
+<script src="js/navidad.js?v=5"></script>
 <script>
 /* BIBLIXIA 2 se desbloquea al completar los 5 niveles de BIBLIXIA */
 (function () {
@@ -305,6 +305,6 @@ window.NAVIDAD_CFG = {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', pintar); else pintar();
 })();
 </script>
-<script type="module" src="js/biblixia.min.js?v=20261115g"></script>
+<script type="module" src="js/biblixia.min.js?v=20261115h"></script>
 </body>
 </html>
