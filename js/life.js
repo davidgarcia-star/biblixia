@@ -587,6 +587,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const asaG = new THREE.TorusGeometry(.024, .006, 6, 12, Math.PI); asaG.rotateZ(-Math.PI / 2);
       const binG = new THREE.CylinderGeometry(.13, .1, .3, 14, 1, true), binM = new THREE.MeshStandardMaterial({ color: 0x2a2d33, metalness: .6, roughness: .45, side: THREE.DoubleSide });
       const paperG = new THREE.IcosahedronGeometry(.045, 0), paperM = mat(0xf4f2ec, { roughness: .95, flatShading: true });
+      const succPotG = new THREE.CylinderGeometry(.042, .032, .07, 12), succPotM = mat(0xf3f1ec, { roughness: .35 }), succSoilM = mat(0x3a2a1c, { roughness: 1 });
+      const succLeafG = new THREE.SphereGeometry(.016, 6, 4); succLeafG.scale(1, 2, 1); const succLeafM = mat(0x6fa86a, { roughness: .6 });
       const desks = i === 0 ? [] : [[cx - 5, cz - 1], [cx - 1, cz - 1], [cx + 3, cz - 1], [cx - 5, cz + 4], [cx - 1, cz + 4], [cx + 3, cz + 4]];
       desks.forEach(([dx, dz], k) => {
         box(1.8, .06, .9, deskM, dx, y + .75, dz); box(1.7, .72, .06, deskM, dx, y + .37, dz + .4); solid(dx - .9, dx + .9, dz - .45, dz + .45, y + .78, y);
@@ -603,6 +605,13 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           const hx = dx + .64, hz = dz + .22;
           cyl(.032, .032, .085, pcM, hx, ty + .0425, hz, 10);
           penMs.forEach((pm, q) => { const pen = cyl(.005, .005, .14, pm, hx + (q - 1) * .014, ty + .1, hz + (q % 2 ? .01 : -.008), 5); pen.rotation.z = (q - 1) * .18; pen.castShadow = false; }); }
+        // suculenta en una macetita blanca de cerámica junto al monitor, con tierra oscura y hojas carnosas
+        { const sx = dx - .6, sz = dz + .3, ty = y + .78;
+          const pot = new THREE.Mesh(succPotG, succPotM); pot.position.set(sx, ty + .035, sz); pot.castShadow = false; group.add(pot);
+          cyl(.036, .036, .004, succSoilM, sx, ty + .066, sz, 10).castShadow = false;
+          for (let q = 0; q < 6; q++) { const a = q / 6 * Math.PI * 2 + k, lf = new THREE.Mesh(succLeafG, succLeafM);
+            lf.position.set(sx + Math.cos(a) * .018, ty + .085, sz + Math.sin(a) * .018); lf.rotation.set(Math.sin(a) * .7, 0, -Math.cos(a) * .7); lf.castShadow = false; group.add(lf); }
+          const top = new THREE.Mesh(succLeafG, succLeafM); top.position.set(sx, ty + .1, sz); top.castShadow = false; group.add(top); }
         // papelera de malla metálica junto al escritorio, con una bola de papel arrugado adentro
         { const px = dx + 1.08, pz = dz + .15;
           const bin = new THREE.Mesh(binG, binM); bin.position.set(px, y + .15, pz); bin.castShadow = true; group.add(bin);
