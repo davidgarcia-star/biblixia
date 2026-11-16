@@ -235,6 +235,15 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     addBox(px - 13, px + 3, pz - 12, pz, 2.6);
     const wood = std({ color: 0x5a3a20, roughness: .9 });
     for (const [dx, h] of [[-4, 5], [0, 6], [4, 5]]) { box(.35, h, .35, wood, px - 5 + dx, 3.6 + h / 2 - .2, pz - 6); box(2.6, .3, .3, wood, px - 5 + dx, 3.6 + h - 1.3, pz - 6); }
+    // letrero sobre la cruz de Jesús: «JESÚS EL NAZARENO, EL REY DE LOS JUDÍOS» (Juan 19:19-20, en hebreo, latín y griego)
+    const titT = tex(512, 160, (g, W, H) => {
+      g.fillStyle = '#e9dcbc'; g.fillRect(0, 0, W, H); g.strokeStyle = '#6b4a2a'; g.lineWidth = 10; g.strokeRect(5, 5, W - 10, H - 10);
+      g.fillStyle = '#2a1a0e'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = 'bold 34px serif'; g.fillText('ישוע הנצרי מלך היהודים', W / 2, 36);
+      g.font = 'bold 40px serif'; g.fillText('I · N · R · I', W / 2, 82);
+      g.font = 'bold 19px serif'; g.fillText('JESÚS EL NAZARENO, EL REY DE LOS JUDÍOS', W / 2, 126);
+    }); titT.wrapS = titT.wrapT = THREE.ClampToEdgeWrapping;
+    box(1.5, .48, .06, std({ map: titT, roughness: .9 }), px - 5, 3.6 + 6 - .55, pz - 6 + .21);
     // tumba en la roca con la piedra removida
     const rock = std({ color: 0x8a8478, roughness: 1 });
     const tomb = box(9, 5, 6, rock, px + 8, 2.5, pz + 6); blockers.push(tomb); addBox(px + 3.5, px + 12.5, pz + 3, pz + 9, 5);
@@ -245,7 +254,7 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
     for (let k = 0; k < 6; k++) { const tr = add(new THREE.IcosahedronGeometry(1.4, 1), std({ color: 0x3f6b2a, roughness: .9 }), px + 3 + k * 2.4, 2.6, pz + 12); add(new THREE.CylinderGeometry(.12, .16, 2, 6), wood, px + 3 + k * 2.4, 1, pz + 12); addBox(px + 2.8 + k * 2.4, px + 3.2 + k * 2.4, pz + 11.8, pz + 12.2, 4); }
     out.zones.push({ id: 'calvario', name: 'El Calvario y la tumba vacía', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'En el Calvario Jesús dio su vida por nosotros y al tercer día resucitó.',
-      ref: 'Juan 19:17-18, 41-42; Mateo 28:1-6' });
+      ref: 'Juan 19:17-19, 41-42; Mateo 28:1-6' });
     out.coins.push([px - 5, pz - 6, 2.6], [px + 8, pz - 2, 0]);
     out.treasures.calvario = [px + 4, pz + 1, 0];
   }
