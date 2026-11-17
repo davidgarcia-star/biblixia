@@ -595,7 +595,7 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 
 /* Fondo provisional: una foto del mundo 3D que aparece al instante mientras el mundo se construye; luego se desvanece */
 #splash>.fondo-previo{position:fixed!important;inset:0;z-index:-1!important;pointer-events:none;
-  background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 0%,rgba(4,3,0,.35) 45%,rgba(2,1,0,.88) 100%),url(../img/fondo.webp) center/cover no-repeat #6f8fae;
+  background:radial-gradient(ellipse at 50% 42%,rgba(0,0,0,0) 0%,rgba(4,3,0,.35) 45%,rgba(2,1,0,.88) 100%),url(../img/fondo.webp?v=20261117) center/cover no-repeat #6f8fae;
   transition:opacity 1.4s ease,visibility 0s linear 1.4s}
 body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 
