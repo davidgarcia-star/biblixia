@@ -60,6 +60,8 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     box(1.6, .6, .8, wood, px, .55, pz - .8); box(1.4, .25, .65, hay, px, .9, pz - .8);
     const baby = add(new THREE.CapsuleGeometry(.12, .35, 4, 10), std({ color: 0xf2ead8 }), px, 1.07, pz - .8); baby.rotation.z = Math.PI / 2;
     add(new THREE.SphereGeometry(.09, 12, 10), std({ color: 0xc8956a }), px + .3, 1.1, pz - .8);
+    // «le envolvió en pañales» (Lucas 2:7): fajas de tela alrededor del niño
+    { const faja = std({ color: 0xd9ccae, roughness: 1 }); for (const fx of [-.17, -.02, .13]) { const f = add(new THREE.TorusGeometry(.124, .014, 6, 18), faja, px + fx, 1.07, pz - .8); f.rotation.y = Math.PI / 2; } }
     for (let k = 0; k < 6; k++) box(1, .5, .7, hay, px - 3 + k * 1.2, .25, pz - 2.4);
     addBox(px - 1, px + 1, pz - 1.3, pz - .3, 1.1);
     const mary = createHuman({ detail: .6, gender: 'f', outfit: 'robe', robe: 0x2a4a8a, mantle: 0x8ab0e0, sash: 0xe8dcc0, hair: 'cloth', cloth: 0x7aa0d8, hairColor: 0x2a1a10, skin: 0xb98260 });
@@ -115,7 +117,7 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     // la estrella titila: su resplandor late suave y el haz de luz «respira» (Mateo 2:9-10)
     out.live.push({ kind: 'fn', update: t => { const tw = 1 + Math.sin(t * 2.1) * .07 + Math.sin(t * 5.3) * .04; sg.scale.set(9 * tw, 9 * tw, 1); sg.material.opacity = .82 + (tw - 1) * 1.6; beam.material.opacity = .13 + (tw - 1) * .35 + .03; } });
     out.zones.push({ id: 'belen', name: 'Belén: el nacimiento de Jesús', minX: px - w / 2, maxX: px + w / 2, minZ: zN, maxZ: zS, pri: 2,
-      text: 'En Belén nació Jesús y fue acostado en un pesebre.',
+      text: 'En Belén nació Jesús: María «le envolvió en pañales y le acostó en un pesebre».',
       ref: 'Miqueas 5:2; Lucas 2:4-14; Mateo 2:9-11' });
     out.coins.push([px - 8, pz + 10, 0], [px + 8, pz + 3, 0]);
     out.treasures.belen = [px + 2.5, pz + 1.5, 0];
