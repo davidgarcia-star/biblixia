@@ -723,7 +723,9 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
     h.skinSkirt.scale.set(1 + .04 * fwd, 1, 1 - .22 * fwd);
   }
   if (h.skirt) { const sw = Math.max(Math.abs(h.legs[0].thigh.rotation.x), Math.abs(h.legs[1].thigh.rotation.x)); h.skirt.scale.z = .86 + sw * .75; h.skirt.scale.x = 1 + sw * .1; }
-  const blink = (t % 3.7) < .12;
+  // parpadeo natural: cada persona parpadea a su propio ritmo (no todos a la vez)
+  if (h.blinkOff === undefined) { h.blinkOff = Math.random() * 4; h.blinkPer = 3.1 + Math.random() * 1.6; }
+  const blink = ((t + h.blinkOff) % h.blinkPer) < .12;
   for (const e of h.eyes) e.scale.y = blink ? .15 : 1;
 }
 
