@@ -203,5 +203,6 @@ export const VERSES = [
   ["Yo soy el Alfa y la Omega, el primero y el último, el principio y el fin.", "Apocalipsis 22:13"],
   ["En lugares de verdes pastos me hace descansar; junto a aguas de reposo me conduce.", "Salmos 23:2"],
   ["Él restaura mi alma; me guía por senderos de justicia por amor de su nombre.", "Salmos 23:3"],
-  ["Bienaventurados los misericordiosos, pues ellos recibirán misericordia.", "Mateo 5:7"]
+  ["Bienaventurados los misericordiosos, pues ellos recibirán misericordia.", "Mateo 5:7"],
+  ["Que las misericordias del SEÑOR jamás terminan, pues nunca fallan sus bondades; son nuevas cada mañana; ¡grande es tu fidelidad!", "Lamentaciones 3:22-23"]
 ];
