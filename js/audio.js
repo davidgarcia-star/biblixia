@@ -392,6 +392,39 @@ export class Sound {
     this.note(196, 1.2, { type: 'sine', vol: .08, attack: .05, when: .05 });
   }
   jump() { this.note(220, .18, { type: 'sine', vol: .08, slide: 440, wet: false }); }
+  // Gota de agua: un «plic» corto que sube de tono (como una gota que cae en el agua)
+  drop(vol = .5, pan = 0) {
+    const a = this.unlock(); if (!a || !this.sfxOn || vol < .01) return;
+    const t = a.currentTime, f0 = 700 + Math.random() * 900, o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * (1.8 + Math.random() * .8), t + .05);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + .09);
+    const out = this._bus(vol, pan); o.connect(g).connect(out); if (this.rev) g.connect(this.rev);
+    o.start(t); o.stop(t + .12);
+  }
+  // Chisporroteo del fuego: chasquidos cortos y un soplo grave de llama
+  crackle(vol = .5, pan = 0) {
+    const a = this.unlock(); if (!a || !this.sfxOn || !this.noise || vol < .01) return;
+    const t = a.currentTime, out = this._bus(vol, pan), n = 1 + (Math.random() * 3 | 0);
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * .12, src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = 1.5 + Math.random();
+      const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800 + Math.random() * 2500;
+      const g = a.createGain(); g.gain.setValueAtTime(.0001, t + w); g.gain.exponentialRampToValueAtTime(.18 + Math.random() * .15, t + w + .003); g.gain.exponentialRampToValueAtTime(.0001, t + w + .03 + Math.random() * .03);
+      src.connect(hp).connect(g).connect(out); src.start(t + w); src.stop(t + w + .08);
+    }
+    const src = a.createBufferSource(); src.buffer = this.noise; src.playbackRate.value = .35;
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380;
+    const g = a.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.12, t + .05); g.gain.exponentialRampToValueAtTime(.0001, t + .5);
+    src.connect(lp).connect(g).connect(out); src.start(t); src.stop(t + .55);
+  }
+  // Quemadura: chirrido de algo que se quema (siseo) y un quejido corto
+  burn() {
+    const a = this.unlock(); if (!a || !this.sfxOn || !this.noise) return;
+    const t = a.currentTime, src = a.createBufferSource(); src.buffer = this.noise; src.loop = true; src.playbackRate.value = 1.2;
+    const bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 5200; bp.Q.value = 1.2;
+    const g = a.createGain(); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.22, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + .6);
+    src.connect(bp).connect(g).connect(this.sfx); src.start(t); src.stop(t + .65);
+    this.note(520, .28, { type: 'triangle', vol: .06, slide: 300, filter: 1500, when: .04, wet: false });
+  }
   hurt() { this.note(330, .5, { type: 'sawtooth', vol: .07, slide: 110, filter: 900 }); this.note(392, .35, { type: 'square', vol: .05, filter: 1200, when: .02 }); }
   tick(hi = false) { this.note(hi ? 1760 : 1320, .05, { type: 'square', vol: .035, filter: 2600, wet: false }); this.note(hi ? 880 : 660, .08, { type: 'sine', vol: .04, when: .01, wet: false }); }
   click() { this.note(880, .06, { type: 'sine', vol: .06, wet: false }); }

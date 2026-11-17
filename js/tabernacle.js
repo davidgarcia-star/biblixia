@@ -371,19 +371,31 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
 }
 
 /* Tiendas del campamento de Israel alrededor del tabernáculo */
-export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }) {
+export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, radiusZ, lite = false }) {
   // Tiendas de pelo de cabra, como las de los patriarcas (Génesis 18:1; Cantares 1:5)
-  const hairT = (() => { const c = document.createElement('canvas'); c.width = 128; c.height = 64; const x = c.getContext('2d'); x.fillStyle = '#2a221c'; x.fillRect(0, 0, 128, 64); for (let i = 0; i < 128; i += 16) { x.fillStyle = 'rgba(200,180,150,.18)'; x.fillRect(i, 0, 3, 64); } for (let i = 0; i < 1500; i++) { x.fillStyle = Math.random() < .5 ? 'rgba(255,255,255,.04)' : 'rgba(0,0,0,.1)'; x.fillRect(Math.random() * 128, Math.random() * 64, 2, 1); } const t = new THREE.CanvasTexture(x.canvas); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })();
+  // Tela de pelo de cabra tejida en franjas cosidas: fibras, costuras y desgaste (más detalle fuera del modo liviano)
+  const hairC = (() => {
+    const W2 = lite ? 128 : 512, H2 = lite ? 64 : 256, c = document.createElement('canvas'); c.width = W2; c.height = H2; const x = c.getContext('2d');
+    x.fillStyle = '#2b221b'; x.fillRect(0, 0, W2, H2);
+    const fr = W2 / 8;
+    for (let i = 0; i < 8; i++) { const v = 30 + (Math.random() * 14 | 0); x.fillStyle = `rgb(${v + 10},${v + 2},${v - 6})`; x.fillRect(i * fr, 0, fr, H2); }
+    for (let i = 0; i < (lite ? 1500 : 16000); i++) { const l = 2 + Math.random() * (lite ? 2 : 7); x.fillStyle = Math.random() < .45 ? `rgba(210,190,160,${.03 + Math.random() * .06})` : `rgba(0,0,0,${.08 + Math.random() * .12})`; x.fillRect(Math.random() * W2, Math.random() * H2, l, 1); }
+    for (let i = 0; i <= 8; i++) { x.fillStyle = 'rgba(205,185,150,.22)'; x.fillRect(i * fr - 1, 0, lite ? 3 : 4, H2); if (!lite) { x.fillStyle = 'rgba(0,0,0,.35)'; for (let y = 0; y < H2; y += 9) x.fillRect(i * fr + 2, y, 2, 4); } }
+    if (!lite) { const g = x.createLinearGradient(0, 0, 0, H2); g.addColorStop(0, 'rgba(255,240,210,.06)'); g.addColorStop(1, 'rgba(0,0,0,.18)'); x.fillStyle = g; x.fillRect(0, 0, W2, H2); }
+    return c;
+  })();
+  const hairT = new THREE.CanvasTexture(hairC); hairT.colorSpace = THREE.SRGBColorSpace; hairT.wrapS = hairT.wrapT = THREE.RepeatWrapping; hairT.anisotropy = lite ? 1 : 8;
+  const hairB = lite ? null : (() => { const b = new THREE.CanvasTexture(hairC); b.wrapS = b.wrapT = THREE.RepeatWrapping; return b; })();
   const sh = new THREE.Shape(); sh.moveTo(-2.6, 0); sh.lineTo(-2.6, .9); sh.quadraticCurveTo(-1.9, 1.9, -1.3, 1.95); sh.quadraticCurveTo(-.65, 1.6, 0, 2.15); sh.quadraticCurveTo(.65, 1.6, 1.3, 1.95); sh.quadraticCurveTo(1.9, 1.9, 2.6, .9); sh.lineTo(2.6, 0); sh.lineTo(-2.6, 0);
   const g = new THREE.ExtrudeGeometry(sh, { depth: 3.4, bevelEnabled: false }); g.translate(0, 0, -1.7);
   const uvA = g.attributes.uv; for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uvA.getX(i) * .35, uvA.getY(i) * .35);
-  const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1 }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
+  const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1, ...(hairB ? { bumpMap: hairB, bumpScale: 1.6 } : {}) }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
   const cols = [0, 0, 0];
   // Fogatas para cocinar delante de algunas tiendas: anillo de piedras, leña y brasas (Éxodo 16:23; Levítico 6:13)
   const stoneM = new THREE.MeshStandardMaterial({ color: 0x6d655b, roughness: 1, flatShading: true }), woodM = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 1 });
   const emberM = new THREE.MeshBasicMaterial({ color: 0xff7a1e }), fireM = new THREE.MeshBasicMaterial({ color: 0xffc04a });
   const stoneG = new THREE.DodecahedronGeometry(.13), logG = new THREE.CylinderGeometry(.045, .055, .8, 6), emberG = new THREE.CylinderGeometry(.24, .28, .06, 10), fireG = new THREE.ConeGeometry(.13, .38, 7);
-  const fireCore = new THREE.MeshBasicMaterial({ color: 0xfff2b0 }), FL = new THREE.Group(), fires = [];
+  const fireCore = new THREE.MeshBasicMaterial({ color: 0xfff2b0 }), FL = new THREE.Group(), fires = [], firePts = [];
   // Cántaros de barro para el agua junto a la entrada de algunas tiendas (Génesis 24:14-15)
   const jarG = new THREE.LatheGeometry([[0, 0], [.1, 0], [.18, .1], [.21, .24], [.17, .39], [.08, .49], [.065, .55], [.095, .6], [.08, .61]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
   const jarM = new THREE.MeshStandardMaterial({ color: 0xa8603a, roughness: .95, side: THREE.DoubleSide });
@@ -420,11 +432,18 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
       const em = new THREE.Mesh(emberG, emberM); em.position.y = .04; f.add(em);
       const wx = x + Math.sin(ry) * 4.6, wz = z + Math.cos(ry) * 4.6; addBox(wx - .5, wx + .5, wz - .5, wz + .5, 1);
       // las llamas quedan fuera de la malla horneada para que puedan chisporrotear (se animan en update)
+      firePts.push([wx, wz]);
       const fl = new THREE.Mesh(fireG, fireM); fl.position.set(wx, .28, wz); fl.userData.k = nTent * 1.7; fl.userData.b = 1; FL.add(fl); fires.push(fl);
       const fi = new THREE.Mesh(fireG, fireCore); fi.position.set(wx, .22, wz); fi.scale.setScalar(.55); fi.userData.k = nTent * 2.3 + 1; fi.userData.b = .55; FL.add(fi); fires.push(fi);
     }
     S.add(t);
-    addBox(x - 2.2, x + 2.2, z - 2.2, z + 2.2, 2.2);
+    // Choque que sigue la forma real de la tienda (girada): el centro es más alto y los lados bajan.
+    // Antes era un cuadrado fijo de 4,4 m que no giraba con la tienda y por las puntas se traspasaba.
+    if (addObb) {
+      const cs = Math.cos(ry), sn = Math.sin(ry);
+      addObb(x, z, ry, 1.35, 1.75, 2.15);
+      for (const sx of [-1, 1]) addObb(x + cs * sx * 1.98, z - sn * sx * 1.98, ry, .66, 1.75, 1.75);
+    } else addBox(x - 2.7, x + 2.7, z - 2.7, z + 2.7, 2.2);
   }
   // Estandartes de las cuatro divisiones del campamento: Judá al oriente (junto al camino de la entrada), Rubén al sur,
   // Efraín al occidente y Dan al norte, «cada uno junto a su estandarte» (Números 2:2-3, 10, 18, 25)
@@ -459,6 +478,7 @@ export async function buildCamp({ group, addBox, cx, cz, rnd, radiusX, radiusZ }
   }
   group.add(FL);
   return {
+    firePts, // dónde están las fogatas (para sentir el calor y oír el fuego)
     // las llamas de las fogatas parpadean y se mecen como fuego de verdad
     update(t) {
       for (const f of fires) {

@@ -63,7 +63,7 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #verse .card.shake{animation:vshake .25s ease 2}
 #verse .vbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 #verse #btnVerseDone{border-color:rgba(126,240,164,.6);color:#c9f7d8}
-#verse.ready #btnVerseDone{display:none}
+#verse.ready #btnVerseDone,#verse #btnVerseDone[hidden]{display:none}
 
 /* HUD */
 #hud{position:fixed;inset:0;z-index:5;pointer-events:none}
@@ -666,3 +666,9 @@ body.mundo-listo #splash>.fondo-previo{opacity:0;visibility:hidden}
 
 /* Modo liviano: sin desenfoques sobre el 3D (en celulares modestos causaban congelamientos) */
 html.bx-lite *,html.bx-lite *::before,html.bx-lite *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+/* Calor del fuego: los bordes de la pantalla se ponen naranja cerca de una fogata; destello rojo si quema */
+#heat{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .35s;background:radial-gradient(ellipse at 50% 55%,transparent 42%,rgba(255,120,20,.28) 70%,rgba(255,60,0,.55) 100%)}
+#heat::after{content:"";position:absolute;inset:0;background:rgba(255,40,0,.55);opacity:0}
+#heat.quema::after{animation:quema .7s ease-out}
+@keyframes quema{0%{opacity:.9}100%{opacity:0}}

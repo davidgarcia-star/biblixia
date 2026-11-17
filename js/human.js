@@ -611,7 +611,7 @@ export function compactParts(root, keep = new Set()) {
 }
 
 /* ---------- Animación (caminar, correr, saltar, reposo) ---------- */
-export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1, praise = -1, sit = 0 }) {
+export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0, climb = -1, swim = 0, kneel = -1, praise = -1, sit = 0, reach = 0 }) {
   const run = THREE.MathUtils.clamp((speed - 5.5) / 3, 0, 1);
   const amp = THREE.MathUtils.clamp(speed / 5.2, 0, 1);
   const stride = lerp(1.45, 2.3, run);
@@ -621,8 +621,12 @@ export function animateHuman(h, dt, { speed, onGround, vy, land, t, gesture = 0,
   if (!onGround) {
     const up = vy > 0 ? 1 : 0;
     P.t0 = -.7; P.t1 = .25; P.k0 = 1.1; P.k1 = .45; P.a0 = .2; P.a1 = .1;
-    P.s0x = .55; P.s1x = -.7; P.s0z = -.35; P.s1z = .35; P.e0 = -.9; P.e1 = -.6;
-    P.spineX = .1; P.spineY = 0; P.hipY = .93; P.headX = -.05 - up * .05;
+    // Brinco normal: brazos abiertos a los lados para el equilibrio (sin estirar la mano como para agarrarse).
+    // Solo cuando hay un objeto alto delante (reach) sube los brazos para alcanzar el borde.
+    h._reach = (h._reach || 0) + ((reach ? 1 : 0) - (h._reach || 0)) * Math.min(1, dt * 10);
+    const r = h._reach;
+    P.s0x = lerp(.35, -2.2, r); P.s1x = lerp(-.25, -2.2, r); P.s0z = lerp(-.75, -.2, r); P.s1z = lerp(.75, .2, r); P.e0 = lerp(-.55, -.25, r); P.e1 = lerp(-.55, -.25, r);
+    P.spineX = .1; P.spineY = 0; P.hipY = .93; P.headX = -.05 - up * .05 - r * .15;
   } else if (amp < .05) {
     const b = Math.sin(t * 1.8);
     P.t0 = 0; P.t1 = 0; P.k0 = .04; P.k1 = .04; P.a0 = -.02; P.a1 = -.02;

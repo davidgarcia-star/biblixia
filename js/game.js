@@ -569,7 +569,9 @@ async function warmShadersNow(root, cam) {
   const t0 = performance.now(); let tick = t0;
   const respirar = async () => { if (performance.now() - tick > 25) { await idle(); tick = performance.now(); } };
   // 1) subir las texturas a la tarjeta gráfica de a pocas (antes se subían todas en el primer cuadro)
-  for (const t of texs) { try { renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
+  // fuera del modo liviano, todas las texturas se ven nítidas también de lado (suelo, paredes, telas)
+  const ANI = LITE ? 1 : Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  for (const t of texs) { try { if (ANI > 1 && t.anisotropy < ANI && !t.isDataTexture && !t.isRenderTargetTexture) t.anisotropy = ANI; renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
   // 2) sombreadores: mandar a compilar un grupo pequeño, esperar sin bloquear y terminar de prepararlo
   const progs = new Set();
   let i = 0;
@@ -640,6 +642,11 @@ async function buildWorld(cfg) {
   const colliders = [], blockers = [], coinSpots = [], platSpots = [], npcSpots = [];
   const W = { group, colliders, blockers, N, T, O, coins: [], cars: [], npcs: [], zones: [], lampPts: [], indoor: [] };
   const addBox = (minX, maxX, minZ, maxZ, top, bottom = 0, tag) => colliders.push({ minX, maxX, minZ, maxZ, top, bottom, tag });
+  // Caja girada (para objetos que no están alineados con las calles, como las tiendas del campamento)
+  const addObb = (cx, cz, ry, hx, hz, top) => {
+    const c = Math.cos(ry), sn = Math.sin(ry), ex = Math.abs(c) * hx + Math.abs(sn) * hz, ez = Math.abs(sn) * hx + Math.abs(c) * hz;
+    colliders.push({ minX: cx - ex, maxX: cx + ex, minZ: cz - ez, maxZ: cz + ez, top, bottom: 0, obb: { cx, cz, c, s: sn, hx, hz } });
+  };
   // Árboles de la Biblia: olivo (Salmo 52:8), higuera (Miqueas 4:4), cedro del Líbano (Salmo 92:12), palmera (Salmo 92:12)
   const treeGroup = new THREE.Group();
   async function plantBiblicalTrees(xa, xb, za, zb, count, avoid, kinds) {
@@ -1015,7 +1022,7 @@ async function buildWorld(cfg) {
     W.tab = tab; W.zones = tab.zones; if (tab.indoor) W.indoor.push(...tab.indoor);
     const tb = tab.bounds;
     await pace();
-    W.camp = await buildCamp({ group, addBox, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
+    W.camp = await buildCamp({ group, addBox, addObb, lite: LITE, cx: tcx, cz: tcz, rnd: r, radiusX: (tb.x1 - tb.x0) / 2 + 18, radiusZ: Math.min((tb.z1 - tb.z0) / 2 + 16, T / 2 - 6) });
     W.desert = { X0, tcx, tcz, tb };
     // sacerdotes, levitas, el arca en procesión y los corderos del sacrificio (desde el nivel Básico)
     await pace();
@@ -1210,7 +1217,7 @@ async function buildWorld(cfg) {
   // ===== Al norte: lugares bíblicos (algunos se abren al pasar niveles) =====
   {
     await pace();
-    const pl = await buildPlaces({ group, addBox, blockers, x0: O, x1: O + T + DES, zN: O - NZ, zS: O, unlocked: save.unlocked, rnd: r, levelNames: LEVELS.map(l => l.name) });
+    const pl = await buildPlaces({ group, addBox, addObb, blockers, x0: O, x1: O + T + DES, zN: O - NZ, zS: O, unlocked: save.unlocked, rnd: r, levelNames: LEVELS.map(l => l.name) });
     W.places = pl.places; W.placeLive = pl.live; W.zones.push(...pl.zones);
     const lockedP = pl.places.filter(p => p.locked);
     pl.coins.filter(c => !lockedP.some(p => c[0] > p.x0 && c[0] < p.x1)).forEach(c => coinSpots.push(c));
@@ -1819,16 +1826,34 @@ function islandH(x, z) {
   }
   return best;
 }
+// ¿El punto (con el radio del jugador) toca de verdad la caja girada? (las cajas normales siempre dicen que sí)
+function inObb(c, x, z, r) {
+  const o = c.obb; if (!o) return true;
+  const dx = x - o.cx, dz = z - o.cz, lx = dx * o.c - dz * o.s, lz = dx * o.s + dz * o.c;
+  return Math.abs(lx) < o.hx + r && Math.abs(lz) < o.hz + r;
+}
 function floorAt(x, z, y) {
   let f = 0;
   if (world.islands) { const ih = islandH(x, z); if (ih > f) f = ih; }
   for (const c of world.colliders) {
     if (c.tag === 'ship' && world.boat && world.boat.away) continue;
-    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { const tp = c.ramp ? topOf(c, z) : c.top; if (tp <= y + STEP && tp > f) f = tp; }
+    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ && inObb(c, x, z, RADIUS)) { const tp = c.ramp ? topOf(c, z) : c.top; if (tp <= y + STEP && tp > f) f = tp; }
   }
   return f;
 }
 let fwdHeld = false;
+// ¿Hay un objeto alto justo delante? (solo entonces, al brincar, sube las manos como para agarrarse)
+function tallAhead() {
+  const fx = Math.sin(P.heading), fz = Math.cos(P.heading);
+  for (const d of [RADIUS + .2, RADIUS + .6]) {
+    const px = P.pos.x + fx * d, pz = P.pos.z + fz * d;
+    for (const c of world.colliders) {
+      if (c.ramp || c.top > 900 || (c.tag === 'ship' && world.boat && world.boat.away)) continue;
+      if (px > c.minX && px < c.maxX && pz > c.minZ && pz < c.maxZ && inObb(c, px, pz, 0)) { const h = c.top - P.pos.y; if (h > .9 && h < 2.6) return true; }
+    }
+  }
+  return false;
+}
 // borde alcanzable con las manos delante del jugador
 function tryGrab() {
   const fx = Math.sin(P.heading), fz = Math.cos(P.heading);
@@ -1837,7 +1862,7 @@ function tryGrab() {
     let best = null;
     for (const c of world.colliders) {
       if (c.ramp || c.top > 900 || (c.tag === 'ship' && world.boat && world.boat.away)) continue;
-      if (px > c.minX && px < c.maxX && pz > c.minZ && pz < c.maxZ) {
+      if (px > c.minX && px < c.maxX && pz > c.minZ && pz < c.maxZ && inObb(c, px, pz, 0)) {
         const h = c.top - P.pos.y;
         if (h > STEP && h < 2.45 && (!best || c.top > best.top)) best = c;
       }
@@ -1888,7 +1913,7 @@ function blocked(x, z, y, swimmer = false, gender = null, from = null) {
     if (sw && c.tag === 'sea') continue;
     const bano = c.tag === 'bano-f' || c.tag === 'bano-m';
     if (bano && (c.tag === 'bano-f') === (g === 'f')) continue;
-    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ) { if (c.ramp) { if (rampBlocks(c, x, z, y, from)) return true; continue; } if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) { if (bano && !gender) avisoBano(c.tag); return true; } }
+    if (x + RADIUS > c.minX && x - RADIUS < c.maxX && z + RADIUS > c.minZ && z - RADIUS < c.maxZ && inObb(c, x, z, RADIUS)) { if (c.ramp) { if (rampBlocks(c, x, z, y, from)) return true; continue; } if (c.bottom && c.bottom > y + 1.75) continue; if (c.top > y + STEP) { if (bano && !gender) avisoBano(c.tag); return true; } }
   }
   return false;
 }
@@ -2170,9 +2195,11 @@ function verseReady() { return performance.now() >= verseReadyAt; }
 function tickVerse() {
   const btn = $('btnVerseOk'), falta = (verseReadyAt - performance.now()) / 1000;
   $('vProg').style.width = Math.min(100, (1 - Math.max(0, falta) / verseSecs) * 100) + '%';
-  // "Terminé de leer": quien lee rápido puede cerrar antes; se activa tras un instante
-  // para que un toque accidental no quite el versículo sin verlo.
-  $('btnVerseDone').disabled = performance.now() < verseMinAt;
+  // "Terminé de leer": está oculto durante la primera mitad del tiempo de lectura;
+  // a partir de la mitad aparece para que quien ya leyó pueda seguir antes.
+  const bd = $('btnVerseDone'), mitad = falta <= verseSecs / 2;
+  if (bd.hidden === mitad) bd.hidden = !mitad;
+  bd.disabled = !mitad;
   if (falta > 0) { btn.disabled = true; btn.textContent = `📖 Lee el versículo… ${Math.ceil(falta)}`; return; }
   clearInterval(verseIv); verseIv = 0; btn.disabled = false; btn.textContent = 'Amén · Continuar';
   $('verse').classList.add('ready');
@@ -2180,7 +2207,7 @@ function tickVerse() {
 function closeVerse(terminado) {
   if (state !== 'verse') return;
   // El que lee lento espera el tiempo establecido; el que ya leyó puede pulsar "Terminé de leer".
-  const yaLeyo = terminado === true && performance.now() >= verseMinAt;
+  const yaLeyo = terminado === true && performance.now() >= verseMinAt && (verseReadyAt - performance.now()) / 1000 <= verseSecs / 2;
   if (!verseReady() && !yaLeyo) { const c = $('verse').querySelector('.card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); return; }
   clearInterval(verseIv); verseIv = 0;
   sound.click(); $('verse').classList.add('hidden');
@@ -3017,6 +3044,46 @@ const shootingStar = (() => {
   };
 })();
 // Si algo falla en un cuadro, se registra y el juego sigue dibujando (antes un error repetido dejaba la imagen congelada)
+/* ---------- Sentidos: calor del fuego y gotas de agua ---------- */
+// Cerca de una fogata la pantalla se calienta (bordes naranja) y se oye el fuego chisporrotear;
+// si el jugador toca el fuego se quema: siseo, destello rojo, «¡Ay, quema!» y retrocede.
+// En el agua se oyen gotas: mientras nada, al salir (va goteando unos segundos) y cerca de las fuentes.
+let heatEl = null, heatShown = 0, burnT = 0, crackT = 0, dropT = 0, wetT = 0, fountT = 0;
+const panTo = (x, z) => { const dx = x - P.pos.x, dz = z - P.pos.z; return (dx * -Math.cos(cam.yaw) + dz * Math.sin(cam.yaw)) / Math.max(1, Math.hypot(dx, dz)); };
+function senses(dt) {
+  if (!heatEl) heatEl = $('heat');
+  if (!world.firePts) {
+    world.firePts = [];
+    if (world.camp && world.camp.firePts) for (const [x, z] of world.camp.firePts) world.firePts.push({ x, z, r: .55, burn: true });
+    if (world.tab && world.tab.altar) { const [x, z, hw] = world.tab.altar; world.firePts.push({ x, z, r: hw + .1, burn: false }); }
+  }
+  let heat = 0, near = null, nd = 1e9;
+  for (const f of world.firePts) { const d = Math.hypot(P.pos.x - f.x, P.pos.z - f.z) - f.r; if (d < nd) { nd = d; near = f; } }
+  if (near && !P.car && !P.driving && P.pos.y < 2.5) {
+    heat = THREE.MathUtils.clamp(1 - nd / 3.2, 0, 1);
+    if (nd < 7) { crackT -= dt; if (crackT <= 0) { crackT = .12 + Math.random() * .35; sound.crackle(Math.pow(1 - Math.max(0, nd) / 7, 2) * .9, panTo(near.x, near.z)); } }
+    burnT -= dt;
+    if (near.burn && nd < .45 && burnT <= 0) {
+      burnT = 1.3; sound.burn(); toast('🔥 ¡Ay, quema! Aléjate del fuego', '#ff8a3d');
+      if (heatEl) { heatEl.classList.remove('quema'); void heatEl.offsetWidth; heatEl.classList.add('quema'); }
+      const dx = P.pos.x - near.x, dz = P.pos.z - near.z, l = Math.hypot(dx, dz) || 1, nx = P.pos.x + dx / l * .6, nz = P.pos.z + dz / l * .6;
+      if (!blocked(nx, nz, P.pos.y, false, null, P.pos)) { P.pos.x = nx; P.pos.z = nz; }
+      P.speed = 0;
+    }
+  }
+  const hv = Math.round(heat * 20) / 20;
+  if (heatEl && hv !== heatShown) { heatShown = hv; heatEl.style.opacity = hv; }
+  if (P.swim) { wetT = 4; dropT -= dt; if (dropT <= 0) { dropT = .3 + Math.random() * .8; sound.drop(.4 + Math.random() * .3, (Math.random() - .5) * 1.4); } }
+  else if (wetT > 0) { wetT -= dt; dropT -= dt; if (dropT <= 0) { dropT = .25 + (4 - wetT) * .25 + Math.random() * .4; sound.drop(.08 + .25 * wetT / 4, Math.random() - .5); } }
+  if (world.fountain && world.fountain.foam.length) {
+    fountT -= dt;
+    if (fountT <= 0) {
+      let fd = 1e9, fp = null; for (const f of world.fountain.foam) { const d = Math.hypot(f.position.x - P.pos.x, f.position.z - P.pos.z); if (d < fd) { fd = d; fp = f; } }
+      fountT = fd < 12 ? .07 + Math.random() * .18 : .6;
+      if (fd < 12) sound.drop(Math.pow(1 - fd / 12, 2) * .55, panTo(fp.position.x, fp.position.z));
+    }
+  }
+}
 let loopErrs = 0, lastPaint = 0;
 // Con el juego quieto (leyendo el versículo, en pausa, hablando o en resultados) no hace falta dibujar
 // el 3D 60 veces por segundo: se dibuja menos para que el celular no se caliente ni se trabe.
@@ -3060,7 +3127,7 @@ function loopBody() {
       perf.acc = 0; perf.n = 0;
     }
   }
-  if (state === 'play') { applyLook(); update(dt); } else lookAcc.x = lookAcc.y = 0;
+  if (state === 'play') { applyLook(); update(dt); if (state === 'play' && world) senses(dt); } else { lookAcc.x = lookAcc.y = 0; if (heatShown > 0 && heatEl) { heatShown = 0; heatEl.style.opacity = 0; } }
   if (!LITE) { // adornos del cielo: en modo liviano no se dibujan
     birds.update(dt, elapsed, camera.position);
     meteor.update(dt);
@@ -3169,7 +3236,7 @@ function loopBody() {
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = !P.car && (state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'); if (state === 'play') updateMate(dt, t); }
-  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1, sit: P.sit ? 1 : 0 });
+  if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { reach: state === 'play' && world && !P.onGround && !P.climb && !P.swim ? tallAhead() : 0, speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1, sit: P.sit ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
   else if (state === 'creator') {

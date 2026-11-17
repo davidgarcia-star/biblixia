@@ -23,7 +23,7 @@ export const PLACES = [
   { id: 'calvario', name: 'El Calvario', req: 5 },
 ];
 
-export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unlocked, rnd, levelNames }) {
+export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN, zS, unlocked, rnd, levelNames }) {
   const P = new THREE.Group(); group.add(P);
   const S = new THREE.Group(); // piezas fijas (se unen al final)
   const out = { zones: [], coins: [], treasures: {}, labels: [], places: [], live: [] };
@@ -120,11 +120,20 @@ export async function buildPlaces({ group, addBox, blockers, x0, x1, zN, zS, unl
       const len = Math.hypot(xB - xA, zB - zA), mx = (xA + xB) / 2, mz = (zA + zB) / 2;
       const fallen = k % 3 !== 0 && !(k === 6 || k === 7);
       if (fallen) {
-        for (let j = 0; j < 4; j++) { const rb = box(1 + rnd() * 1.4, .6 + rnd() * .6, 1 + rnd(), wallM, mx + (rnd() - .5) * 3, .3, mz + (rnd() - .5) * 3); rb.rotation.set(rnd(), rnd() * 3, rnd() * .5); }
+        // piedras caídas del muro: ahora son sólidas (antes no tenían choque y el jugador las atravesaba)
+        for (let j = 0; j < 4; j++) {
+          const w = 1 + rnd() * 1.4, h = .6 + rnd() * .6, d = 1 + rnd(), bx = mx + (rnd() - .5) * 3, bz = mz + (rnd() - .5) * 3;
+          const rb = box(w, h, d, wallM, bx, .3, bz), rx = rnd(), ry = rnd() * 3, rz = rnd() * .5;
+          rb.rotation.order = 'YXZ'; rb.rotation.set(rx, ry, rz);
+          const hx = Math.abs(w / 2 * Math.cos(rz)) + Math.abs(h / 2 * Math.sin(rz)), hz = Math.abs(d / 2 * Math.cos(rx)) + Math.abs(h / 2 * Math.sin(rx));
+          const top = .3 + Math.abs(h / 2 * Math.cos(rx) * Math.cos(rz)) + Math.abs(d / 2 * Math.sin(rx)) + Math.abs(w / 2 * Math.sin(rz));
+          if (addObb) addObb(bx, bz, ry, hx * .9, hz * .9, top); else addBox(bx - hx, bx + hx, bz - hz, bz + hz, top);
+        }
       } else {
         const wl = box(len + .3, Hh, 1.4, wallM, mx, Hh / 2, mz); wl.rotation.y = -Math.atan2(zB - zA, xB - xA);
-        const cx2 = Math.cos(-wl.rotation.y), sx2 = Math.sin(-wl.rotation.y);
-        addBox(mx - Math.abs(cx2) * len / 2 - .7, mx + Math.abs(cx2) * len / 2 + .7, mz - Math.abs(sx2) * len / 2 - .7, mz + Math.abs(sx2) * len / 2 + .7, Hh);
+        // choque girado igual que el muro (antes era una caja recta que dejaba huecos y paredes invisibles)
+        if (addObb) addObb(mx, mz, wl.rotation.y, (len + .3) / 2, .7, Hh);
+        else { const cx2 = Math.cos(-wl.rotation.y), sx2 = Math.sin(-wl.rotation.y); addBox(mx - Math.abs(cx2) * len / 2 - .7, mx + Math.abs(cx2) * len / 2 + .7, mz - Math.abs(sx2) * len / 2 - .7, mz + Math.abs(sx2) * len / 2 + .7, Hh); }
         if (k === 6) { // casa de Rahab sobre el muro
           const hs = box(3, 2.6, 2.6, std({ color: 0xc8a878, roughness: .95 }), mx, Hh + 1.3, mz); hs.rotation.y = wl.rotation.y;
           // ventana por la que bajó a los espías y el cordón escarlata atado a ella, por fuera del muro (Josué 2:15, 18)
