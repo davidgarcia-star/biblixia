@@ -348,6 +348,8 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
+      // el resplandor del candelabro de oro titila suave con sus siete llamas de aceite (Éxodo 27:20; Levítico 24:2-4)
+      { const fl = Math.sin(t * 7.3) * .035 + Math.sin(t * 17.1 + 1.3) * .02 + Math.sin(t * 29.7 + .4) * .012; mg.scale.set(1.6 * (1 + fl * .6), 1.2 * (1 + fl), 1); mg.position.y = lampY + .1 + fl * .05; }
       // la gloria de Dios sobre el propiciatorio, entre los querubines, «respira» despacio con una luz suave (Éxodo 25:22; 40:34)
       { const p = Math.sin(t * 1.1) * .5 + Math.sin(t * 2.7 + 1) * .15; gs.scale.set(2.6 + p * .35, 2.6 + p * .45, 1); gs.position.y = 1.6 + p * .06; }
       for (const w of ripples) { const u = (t * .45 + w.k) % 1; w.r.scale.setScalar(.04 + u * .34); w.r.material.opacity = (1 - u) * Math.min(1, u * 8) * .5; }
