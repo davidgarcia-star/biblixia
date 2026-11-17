@@ -348,6 +348,8 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       for (const h of halos) h.scale.setScalar(.2 + Math.sin(t * 13 + h.position.z * 27) * .02 + Math.sin(t * 31 + h.position.z * 11) * .012);
       for (const c of clouds) { c.s.position.y = c.y + Math.sin(t * .3 + c.k) * .6; c.s.material.rotation = t * .02 * (c.k % 2 ? 1 : -1); }
       fg.scale.y = 2 + Math.sin(t * 9) * .3;
+      // la gloria de Dios sobre el propiciatorio, entre los querubines, «respira» despacio con una luz suave (Éxodo 25:22; 40:34)
+      { const p = Math.sin(t * 1.1) * .5 + Math.sin(t * 2.7 + 1) * .15; gs.scale.set(2.6 + p * .35, 2.6 + p * .45, 1); gs.position.y = 1.6 + p * .06; }
       for (const w of ripples) { const u = (t * .45 + w.k) % 1; w.r.scale.setScalar(.04 + u * .34); w.r.material.opacity = (1 - u) * Math.min(1, u * 8) * .5; }
       for (let i = 0; i < tongues.length; i++) { const f = tongues[i]; f.scale.set(1, .7 + Math.abs(Math.sin(t * 11 + i * 1.9)) * .7 + Math.sin(t * 23 + i) * .12, 1); f.rotation.z = Math.sin(t * 6 + i) * .12; }
       let root = T; while (root.parent) root = root.parent;
