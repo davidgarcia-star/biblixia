@@ -200,5 +200,8 @@ export const VERSES = [
   ["Nosotros amamos porque Él nos amó primero.", "1 Juan 4:19"],
   ["He aquí, yo estoy a la puerta y llamo; si alguno oye mi voz y abre la puerta, entraré a él, y cenaré con él y él conmigo.", "Apocalipsis 3:20"],
   ["Él enjugará toda lágrima de sus ojos, y ya no habrá muerte, ni habrá más duelo, ni clamor, ni dolor, porque las primeras cosas han pasado.", "Apocalipsis 21:4"],
-  ["Yo soy el Alfa y la Omega, el primero y el último, el principio y el fin.", "Apocalipsis 22:13"]
+  ["Yo soy el Alfa y la Omega, el primero y el último, el principio y el fin.", "Apocalipsis 22:13"],
+  ["En lugares de verdes pastos me hace descansar; junto a aguas de reposo me conduce.", "Salmos 23:2"],
+  ["Él restaura mi alma; me guía por senderos de justicia por amor de su nombre.", "Salmos 23:3"],
+  ["Bienaventurados los misericordiosos, pues ellos recibirán misericordia.", "Mateo 5:7"]
 ];
