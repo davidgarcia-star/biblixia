@@ -63,6 +63,13 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     // «le envolvió en pañales» (Lucas 2:7): fajas de tela alrededor del niño
     { const faja = std({ color: 0xd9ccae, roughness: 1 }); for (const fx of [-.17, -.02, .13]) { const f = add(new THREE.TorusGeometry(.124, .014, 6, 18), faja, px + fx, 1.07, pz - .8); f.rotation.y = Math.PI / 2; } }
     for (let k = 0; k < 6; k++) box(1, .5, .7, hay, px - 3 + k * 1.2, .25, pz - 2.4);
+    // paja suelta esparcida por el suelo del establo, caída del pesebre y de las pacas (Lucas 2:7); apenas sobre el piso de la escena (y = 0.1) para que no parpadee
+    { const straw = std({ color: 0xe0bc5c, roughness: 1 }); let sd = 7; const sr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+      for (let k = 0; k < 28; k++) {
+        const a = sr() * Math.PI * 2, d = .9 + sr() * 2.2, sx = px + Math.cos(a) * d * 1.4, sz = pz - .8 + Math.sin(a) * d * .7;
+        if (Math.abs(sx - px) > 3.6 || sz < pz - 2.85 || sz > pz + 2.8) continue;
+        const s = box(.32 + sr() * .3, .012, .025, straw, sx, .114 + (k % 3) * .004, sz); s.rotation.y = sr() * Math.PI;
+      } }
     addBox(px - 1, px + 1, pz - 1.3, pz - .3, 1.1);
     const mary = createHuman({ detail: .6, gender: 'f', outfit: 'robe', robe: 0x2a4a8a, mantle: 0x8ab0e0, sash: 0xe8dcc0, hair: 'cloth', cloth: 0x7aa0d8, hairColor: 0x2a1a10, skin: 0xb98260 });
     mary.arms[0].shoulder.rotation.set(-.5, 0, -.1); mary.arms[0].elbow.rotation.x = -.8; mary.arms[1].shoulder.rotation.set(-.5, 0, .1); mary.arms[1].elbow.rotation.x = -.8;
