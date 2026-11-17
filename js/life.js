@@ -321,6 +321,17 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     }
     solid(pX - pW / 2, pX + pW / 2, pZ - pD / 2, pZ + pD / 2, fy + 1.4);
     {
+      // escalerilla de acero inoxidable: dos pasamanos curvos que salen del agua y se apoyan en la terraza
+      const steelM = new THREE.MeshStandardMaterial({ color: 0xdfe4ea, metalness: .9, roughness: .22 });
+      const ez = pZ + pD / 2, lx = pX - 2.5;
+      const curve = new THREE.CatmullRomCurve3([[0, -.04, -.2], [0, .55, -.2], [0, .86, -.1], [0, .92, .08], [0, .78, .28], [0, .45, .34], [0, -.06, .34]].map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+      const railG = new THREE.TubeGeometry(curve, 24, .025, 8, false);
+      for (const s of [-.28, .28]) {
+        const rail = new THREE.Mesh(railG, steelM); rail.position.set(lx + s, fy + .17, ez); rail.castShadow = true; rail.raycast = () => {}; group.add(rail);
+        const foot = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .03, 12), steelM); foot.position.set(lx + s, fy + .125, ez + .34); foot.raycast = () => {}; group.add(foot); // tapita que fija el tubo a la terraza
+      }
+    }
+    {
       // flotador salvavidas rojo y blanco que se mece y va a la deriva despacio sobre el agua de la piscina
       const ring = new THREE.Group(); group.add(ring);
       const tG = new THREE.TorusGeometry(.32, .1, 10, 8, Math.PI / 4);
