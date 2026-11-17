@@ -2234,6 +2234,8 @@ function endLevel(won, why) {
     const todo = save.stars.slice(0, LEVELS.length).every(x => x > 0);
     $('btnB2')?.classList.toggle('hidden', !todo);
     if (todo && lvlIdx + 1 >= LEVELS.length) $('resVerse').textContent += '  🔓 ¡Desbloqueaste BIBLIXIA 2!';
+    // portada de FELICIDADES al aprobar el último nivel con todos los niveles aprobados
+    if (todo && lvlIdx + 1 >= LEVELS.length) setTimeout(() => window.Felicidades?.mostrar({ juego: 'BIBLIXIA', niveles: LEVELS.map(l => l.name), jugador: (save.player && save.player.name) || '', texto: 'BIBLIXIA 2 ya está desbloqueado', siguiente: { nombre: 'BIBLIXIA 2', url: 'https://davidgarcia-star.github.io/biblixia2/' }, sonido: sound.sfxOn !== false }), 900);
     window.__pintarB2?.();
   } else {
     $('btnB2')?.classList.add('hidden');
