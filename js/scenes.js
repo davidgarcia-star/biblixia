@@ -304,6 +304,12 @@ export async function buildArk({ group, addBox, addRamp, blockers, x, z, rnd }) 
   const doves = [];
   const flock = [...Array(14)].map(() => [0xf6f6f2, 1]).concat([[0xd82a2a, 1.2], [0xd82a2a, 1.2], [0x1e6ad8, 1.2], [0x1e6ad8, 1.2], [0x2aa84a, 1.1], [0x2aa84a, 1.1], [0x6a4a2a, 2.2], [0x6a4a2a, 2.2], [0xf2c230, 1], [0xf2c230, 1]]); // siete parejas de palomas (Génesis 7:3) y otras aves en parejas
   flock.forEach(([c, sz], i) => { const f = makeFlyer(c, sz); A.add(f.d); doves.push({ ...f, k: i, r: 20 + (i % 9) * 3.2, h: H + 5 + (i % 5) * 2.2, sp: .22 + (i % 4) * .05 }); });
+  // la paloma que volvió al arca con una hoja de olivo recién arrancada en el pico (Génesis 8:11)
+  { const oliveM = std({ color: 0x6f8a3a, roughness: .8, side: THREE.DoubleSide }), stemM = std({ color: 0x5a4a2a, roughness: .9 });
+    const sprig = new THREE.Group(); sprig.position.set(0, .02, .42);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .26, 5), stemM); stem.rotation.z = Math.PI / 2; sprig.add(stem);
+    for (const [lx, ry] of [[-.1, .5], [.02, -.6], [.12, .4]]) { const lf = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), oliveM); lf.scale.set(1.9, .18, .7); lf.position.set(lx, 0, .03 * Math.sign(ry)); lf.rotation.y = ry; sprig.add(lf); }
+    doves[0].d.add(sprig); }
   const tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
   return {
     indoor: [{ name: 'el arca', msg: '⏸ En el arca el tiempo se detiene', rects: [[x - L / 2, x + L / 2, doorZ, z + Wd / 2], [x - doorW / 2 - 1, x + doorW / 2 + 1, doorZ - leafLen - 1, doorZ]], minY: doorY - 1.5 }],
