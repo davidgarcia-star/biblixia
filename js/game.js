@@ -2185,7 +2185,7 @@ function openVerse() {
   const palabras = (VERSES[k][0] + ' ' + VERSES[k][1]).trim().split(/\s+/).length;
   verseSecs = Math.min(20, Math.max(6, Math.ceil(palabras / 2) + 1));
   verseReadyAt = performance.now() + verseSecs * 1000;
-  verseMinAt = performance.now() + 1500;
+  verseMinAt = performance.now() + 2000; // a los 2 segundos ya se puede saltar
   elTimer.classList.add('paused');
   $('verse').classList.remove('hidden'); $('verse').classList.remove('ready');
   tickVerse(); clearInterval(verseIv); verseIv = setInterval(tickVerse, 100);
@@ -2195,19 +2195,19 @@ function verseReady() { return performance.now() >= verseReadyAt; }
 function tickVerse() {
   const btn = $('btnVerseOk'), falta = (verseReadyAt - performance.now()) / 1000;
   $('vProg').style.width = Math.min(100, (1 - Math.max(0, falta) / verseSecs) * 100) + '%';
-  // "Terminé de leer": está oculto durante la primera mitad del tiempo de lectura;
-  // a partir de la mitad aparece para que quien ya leyó pueda seguir antes.
-  const bd = $('btnVerseDone'), mitad = falta <= verseSecs / 2;
-  if (bd.hidden === mitad) bd.hidden = !mitad;
-  bd.disabled = !mitad;
+  // "Terminé de leer": está oculto los primeros 2 segundos; después aparece
+  // para que quien ya leyó (o quiere seguir) pueda saltar el versículo.
+  const bd = $('btnVerseDone'), puede = performance.now() >= verseMinAt;
+  if (bd.hidden === puede) bd.hidden = !puede;
+  bd.disabled = !puede;
   if (falta > 0) { btn.disabled = true; btn.textContent = `📖 Lee el versículo… ${Math.ceil(falta)}`; return; }
   clearInterval(verseIv); verseIv = 0; btn.disabled = false; btn.textContent = 'Amén · Continuar';
   $('verse').classList.add('ready');
 }
 function closeVerse(terminado) {
   if (state !== 'verse') return;
-  // El que lee lento espera el tiempo establecido; el que ya leyó puede pulsar "Terminé de leer".
-  const yaLeyo = terminado === true && performance.now() >= verseMinAt && (verseReadyAt - performance.now()) / 1000 <= verseSecs / 2;
+  // El que lee lento espera el tiempo establecido; desde los 2 segundos se puede pulsar "Terminé de leer".
+  const yaLeyo = terminado === true && performance.now() >= verseMinAt;
   if (!verseReady() && !yaLeyo) { const c = $('verse').querySelector('.card'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake'); return; }
   clearInterval(verseIv); verseIv = 0;
   sound.click(); $('verse').classList.add('hidden');
@@ -2364,9 +2364,10 @@ function driveCar(dt) {
   const want = thr > 0 ? thr * top : thr < 0 ? (c.speed > 1 ? 0 : thr * 7) : 0;
   const acc = thr < 0 && c.speed > 1 ? 3.5 : thr === 0 ? .9 : 1.1;              // frena fuerte, acelera suave
   c.speed += (want - c.speed) * Math.min(1, dt * acc);
-  // dirección amplia (dobla en las esquinas); a más velocidad, algo menos de giro
-  const maxSteer = .48 * (1 - Math.min(.4, Math.abs(c.speed) / top * .45));
-  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 4.5);
+  // dirección más amplia (dobla más cerrado en las esquinas) y de respuesta rápida;
+  // a toda velocidad gira un poco menos para que no se descontrole
+  const maxSteer = .62 * (1 - Math.min(.5, Math.abs(c.speed) / top * .55));
+  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 6);
   c.heading += c.steer * dt * c.speed / (c.len * .62);
   const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
   const nx = o.position.x + fx * c.speed * dt, nz = o.position.z + fz * c.speed * dt;
