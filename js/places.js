@@ -69,7 +69,17 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     jos.arms[1].shoulder.rotation.set(-.3, 0, .25); jos.arms[1].elbow.rotation.x = -.5;
     const j1 = bakeStatic(jos.root); j1.position.set(px + 1.5, 0, pz - .4); j1.rotation.y = -1.1; S.add(j1);
     addBox(px - 1.8, px - 1, pz - 1, pz - .2, 1.8); addBox(px + 1.1, px + 1.9, pz - .8, pz, 1.8);
-    for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); const sx3 = px - 6 + k * 3.5, sz3 = pz + 6 + (k % 2) * 2; sh.position.set(sx3, 0, sz3); sh.rotation.y = k; P.add(sh); addBox(sx3 - .6, sx3 + .6, sz3 - .6, sz3 + .6, 1); }
+    const ovejas = [];
+    for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); const sx3 = px - 6 + k * 3.5, sz3 = pz + 6 + (k % 2) * 2; sh.position.set(sx3, 0, sz3); sh.rotation.y = k; P.add(sh); addBox(sx3 - .6, sx3 + .6, sz3 - .6, sz3 + .6, 1); ovejas.push({ o: sh, r0: k, per: 8 + k * 2.1, ph: k * 2.9 }); }
+    // las ovejas de los pastores no están quietas: de vez en cuando giran despacio en su sitio dando pasitos, como cuando pastan (Lucas 2:8)
+    out.live.push({ kind: 'fn', update: t => {
+      for (const m of ovejas) {
+        const c = (t + m.ph) % m.per, k = THREE.MathUtils.smoothstep(c, 0, 1.6), n = Math.floor((t + m.ph) / m.per), ang = q => m.r0 + (q % 2 ? .6 : 0);
+        m.o.rotation.y = ang(n - 1) + (ang(n) - ang(n - 1)) * k;
+        const paso = c < 1.6 ? Math.sin(c * 11) * .35 * Math.sin(c / 1.6 * Math.PI) : 0;
+        const legs = m.o.userData.legs; if (legs) legs.forEach((l, j) => { l.rotation.x = (j === 0 || j === 3 ? 1 : -1) * paso; });
+      }
+    } });
     // pastores con su cayado que vinieron a ver al niño: «Vamos, pues, hasta Belén» (Lucas 2:15-16)
     const staffM = std({ color: 0x6b4a2a, roughness: .9 });
     for (const [sx4, sz4, robe, mantle, cloth, skin] of [[-2.9, 4.1, 0x8a7a5a, 0x5a4a32, 0xd8cdb0, 0xa8714f], [3.1, 4.4, 0x6a5a44, 0x9a8a6a, 0x8a3a2a, 0x8a5a3a]]) {
