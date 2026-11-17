@@ -2364,9 +2364,9 @@ function driveCar(dt) {
   const want = thr > 0 ? thr * top : thr < 0 ? (c.speed > 1 ? 0 : thr * 7) : 0;
   const acc = thr < 0 && c.speed > 1 ? 3.5 : thr === 0 ? .9 : 1.1;              // frena fuerte, acelera suave
   c.speed += (want - c.speed) * Math.min(1, dt * acc);
-  // dirección moderada: a más velocidad, menos se puede girar el volante
-  const maxSteer = .24 * (1 - Math.min(.55, Math.abs(c.speed) / top * .6));
-  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 2.5);
+  // dirección amplia (dobla en las esquinas); a más velocidad, algo menos de giro
+  const maxSteer = .48 * (1 - Math.min(.4, Math.abs(c.speed) / top * .45));
+  c.steer += (turn * maxSteer - c.steer) * Math.min(1, dt * 4.5);
   c.heading += c.steer * dt * c.speed / (c.len * .62);
   const fx = Math.sin(c.heading), fz = Math.cos(c.heading);
   const nx = o.position.x + fx * c.speed * dt, nz = o.position.z + fz * c.speed * dt;
