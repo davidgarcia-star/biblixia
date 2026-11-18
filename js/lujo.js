@@ -229,8 +229,9 @@ export function buildYacht() {
   add(new THREE.SphereGeometry(.07, 8, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.5 }), cx0 + .95, fy + 3.15, 1.9, false); // luz de tope
   // bandera en la popa
   add(new THREE.CylinderGeometry(.025, .025, 1.6, 6), steel, -L / 2 + .5, DECK + 1.6, 0, false);
-  const flag = add(new THREE.PlaneGeometry(.9, .55, 6, 2), new THREE.MeshStandardMaterial({ color: 0x1a4aa0, side: THREE.DoubleSide, roughness: .8 }), -L / 2 + .02, DECK + 2.1, 0, false);
-  flag.rotation.y = Math.PI / 2; g.userData.flag = flag;
+  // La bandera nace del asta y ondea hacia atrás (antes quedaba de canto, separada del asta y flotando)
+  const flag = add(new THREE.PlaneGeometry(.9, .55, 10, 3), new THREE.MeshStandardMaterial({ color: 0x1a4aa0, side: THREE.DoubleSide, roughness: .8 }), -L / 2 + .5 - .47, DECK + 2.1, 0, false);
+  g.userData.flag = flag;
   bakeInPlace(g, [hull, rad, flag]);
   return g;
 }

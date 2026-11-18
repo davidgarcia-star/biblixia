@@ -3004,6 +3004,12 @@ const fireflies = (() => {
     }
   };
 })();
+// Bandera del yate: la tela ondea con el viento (más movimiento lejos del asta, quieta junto a él)
+function waveFlag(f, t) {
+  const g = f.geometry, pa = g.attributes.position, a = pa.array, b0 = g.userData.b0 || (g.userData.b0 = a.slice());
+  for (let i = 0; i < pa.count; i++) { const x = b0[i * 3], y = b0[i * 3 + 1], d = (.45 - x) / .9; a[i * 3 + 2] = Math.sin(t * 5.5 + d * 7 + y * 2) * .08 * d; a[i * 3 + 1] = y - d * d * .04; }
+  pa.needsUpdate = true; g.computeVertexNormals();
+}
 // Mariposas: de día, unas mariposas de colores revolotean cerca del jugador (no dentro de los edificios ni de noche)
 const butterflies = (() => {
   const grp = new THREE.Group(), list = [], n = 9;
@@ -3239,7 +3245,7 @@ function loopBody() {
     if (M.sea.userData.shader) M.sea.userData.shader.uniforms.uTime.value = t;
     seaNormal.offset.set(t * .012, t * .008);
     if (world.placeLive) for (const it of world.placeLive) { if (it.kind === 'spin') it.obj.rotation.y = t * .8; else if (it.kind === 'barrier') it.obj.material.opacity = .2 + Math.sin(t * 2) * .08; else if (it.kind === 'wave') it.obj.position.y = it.base + Math.sin(t * 1.3) * .15; else if (it.kind === 'fn') it.update(t); }
-    if (world.ship) { world.ship.rotation.x = Math.sin(t * .7) * .035; world.ship.rotation.z = Math.sin(t * .5) * .012; world.ship.position.y = Math.sin(t * .9) * .14; const sl = world.ship.userData.sail; if (sl) sl.scale.z = 1 + Math.sin(t * 2.2) * .12; const ud = world.ship.userData; if (ud.radar) ud.radar.rotation.y = t * 2.5; if (ud.flag) ud.flag.rotation.x = Math.sin(t * 3) * .25; }
+    if (world.ship) { world.ship.rotation.x = Math.sin(t * .7) * .035; world.ship.rotation.z = Math.sin(t * .5) * .012; world.ship.position.y = Math.sin(t * .9) * .14; const sl = world.ship.userData.sail; if (sl) sl.scale.z = 1 + Math.sin(t * 2.2) * .12; const ud = world.ship.userData; if (ud.radar) ud.radar.rotation.y = t * 2.5; if (ud.flag) waveFlag(ud.flag, t); }
     if (world.gulls) for (const gl of world.gulls) { gl.a += dt * gl.sp; const cx = gl.cx + Math.cos(gl.a) * gl.rad, cz = gl.cz + Math.sin(gl.a) * gl.rad; gl.obj.position.set(cx, gl.y + Math.sin(t * .6 + gl.ph) * 1.2, cz); gl.obj.rotation.set(0, Math.atan2(-Math.sin(gl.a) * gl.sp, Math.cos(gl.a) * gl.sp), -Math.sign(gl.sp) * .3); const flap = Math.sin(t * .35 + gl.ph) > .3 ? Math.sin(t * 9 + gl.ph) * .55 : .12 + Math.sin(t * 1.5 + gl.ph) * .05; for (const w of gl.wings) w.rotation.z = flap * w.userData.sd; }
     if (world.foam) world.foam.material.opacity = .45 + Math.sin(t * 1.4) * .2;
     if (world.sails) for (const sb of world.sails) { sb.a += dt * (sb.speed || .02); sb.obj.position.set(sb.cx + Math.cos(sb.a) * sb.r * 1.4, Math.sin(t + sb.a) * .15, sb.cz + Math.sin(sb.a) * sb.r); sb.obj.rotation.y = -sb.a; sb.obj.rotation.x = Math.sin(t * .8 + sb.a) * .03; }
