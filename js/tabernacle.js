@@ -77,6 +77,27 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   for (let i = 0; i <= 20; i++) { posts.push([x0 + i * 5 * C, z0], [x0 + i * 5 * C, z1]); }
   for (let j = 1; j < 10; j++) { posts.push([x0, z0 + j * 5 * C], [x1, z0 + j * 5 * C]); }
   for (const [x, z] of posts) { pillar(x, z); await pace(); }               // 42 + 18 = 60 columnas
+  // «Todas las estacas del atrio serán de bronce» (Éxodo 27:19), con sus cuerdas (Éxodo 35:18): cada columna queda
+  // tensada hacia afuera por una cuerda de lino que baja hasta una estaca de bronce clavada en la arena.
+  // Las cuatro columnas de la puerta no llevan cuerda hacia afuera para que la entrada quede libre.
+  {
+    const ropeM = new THREE.MeshStandardMaterial({ color: 0xc9b48a, roughness: 1 });
+    const up = new THREE.Vector3(0, 1, 0), out = 1.6, topY = HH - .25;
+    for (const [x, z] of posts) {
+      let dx = x <= x0 + .01 ? -1 : x >= x1 - .01 ? 1 : 0, dz = z <= z0 + .01 ? -1 : z >= z1 - .01 ? 1 : 0;
+      if (dx === 1 && dz === 0 && Math.abs(z - cz) < gateHalf - .01) continue;
+      const n = Math.hypot(dx, dz); if (!n) continue; dx /= n; dz /= n;
+      const sx = x + dx * out, sz = z + dz * out;
+      // estaca de bronce: un poco inclinada hacia afuera, con la cabeza asomando sobre la arena
+      const st = add(new THREE.CylinderGeometry(.03, .012, .34, 6), M.bronze, sx, .1, sz, { cast: false });
+      st.rotation.set(dz * .35, 0, -dx * .35);
+      // cuerda tensa desde lo alto de la columna hasta la cabeza de la estaca
+      const a = new THREE.Vector3(x + dx * .1, topY, z + dz * .1), b = new THREE.Vector3(sx, .22, sz);
+      const dir = b.clone().sub(a), len = dir.length();
+      const rope = add(new THREE.CylinderGeometry(.012, .012, len, 4), ropeM, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2, { cast: false });
+      rope.quaternion.setFromUnitVectors(up, dir.normalize());
+    }
+  }
   // Cortinas laterales
   const hang = (ax, az, bx, bz, mat = M.linen) => {
     const len = Math.hypot(bx - ax, bz - az);
