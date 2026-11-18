@@ -282,6 +282,20 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     const lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xfff3c8 })); lg.scale.set(5, 5, 1); lg.position.set(px + 8, 1.6, pz + 2.7); P.add(lg);
     // huerto
     for (let k = 0; k < 6; k++) { const tr = add(new THREE.IcosahedronGeometry(1.4, 1), std({ color: 0x3f6b2a, roughness: .9 }), px + 3 + k * 2.4, 2.6, pz + 12); add(new THREE.CylinderGeometry(.12, .16, 2, 6), wood, px + 3 + k * 2.4, 1, pz + 12); addBox(px + 2.8 + k * 2.4, px + 3.2 + k * 2.4, pz + 11.8, pz + 12.2, 4); }
+    // flores silvestres en el huerto junto al sepulcro (Juan 19:41): pocas instancias, un solo dibujado por color
+    {
+      const stemG = new THREE.CylinderGeometry(.02, .02, .3, 4); stemG.translate(0, .15, 0);
+      const headG = new THREE.IcosahedronGeometry(.09, 0); headG.translate(0, .32, 0);
+      const stems = new THREE.InstancedMesh(stemG, std({ color: 0x4f7a32, roughness: 1 }), 36);
+      const heads = [0xffffff, 0xf3d24a, 0xd9608a].map(c => new THREE.InstancedMesh(headG, std({ color: c, roughness: .8 }), 12));
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), s = new THREE.Vector3(), v = new THREE.Vector3();
+      for (let k = 0; k < 36; k++) {
+        const fx = px + 2 + ((k * 37) % 100) / 100 * 13, fz = pz + 10 + ((k * 53) % 100) / 100 * 4;
+        e.set((((k * 17) % 10) - 5) * .03, k * 1.7, 0); q.setFromEuler(e); const sc = .8 + ((k * 29) % 10) / 20; s.set(sc, sc, sc); v.set(fx, 0, fz);
+        m4.compose(v, q, s); stems.setMatrixAt(k, m4); heads[k % 3].setMatrixAt((k / 3) | 0, m4);
+      }
+      for (const im of [stems, ...heads]) { im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); P.add(im); }
+    }
     out.zones.push({ id: 'calvario', name: 'El Calvario y la tumba vacía', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'En el Calvario Jesús dio su vida por nosotros y al tercer día resucitó.',
       ref: 'Juan 19:17-19, 41-42; Mateo 28:1-6' });
