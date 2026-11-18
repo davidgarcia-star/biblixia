@@ -345,7 +345,28 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         ring.rotation.z = t * .08; ring.rotation.y = Math.sin(t * 1.1) * .035;
       });
     }
-    for (const sx of [-1.6, 0, 1.6]) { const t = box(.7, .12, 1.9, mat(0xf2f2f0), pX + 6.3, fy + .35, pZ + sx * .7 - .3); t.rotation.x = -.05; box(.7, .5, .12, mat(0xf2f2f0), pX + 6.3, fy + .55, pZ + sx * .7 + .6); }
+    {
+      // tumbonas junto a la piscina: antes estaban encimadas una sobre otra y flotaban sobre la grama;
+      // ahora la terraza de madera se alarga, y quedan tres tumbonas separadas, mirando al agua, con 4 patas de aluminio
+      // y una toalla de rayas doblada a los pies
+      const lx = pX + 6.5;
+      box(2.6, .1, pD + 2.4, woodM, lx, fy + .06, pZ, { cast: false });
+      const lounM = mat(0xf2f2f0), legM = new THREE.MeshStandardMaterial({ color: 0xc9ced4, metalness: .85, roughness: .3 });
+      const legG = new THREE.CylinderGeometry(.025, .025, .26, 8);
+      const tc = document.createElement('canvas'); tc.width = 64; tc.height = 8; const tg = tc.getContext('2d');
+      ['#2f7fc1', '#ffffff', '#f2b33d', '#ffffff'].forEach((c, k) => { tg.fillStyle = c; tg.fillRect(k * 16, 0, 16, 8); });
+      const towT = new THREE.CanvasTexture(tc); towT.colorSpace = THREE.SRGBColorSpace;
+      const towM = new THREE.MeshStandardMaterial({ map: towT, roughness: 1 });
+      [-1.15, 0, 1.15].forEach((dz, k) => {
+        const lz = pZ + dz;
+        const seat = box(1.9, .12, .7, lounM, lx, fy + .35, lz); seat.rotation.z = .05;
+        box(.12, .5, .7, lounM, lx + .92, fy + .58, lz);
+        for (const [ax, az] of [[-.82, -.28], [-.82, .28], [.82, -.28], [.82, .28]]) {
+          const l = new THREE.Mesh(legG, legM); l.position.set(lx + ax, fy + .23, lz + az); l.raycast = () => {}; group.add(l);
+        }
+        if (k !== 1) { const tw = box(.34, .05, .62, towM, lx - .6, fy + .405, lz, { cast: false }); tw.rotation.z = .05; tw.raycast = () => {}; }
+      });
+    }
     // --- Sala y cocina (lado izquierdo) ---
     const sofaM = mat(0x8c8a86, { roughness: .95 });
     box(2.4, .45, .9, sofaM, cx - 4, fy + .23, Z1 - .8); box(2.4, .7, .25, sofaM, cx - 4, fy + .6, Z1 - .35); solid(cx - 5.2, cx - 2.8, Z1 - 1.3, Z1 - .2, fy + .45);
