@@ -159,14 +159,19 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
 
   /* ---------------- FUENTE DE BRONCE ---------------- */
   const lavX = cx + 10 * C;
-  add(new THREE.CylinderGeometry(.35, .5, .7, 20), M.bronze, lavX, .35, cz);
-  add(new THREE.LatheGeometry([[0, 0], [.3, .02], [.75, .2], [.85, .42], [.8, .45]].map(([x, y]) => new THREE.Vector2(x, y)), 32), M.bronze, lavX, .7, cz);
+  // La fuente se hizo con los espejos de bronce de las mujeres que servían a la puerta de la tienda de reunión (Éxodo 38:8):
+  // bronce bruñido, más claro y brillante, que refleja el cielo como un espejo
+  const mirrorBronze = new THREE.MeshStandardMaterial({ color: 0xd09050, metalness: 1, roughness: .16 });
+  add(new THREE.CylinderGeometry(.35, .5, .7, 20), mirrorBronze, lavX, .35, cz);
+  add(new THREE.LatheGeometry([[0, 0], [.3, .02], [.75, .2], [.85, .42], [.8, .45]].map(([x, y]) => new THREE.Vector2(x, y)), 32), mirrorBronze, lavX, .7, cz);
+  // borde pulido del lavatorio que atrapa la luz
+  add(new THREE.TorusGeometry(.815, .028, 8, 40), mirrorBronze, lavX, 1.15, cz).rotation.x = Math.PI / 2;
   add(new THREE.CircleGeometry(.76, 32), M.water, lavX, 1.08, cz).rotation.x = -Math.PI / 2;
   addBox(lavX - .8, lavX + .8, cz - .8, cz + .8, 1.15);
   // Ondas suaves en el agua donde el sacerdote se lava las manos (Éxodo 30:18-21)
   const ripples = []; for (let i = 0; i < 3; i++) { const r = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 28), new THREE.MeshBasicMaterial({ color: 0xe8f4ff, transparent: true, opacity: 0, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(lavX + .3 - i * .06, 1.088, cz + (i - 1) * .12); r.renderOrder = 2; r.castShadow = r.receiveShadow = false; T.add(r); ripples.push({ r, k: i / 3 }); }
   zones.push({ id: 'fuente', name: 'La fuente de bronce', minX: lavX - 2, maxX: lavX + 2, minZ: cz - 2, maxZ: cz + 2, pri: 2,
-    text: 'En la fuente de bronce los sacerdotes lavaban sus manos y pies antes de ministrar.', ref: 'Éxodo 30:17-21; 38:8' });
+    text: 'En la fuente de bronce los sacerdotes lavaban sus manos y sus pies antes de ministrar. Se hizo con los espejos de bronce de las mujeres que servían a la puerta de la tienda de reunión.', ref: 'Éxodo 30:17-21; 38:8' });
 
   /* ---------------- LA TIENDA: 30 × 10 × 10 codos ---------------- */
   const tx0 = cx - 30 * C, tx1 = cx, tz0 = cz - 5 * C, tz1 = cz + 5 * C, TH = 10 * C, wallT = .22;
