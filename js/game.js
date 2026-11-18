@@ -98,9 +98,13 @@ const isTouch0 = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPo
 // Calidad automática guardada: si el equipo fue lento la vez anterior, empieza ya liviano (sin tirones al comenzar)
 let QL = 0; if (!LITE) try { QL = Math.min(3, Math.max(0, +localStorage.getItem('bx_ql') || 0)); } catch (e) {}
 // en computadoras el suavizado de bordes lo hace el acabado (composer); así no se dibuja dos veces
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE && (isTouch0 || QL >= 2), powerPreference: LITE ? 'default' : 'high-performance', precision: LITE ? 'mediump' : 'highp', logarithmicDepthBuffer: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE && (isTouch0 || QL >= 2), powerPreference: LITE ? 'default' : 'high-performance', precision: 'highp', logarithmicDepthBuffer: false });
+// Antes en modo liviano se pedía precisión 'mediump': en GPU modestas la luz salía mal y el suelo se veía negro.
+// Ahora siempre 'highp' (three.js baja a mediump por su cuenta solo si el equipo no tiene highp).
 const isTouch = isTouch0;
-const MAX_PR = LITE ? Math.min(devicePixelRatio, .8) : Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
+// "Ultra liviano": se activa solo si el teléfono ya perdió los gráficos estando en modo liviano
+let ULTRA = false; try { ULTRA = LITE && localStorage.getItem('bx_ultra') === '1'; } catch (e) {}
+const MAX_PR = LITE ? Math.min(devicePixelRatio, ULTRA ? .6 : .8) : Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
 renderer.setPixelRatio(QL >= 1 ? Math.max(.75, MAX_PR - .35 * QL) : MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 // Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde: guardar y recargar UNA sola vez
@@ -108,6 +112,8 @@ renderer.setSize(innerWidth, innerHeight);
 canvas.addEventListener('webglcontextlost', e => {
   e.preventDefault();
   try { persist(); } catch (_) {}
+  // la próxima vez abrir más liviano: si no estaba en liviano, pasa a liviano; si ya lo estaba, a ultra liviano
+  try { if (!LITE) localStorage.setItem('bx_lite', '1'); else localStorage.setItem('bx_ultra', '1'); } catch (_) {}
   let again = false; try { again = sessionStorage.getItem('bx_reload') === '1'; sessionStorage.setItem('bx_reload', '1'); } catch (_) { again = true; }
   const gl = document.getElementById('glLost'); if (gl) gl.classList.remove('hidden');
   if (!again) setTimeout(() => location.reload(), 1500);
