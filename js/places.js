@@ -252,9 +252,27 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     mo.arms[1].shoulder.rotation.set(-2.4, 0, .2); mo.arms[1].elbow.rotation.x = -.2;
     const staff = new THREE.Mesh(new THREE.CylinderGeometry(.02, .025, 1.9, 8), std({ color: 0x6b4a2a })); staff.position.set(0, -.3, .1); staff.rotation.x = -.3; mo.arms[1].hand.add(staff);
     const mb = bakeStatic(mo.root); mb.position.set(px, 0, zS - 14); mb.rotation.y = Math.PI; S.add(mb); addBox(px - .4, px + .4, zS - 14.4, zS - 13.6, 1.8);
+    { // la columna de nube y de fuego se puso detrás de Israel, entre ellos y los egipcios (Éxodo 14:19-20, 24)
+      const cx = px + Math.min(ww * .3, 7), czp = zS - 8, col = new THREE.Group(); col.position.set(cx, 0, czp); P.add(col);
+      const cloudM = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, emissive: 0xfff4dc, emissiveIntensity: .25, roughness: 1, transparent: true, opacity: .5, depthWrite: false });
+      const fireM = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: .45, depthWrite: false, blending: THREE.AdditiveBlending });
+      const puffs = [];
+      const puffG = new THREE.SphereGeometry(1, 14, 10);
+      for (let k = 0; k < 11; k++) {
+        const r0 = 1.05 + Math.sin(k * 1.7) * .3, m = new THREE.Mesh(puffG, cloudM);
+        m.position.y = 1 + k * 1.25; m.scale.set(r0, r0 * 1.25, r0 * (.9 + Math.cos(k * 2.3) * .12)); m.userData.a = k * 2.4;
+        m.castShadow = m.receiveShadow = false; m.raycast = () => {}; col.add(m); puffs.push(m);
+      }
+      const core = new THREE.Mesh(new THREE.CylinderGeometry(.45, .7, 13, 12, 1, true), fireM); core.position.y = 7; core.raycast = () => {}; col.add(core);
+      out.live.push({ kind: 'fn', update(t) {
+        col.rotation.y = t * .25;
+        for (let k = 0; k < puffs.length; k++) { const q = puffs[k]; q.position.x = Math.sin(t * .6 + q.userData.a) * .35; q.position.z = Math.cos(t * .5 + q.userData.a * 1.3) * .35; }
+        fireM.opacity = .35 + Math.sin(t * 2.3) * .08 + Math.sin(t * 5.1) * .04;
+      } });
+    }
     out.zones.push({ id: 'marrojo', name: 'El Mar Rojo abierto', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'El SEÑOR abrió el Mar Rojo e Israel lo cruzó en seco.',
-      ref: 'Éxodo 14:21-22, 29-31' });
+      ref: 'Éxodo 14:19-22, 29-31' });
     out.coins.push([px, pz - 4, 0], [px, pz + 14, 0]);
     out.treasures.marrojo = [px, pz + 5, 0];
   }
