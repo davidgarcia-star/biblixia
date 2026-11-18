@@ -892,6 +892,17 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         box(.012, .04, .03, cupM, ux + .05, ty + .05, uz, { cast: false });
         steam(ux, ty + .14, uz);
       }
+      // servilletero de acero con servilletas blancas y vasito con sobrecitos de azúcar en el centro de cada mesita
+      const steelM = mat(0xc9ccd0, { metalness: .85, roughness: .25 }), napM = mat(0xffffff, { roughness: .9 });
+      const sugM = [mat(0xf4f1ea, { roughness: .8 }), mat(0xc79a5a, { roughness: .8 }), mat(0xe8a0b4, { roughness: .8 })];
+      for (const [nx, nz] of [[cx - 3.82, cz + .14], [cx - .2, cz + .85]]) {
+        box(.13, .012, .07, steelM, nx, ty + .006, nz, { cast: false });                 // base del servilletero
+        for (const sz of [-.03, .03]) box(.12, .09, .006, steelM, nx, ty + .055, nz + sz, { cast: false });   // laterales
+        box(.11, .075, .05, napM, nx, ty + .05, nz, { cast: false });                    // servilletas
+        const gx = nx - .14;
+        cyl(.03, .026, .06, mat(0xdfe8ee, { roughness: .1, metalness: .1 }), gx, ty + .03, nz, 10).castShadow = false;   // vasito
+        for (let k = 0; k < 5; k++) { const p = box(.022, .055, .004, sugM[k % 3], gx + (k - 2) * .009, ty + .075, nz + (k % 2 ? .006 : -.006), { cast: false }); p.rotation.z = (k - 2) * .12; }   // sobrecitos
+      }
     }
     // sillas libres de madera con cojín alrededor de las mesitas de la cafetería
     const cafeSeats = [[cx - 4, cz + .75, 0], [cx, cz + .25, Math.PI], [cx, cz + 1.75, 0]];
