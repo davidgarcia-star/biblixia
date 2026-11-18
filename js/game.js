@@ -1175,6 +1175,15 @@ async function buildWorld(cfg) {
     const deck = new THREE.Mesh(new THREE.BoxGeometry(pierLen + 2, .3, 4.4), M.wood); deck.position.set((pierX0 + pierX1) / 2, .45, pz0); deck.castShadow = deck.receiveShadow = true; group.add(deck);
     for (let i = 0; i <= 14; i++) for (const sz of [-1, 1]) { const pst = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, 2.4, 8), M.woodDark); pst.position.set(pierX0 + i * pierLen / 14, -.6, pz0 + sz * 2.1); group.add(pst); if (i % 2 === 0) { const rail = new THREE.Mesh(new THREE.CylinderGeometry(.08, .08, 1.1, 6), M.woodDark); rail.position.set(pierX0 + i * pierLen / 14, 1.1, pz0 + sz * 2.1); group.add(rail); } }
     for (const sz of [-1, 1]) { const rope = new THREE.Mesh(new THREE.BoxGeometry(pierLen, .08, .08), M.woodDark); rope.position.set((pierX0 + pierX1) / 2, 1.5, pz0 + sz * 2.1); group.add(rope); }
+    // salvavidas anaranjados con franjas blancas colgados por fuera de la baranda del muelle
+    { const mO = new THREE.MeshStandardMaterial({ color: 0xff5a1f, roughness: .55 }), mWt = new THREE.MeshStandardMaterial({ color: 0xf4f4f0, roughness: .6 });
+      const ringG = new THREE.TorusGeometry(.36, .09, 8, 22), bandG = new THREE.TorusGeometry(.36, .096, 8, 5, .38), hookG = new THREE.CylinderGeometry(.03, .03, .28, 6);
+      for (const [i, sz] of [[4, 1], [10, -1]]) {
+        const lr = new THREE.Group(); lr.add(new THREE.Mesh(ringG, mO));
+        for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(bandG, mWt); b.rotation.z = k * Math.PI / 2 + Math.PI / 4 - .19; lr.add(b); }
+        const hk = new THREE.Mesh(hookG, M.woodDark); hk.position.set(0, .44, -sz * .07); lr.add(hk);
+        lr.position.set(pierX0 + i * pierLen / 14, 1.12, pz0 + sz * 2.28); lr.rotation.x = sz * .06; group.add(lr);
+      } }
     addBox(pierX0 - 1, pierX1 + 2, pz0 - 2.2, pz0 + 2.2, .6);
     W.pier = { minX: pierX0 - 1.5, maxX: pierX1 + 2, minZ: pz0 - 2.7, maxZ: pz0 + 2.7 };
     addBox(pierX0 - 1, pierX1 - 2, pz0 - 2.6, pz0 - 2.2, 999); addBox(pierX0 - 1, pierX1 - 2, pz0 + 2.2, pz0 + 2.6, 999);
