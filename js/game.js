@@ -908,6 +908,15 @@ async function buildWorld(cfg) {
     const o = new THREE.Object3D();
     hydrants.forEach(([x, z], i) => { o.position.set(x, CURB, z); o.rotation.set(0, 0, 0); o.updateMatrix(); hm.setMatrixAt(i, o.matrix); addBox(x - .2, x + .2, z - .2, z + .2, CURB + .9); });
     hm.castShadow = true; group.add(hm);
+    // tapas hexagonales plateadas en las tres bocas y franja reflectante cerca de la tapa (para verlo de noche)
+    const caps = [];
+    for (const sx of [-1, 1]) { const g = new THREE.CylinderGeometry(.064, .064, .035, 6); g.rotateZ(Math.PI / 2); g.translate(sx * .272, .45, 0); caps.push(g); }
+    const fc = new THREE.CylinderGeometry(.086, .086, .035, 6); fc.rotateX(Math.PI / 2); fc.translate(0, .42, -.245); caps.push(fc);
+    caps.push(new THREE.CylinderGeometry(.153, .153, .045, 12, 1, true).translate(0, .58, 0));
+    caps.forEach(g => g.deleteAttribute('uv'));
+    const cm = new THREE.InstancedMesh(mergeGeometries(caps), new THREE.MeshStandardMaterial({ color: 0xe4e6ea, roughness: .3, metalness: .7, side: THREE.DoubleSide }), hydrants.length);
+    for (let i = 0; i < hydrants.length; i++) { hm.getMatrixAt(i, o.matrix); cm.setMatrixAt(i, o.matrix); }
+    group.add(cm);
   }
   // Instanciar papeleras: cuerpo cilíndrico verde con aros, tapa abovedada con boca y base oscura
   if (bins.length) {
