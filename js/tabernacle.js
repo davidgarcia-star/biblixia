@@ -130,6 +130,38 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(aw + .1, .08, .05, M.bronze, altX, ah * .5, cz - aw / 2 - .02); box(aw + .1, .08, .05, M.bronze, altX, ah * .5, cz + aw / 2 + .02); // rejilla
   for (const sz of [-1, 1]) { const pole = add(new THREE.CylinderGeometry(.04, .04, aw + 1.2, 8), M.bronze, altX, ah * .45, cz + sz * (aw / 2 + .12)); pole.rotation.z = Math.PI / 2; }
   addBox(altX - aw / 2, altX + aw / 2, cz - aw / 2, cz + aw / 2, ah);
+  // «Le harás también un enrejado de bronce en forma de red, y sobre la red harás cuatro anillos de bronce en sus cuatro
+  // extremos. Y la pondrás debajo del borde del altar, de manera que la red llegue hasta la mitad del altar» (Éxodo 27:4-5).
+  // Red de bronce calada alrededor de los cuatro lados, cornisa también en los lados oriente y occidente, y los cuatro
+  // anillos en las esquinas por donde pasan las varas (Éxodo 27:6-7).
+  {
+    const netTex = tex(64, 64, (g, W, H) => {
+      g.clearRect(0, 0, W, H); g.strokeStyle = '#fff'; g.lineWidth = 8;
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(W, H); g.moveTo(W, 0); g.lineTo(0, H); g.stroke();
+      g.strokeRect(0, 0, W, H);
+    });
+    const bandH = ah * .3, bandY = ah * .5 - .04 - bandH / 2;
+    netTex.repeat.set(Math.round(aw / .26), Math.max(1, Math.round(bandH / .26)));
+    netTex.generateMipmaps = false; netTex.minFilter = THREE.LinearFilter; // sin mipmaps para que la red no desaparezca de lejos
+    const netM = new THREE.MeshStandardMaterial({ color: 0xc8843e, metalness: .85, roughness: .45, map: netTex, alphaTest: .4 });
+    const holeM = new THREE.MeshStandardMaterial({ color: 0x1c120a, roughness: 1 });
+    for (let k = 0; k < 4; k++) {
+      const a = k * Math.PI / 2, nx = Math.cos(a), nz = Math.sin(a);
+      const pl = add(new THREE.PlaneGeometry(aw - .02, bandH), netM, altX + nx * (aw / 2 + .012), bandY, cz + nz * (aw / 2 + .012), { cast: false });
+      pl.rotation.y = Math.PI / 2 - a;
+      // fondo oscuro detrás de la red: por los huecos se ve el interior hueco del altar (Éxodo 27:8)
+      const bk = add(new THREE.PlaneGeometry(aw - .04, bandH - .02), holeM, altX + nx * (aw / 2 + .005), bandY, cz + nz * (aw / 2 + .005), { cast: false });
+      bk.rotation.y = Math.PI / 2 - a;
+    }
+    // cornisa (borde) en los lados oriente y occidente, a la misma altura que la de los lados norte y sur
+    box(.05, .08, aw + .1, M.bronze, altX - aw / 2 - .02, ah * .5, cz); box(.05, .08, aw + .1, M.bronze, altX + aw / 2 + .02, ah * .5, cz);
+    // cuatro anillos de bronce con su abrazadera, abrazando las varas
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const rx = altX + sx * (aw / 2 - .3), rz = cz + sz * (aw / 2 + .12);
+      add(new THREE.TorusGeometry(.075, .022, 8, 18), M.bronze, rx, ah * .45, rz, { cast: false }).rotation.y = Math.PI / 2;
+      box(.05, .04, .12, M.bronze, rx, ah * .45 + .085, cz + sz * (aw / 2 + .06));
+    }
+  }
   // Fuego vivo y humo del holocausto que sube al cielo (Levítico 1:9; 6:13)
   const smokeTex = tex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(235,232,228,.7)'); gr.addColorStop(.55, 'rgba(200,196,190,.3)'); gr.addColorStop(1, 'rgba(190,186,180,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
   const smoke = [], smokeCol = new THREE.Color();
