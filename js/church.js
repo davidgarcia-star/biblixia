@@ -177,6 +177,24 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   wall(X0, LZ, cx - 3, LZ, 4); wall(cx + 3, LZ, X1, LZ, 4);
   box(6, H - 4, T, wallM, cx, y0 + 4 + (H - 4) / 2, LZ);
   box(4, 1.1, 1, mat(0x6a4a2a), cx, y0 + .55, Z0 + 3.2); box(4.1, .06, 1.1, mat(0x2a2420, { roughness: .3 }), cx, y0 + 1.12, Z0 + 3.2); solid(cx - 2, cx + 2, Z0 + 2.7, Z0 + 3.7, y0 + 1.15);
+  { // sobre el mostrador de recepción: florero de cerámica con lirios blancos y folletos de bienvenida
+    const top = y0 + 1.15, vx = cx + 1.45, vz = Z0 + 3.05;
+    const vase = new THREE.Mesh(new THREE.CylinderGeometry(.07, .05, .24, 18), mat(0xf4f1ea, { roughness: .25 }));
+    vase.position.set(vx, top + .12, vz); vase.castShadow = true; group.add(vase);
+    const stemM = mat(0x2f6b2a, { roughness: .8 }), leafM = mat(0x3d8a34, { roughness: .7, side: THREE.DoubleSide });
+    const petalM = mat(0xfbfaf4, { roughness: .5 }), pistilM = mat(0xe8b830, { roughness: .6 });
+    const stemG = new THREE.CylinderGeometry(.006, .006, .34, 5), cupG = new THREE.ConeGeometry(.045, .09, 6, 1, true), dotG = new THREE.SphereGeometry(.012, 6, 4), leafG = new THREE.PlaneGeometry(.05, .16);
+    [[0, 0, .0], [.04, .3, .02], [-.04, -.3, -.01], [.01, .15, -.04], [-.02, -.2, .04]].forEach(([dx, tilt, dz], k) => {
+      const f = new THREE.Group(); f.position.set(vx + dx * .5, top + .2, vz + dz * .5); f.rotation.set(dz * 6, 0, -tilt); group.add(f);
+      const st = new THREE.Mesh(stemG, stemM); st.position.y = .17; f.add(st);
+      const cup = new THREE.Mesh(cupG, petalM); cup.position.y = .36 + (k % 2) * .03; cup.rotation.x = Math.PI; f.add(cup);   // flor abierta hacia arriba
+      const dot = new THREE.Mesh(dotG, pistilM); dot.position.y = cup.position.y - .01; f.add(dot);
+      if (k < 3) { const lf = new THREE.Mesh(leafG, leafM); lf.position.set(.02, .14, 0); lf.rotation.z = -.5; f.add(lf); }
+    });
+    // folletos: dos pequeñas pilas de papel con portada azul y dorada
+    const brM = [mat(0x2a4a9a, { roughness: .6 }), mat(0xd9b24a, { roughness: .5 })];
+    brM.forEach((m, k) => { const b = box(.21, .025, .29, m, cx - 1.3 + k * .3, top + .013, Z0 + 3.0, { cast: false }); b.rotation.y = (k ? -.12 : .1); });
+  }
   // servidora de la recepción: se mueve, saluda con gestos y dice «¡Bendiciones!» cuando llegas
   // (antes llevaba saco negro con camisa y solapas y parecía un hombre de esmoquin: ahora es claramente una dama)
   const recep = createHuman({ detail: .6, gender: 'f', topStyle: 'mangalarga', top: 0x9a2a4e, legwear: 'vestido', skin: SKINS[2], hair: 'long', hairColor: 0x1d130c, shoes: 0x1a1214, earrings: true, necklace: true, name: '' });
