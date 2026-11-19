@@ -78,7 +78,8 @@ function equipoModesto() {
   return gpuDebil || (mem && mem <= 3) || (android && av && av <= 9) || (android && cores && cores <= 4);
 }
 const LITE = GFX_PREF === '1' || (GFX_PREF === 'auto' && equipoModesto());
-const LR = LITE ? .6 : 1; // en modo liviano lo lejano se oculta antes
+let ULTRA0 = false; try { ULTRA0 = LITE && localStorage.getItem('bx_ultra') === '1'; } catch (e) {}
+const LR = LITE ? (ULTRA0 ? .38 : .47) : 1; // en modo liviano lo lejano se oculta antes (antes .6: el celular seguía dibujando demasiado)
 // En modo liviano se quitan los desenfoques (blur) de los paneles: en celulares modestos el navegador
 // tenía que volver a desenfocar el 3D en cada cuadro y el juego a veces se congelaba
 try { document.documentElement.classList.toggle('bx-lite', LITE); } catch (e) {}
@@ -130,7 +131,8 @@ renderer.toneMappingExposure = 0.62;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, LITE ? 700 : 2600);
+// en modo liviano la neblina tapa todo a partir de ~420 m: lo que está más lejos ya no se dibuja (antes se dibujaba hasta 700 m sin verse)
+const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, LITE ? 440 : 2600);
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -196,6 +198,8 @@ function snapShadow(c) {
   sun.target.updateMatrixWorld();
 }
 
+// En modo liviano la cámara ve menos lejos (440 m): el cielo (estrellas, luna, sol y nubes) se pone más cerca y más pequeño
+const SKYK = LITE ? .26 : 1;
 // Estrellas, luna y nubes propias (funcionan en cualquier versión)
 const stars = (() => {
   const n = 2600, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
@@ -231,6 +235,7 @@ const sunGlow = (() => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.set(260, 260, 1); scene.add(sp); return sp;
 })();
+if (SKYK !== 1) { stars.scale.setScalar(SKYK); moon.scale.multiplyScalar(SKYK); sunGlow.scale.multiplyScalar(SKYK); skyClouds.grp.scale.setScalar(SKYK); }
 // Estrella fugaz: de noche, de vez en cuando cruza el cielo una estela brillante (Salmo 19:1 «Los cielos proclaman la gloria de Dios»)
 const meteor = (() => {
   const g = new THREE.BufferGeometry();
@@ -303,7 +308,7 @@ function applyTime(mode) {
   scene.environment = envRT.texture; scene.environmentIntensity = T2.env;
   if (T2.stars) { scene.background = new THREE.Color(0x05070f); sky.visible = false; } else if (LITE) { scene.background = scene.fog.color; sky.visible = false; } else { scene.background = null; sky.visible = true; }
   if (world && world.ark && world.ark.rainbow) world.ark.rainbow.visible = !T2.stars;
-  stars.visible = T2.stars; birds.grp.visible = !T2.stars && !LITE; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400);
+  stars.visible = T2.stars; birds.grp.visible = !T2.stars && !LITE; moon.visible = T2.stars; sunGlow.visible = !T2.stars; sunGlow.material.color.set(mode === 'atardecer' ? 0xff9a50 : 0xffffff); sunGlow.material.opacity = mode === 'atardecer' ? .9 : .75; moon.position.copy(moonDir).multiplyScalar(1400 * SKYK);
   skyClouds.grp.children.forEach((c, i) => { c.visible = i < (LITE ? Math.min(T2.clouds, 8) : T2.clouds); });
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
@@ -1486,7 +1491,8 @@ const CULL_K = isTouch ? 1 : 1.35;
 const _cb = new THREE.Box3(), _cs = new THREE.Sphere(), _ci = new THREE.Matrix4(), _cv = new THREE.Vector3();
 // pieza diminuta bajo el suelo para que el material de las personas lejanas se prepare junto con los demás
 { const g = new THREE.BoxGeometry(.01, .01, .01); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); const m = new THREE.Mesh(g, FAR_MAT); m.position.y = -40; m.receiveShadow = true; m.frustumCulled = false; scene.add(m); }
-const LOD_FAR = LITE ? 10 : isTouch ? 16 : 22, LOD_HIDE = isTouch ? 110 : 170, _lv = new THREE.Vector3();
+// en modo liviano la gente lejana (más de 55 m) ya no se dibuja: era lo que más triángulos ponía en pantalla
+const LOD_FAR = LITE ? 10 : isTouch ? 16 : 22, LOD_HIDE = LITE ? 55 : isTouch ? 110 : 170, _lv = new THREE.Vector3();
 // Personas lejanas: una versión sencilla (una sola pieza, sin dedos) en la misma postura.
 // Se prepara DESPUÉS de mostrar el mundo, de a poquito, para no alargar la carga ni congelar la pantalla.
 let lodJob = 0;
@@ -1539,6 +1545,25 @@ function buildCull(root) {
     if (!items.length) return;
     const range = (rad < 2 ? 85 : rad < 6 ? 125 : rad < 15 ? 190 : 300) * CULL_K + rad;
     units.push({ o, items, c: _cs.center.clone().applyMatrix4(_ci.copy(o.matrixWorld).invert()), range, hidden: false });
+    if (rad >= 4 && !o.userData.isHuman) detail(o, rad);
+  };
+  // Detalles pequeños dentro de un edificio o lugar grande (floreros, servilleteros, portarretratos, folletos…):
+  // antes se dibujaban mientras se viera el edificio entero (hasta 300 m). Ahora cada detalle se oculta solo
+  // cuando está lejos (desde ~25 a 55 m en modo liviano), donde en la pantalla del celular casi no se ve.
+  // Así se dibujan muchos menos triángulos y el juego se traba mucho menos en celulares modestos.
+  const detail = (x, parentRad) => {
+    for (const ch of x.children) {
+      if (ch.isLight || ch.isCamera || ch.userData.isHuman) continue;
+      _cb.makeEmpty().expandByObject(ch);
+      if (_cb.isEmpty()) continue;
+      _cb.getBoundingSphere(_cs);
+      const r = _cs.radius;
+      if (r < 3 && r < parentRad * .5) {
+        const items = [];
+        ch.traverse(m => { if (m.isMesh || m.isSprite || m.isPoints || m.isLine) items.push(m); });
+        if (items.length) units.push({ o: ch, items, c: _cs.center.clone().applyMatrix4(_ci.copy(ch.matrixWorld).invert()), range: (r < .6 ? 40 : r < 1.5 ? 60 : 90) * CULL_K + r, hidden: false });
+      } else if (ch.children.length) detail(ch, r);
+    }
   };
   for (const ch of root.children) visit(ch);
   return units;
@@ -1548,7 +1573,11 @@ function updateCull(cp) {
   for (const u of world.cull) {
     _cv.copy(u.c).applyMatrix4(u.o.matrixWorld);
     const hide = Math.hypot(_cv.x - cp.x, _cv.z - cp.z) > u.range * LR;
-    if (hide !== u.hidden) { u.hidden = hide; for (const m of u.items) m.layers.set(hide ? 1 : 0); }
+    if (hide !== u.hidden) {
+      // un objeto puede estar en un grupo grande y en un detalle: se oculta si cualquiera de los dos lo oculta
+      u.hidden = hide;
+      for (const m of u.items) { const n = (m.userData._cullN || 0) + (hide ? 1 : -1); m.userData._cullN = Math.max(0, n); m.layers.set(n > 0 ? 1 : 0); }
+    }
   }
 }
 
@@ -3305,8 +3334,8 @@ function loopBody() {
   updateHumanLOD();
   if (composer) { const prN = renderer.getPixelRatio(); if (prN !== composer._pr) { composer._pr = prN; composer.setPixelRatio(prN); } composer.render(); } else renderer.render(scene, camera);
   for (const g of pendingGroups) g.visible = true;
-  skyClouds.grp.position.set(camera.position.x * .3, 0, camera.position.z * .3);
-  stars.position.copy(camera.position); if (stars.visible) stars.userData.tw.value = performance.now() / 1000; moon.position.copy(moonDir).multiplyScalar(1400).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500).add(camera.position);
+  skyClouds.grp.position.set(camera.position.x * (SKYK !== 1 ? .9 : .3), 0, camera.position.z * (SKYK !== 1 ? .9 : .3));
+  stars.position.copy(camera.position); if (stars.visible) stars.userData.tw.value = performance.now() / 1000; moon.position.copy(moonDir).multiplyScalar(1400 * SKYK).add(camera.position); sunGlow.position.copy(skyDir).multiplyScalar(1500 * SKYK).add(camera.position);
 }
 
 /* =========================================================

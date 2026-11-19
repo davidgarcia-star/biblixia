@@ -16,6 +16,7 @@ export function physM(o = {}) {
   const p = { ...o }; for (const k of PHYS_ONLY) delete p[k];
   return new THREE.MeshStandardMaterial(p);
 }
+const GFX_LITE = () => { try { return document.documentElement.classList.contains('bx-lite'); } catch (e) { return false; } };
 let Q = 1; // nivel de detalle (1 = jugador, menos para personajes lejanos)
 const SG = (r, w = 32, h = 16, ...rest) => new THREE.SphereGeometry(r, Math.max(6, Math.round(w * Q)), Math.max(4, Math.round(h * Q)), ...rest);
 const segs = n => Math.max(6, Math.round(n * Q));
@@ -262,7 +263,9 @@ export function createHuman(opt = {}) {
     top: 0x1f5c70, pants: 0x2b3a57, shoes: 0xf2f2f0, robe: 0xcbb994, mantle: 0x6b3f2a, sash: 0x8a2b2b, cloth: 0xe8dcc0,
     beard: null, name: '', age: 0,
   }, opt);
-  Q = o.detail ?? 1;
+  // En modo liviano (celulares modestos) cada persona se hace con la mitad de triángulos: casi no se nota en la
+  // pantalla del celular y el teléfono dibuja mucho menos (antes el jugador solo tenía ~38.000 triángulos)
+  Q = (o.detail ?? 1) * (GFX_LITE() ? .5 : 1);
   const lowQ = Q < .5; // figuras lejanas: sin dedos, párpados ni pestañas
   const F = o.gender === 'f', robe = o.outfit === 'robe';
   o.lip = F ? shade(new THREE.Color(o.skin).lerp(new THREE.Color(0xb04a5a), .55).getHex(), .9) : shade(new THREE.Color(o.skin).lerp(new THREE.Color(0x8a4a40), .2).getHex(), .86); o.brow = shade(o.hairColor, .9);
