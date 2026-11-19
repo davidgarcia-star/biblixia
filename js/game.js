@@ -844,6 +844,26 @@ async function buildWorld(cfg) {
     }
     for (let j = 0; j <= N; j++) coinSpots.push([sc, streetCenters[j], 0]);
   }
+  // Líneas de pare: franja blanca continua antes de cada paso de cebra, solo en el carril que llega al cruce
+  // (los autos van por la derecha; la franja no toca la cebra ni la línea central, así no hay superficies encimadas)
+  {
+    const stopMat = new THREE.MeshStandardMaterial({ color: 0xe9e9e4, roughness: .85, polygonOffset: true, polygonOffsetFactor: -2 });
+    const half = STREET / 2 - .6, gap = .18, len = half - gap;
+    for (let i = 0; i <= N; i++) { const sc = streetCenters[i];
+      for (let j = 0; j < N; j++) {
+        const a = O + j * PITCH + STREET, b = a + BLOCK;
+        // [posición a lo largo de la calle, lado del carril]: al final del tramo llega el tráfico que avanza (+), al inicio el que regresa (−)
+        for (const [e, side] of [[b - 4.1, 1], [a + 4.1, -1]]) for (const horiz of [true, false]) {
+          const s = new THREE.Mesh(new THREE.PlaneGeometry(.45, len), stopMat);
+          s.rotation.x = -Math.PI / 2;
+          const off = sc + (horiz ? side : -side) * (gap + len / 2);
+          s.position.set(horiz ? e : off, .047, horiz ? off : e);
+          if (!horiz) s.rotation.z = Math.PI / 2;
+          s.receiveShadow = true; group.add(s);
+        }
+      }
+    }
+  }
   // Tapas de alcantarilla de hierro fundido: un disco apenas elevado (sin superposición plana) en un carril de cada tramo de calle
   {
     const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
