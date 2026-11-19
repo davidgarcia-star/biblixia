@@ -819,6 +819,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
     {
+      // máquina de espresso: dos grupos con portafiltros de mango negro, bandeja de goteo, manómetro, lanceta de vapor y tacitas calentándose arriba
+      const ex = cx - 5, fz = Z1 - 1.8, top = y0 + 1.10, chrM = mat(0xd6dbe0, { metalness: .9, roughness: .18 }), dkM = mat(0x1b1c20, { roughness: .45 }), cupM = mat(0xf6f3ec, { roughness: .35 });
+      box(.46, .02, .13, dkM, ex, top + .012, fz + .065, { cast: false });                                   // bandeja de goteo
+      box(.44, .006, .11, chrM, ex, top + .025, fz + .065, { cast: false });                                 // rejilla de acero
+      for (const dx of [-.12, .1]) {
+        cyl(.042, .042, .05, chrM, ex + dx, top + .3, fz + .04, 14).castShadow = false;                      // grupo
+        cyl(.036, .03, .03, chrM, ex + dx, top + .265, fz + .045, 14).castShadow = false;                    // portafiltro
+        box(.024, .024, .13, dkM, ex + dx, top + .262, fz + .14, { cast: false }).rotation.x = -.12;         // mango negro
+        cyl(.024, .018, .045, cupM, ex + dx, top + .055, fz + .05, 12).castShadow = false;                   // tacita de espresso
+      }
+      const gauge = cyl(.04, .04, .01, mat(0xf4f1ea, { roughness: .4 }), ex, top + .43, fz + .006, 18); gauge.rotation.x = Math.PI / 2; gauge.castShadow = false;   // manómetro
+      const aguja = box(.003, .028, .002, mat(0xc0283a), ex + .006, top + .435, fz + .012, { cast: false }); aguja.rotation.z = -.6;
+      const wand = cyl(.007, .007, .2, chrM, ex + .21, top + .2, fz + .05, 8); wand.rotation.x = .25; wand.castShadow = false;   // lanceta de vapor
+      for (let k = 0; k < 4; k++) cyl(.03, .024, .05, cupM, ex - .15 + k * .1, top + .525, Z1 - 2.1, 12).castShadow = false;       // tazas sobre la máquina
+    }
+    {
       // caja registradora sobre el mostrador (pantallita verde hacia el cliente) y frasco de propinas de vidrio con monedas
       const rx = cx - 3.9, rz = Z1 - 1.95, top = y0 + 1.10, rgM = mat(0x2b2e34, { roughness: .45 }), rgL = mat(0x4a4f58, { roughness: .4 });
       box(.38, .1, .32, rgM, rx, top + .05, rz, { cast: false });                                          // gaveta del dinero
