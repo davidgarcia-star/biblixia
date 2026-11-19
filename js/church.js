@@ -275,6 +275,32 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     solid(ox - .34, ox + .34, oz - .25, oz + .25, fl + .95);
   }
 
+  // reloj de pared redondo en el lobby (entre el baño de damas y el dispensador): marca la hora real del equipo
+  // y el segundero avanza a saltitos, como un reloj de cuarzo
+  const clockHands = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    g.fillStyle = '#fbfaf6'; g.beginPath(); g.arc(128, 128, 126, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#1c1c1e'; g.lineCap = 'round';
+    for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2, r0 = i % 5 ? 112 : 100; g.lineWidth = i % 5 ? 2 : 6;
+      g.beginPath(); g.moveTo(128 + Math.sin(a) * r0, 128 - Math.cos(a) * r0); g.lineTo(128 + Math.sin(a) * 118, 128 - Math.cos(a) * 118); g.stroke(); }
+    g.fillStyle = '#1c1c1e'; g.font = '700 26px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let h = 1; h <= 12; h++) { const a = h / 12 * Math.PI * 2; g.fillText(String(h), 128 + Math.sin(a) * 80, 129 - Math.cos(a) * 80); }
+    g.fillStyle = '#b8902c'; g.font = '700 13px system-ui, sans-serif'; g.fillText('MORIAH', 128, 168);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+    const ck = new THREE.Group(); ck.position.set(cx - 6, y0 + 3, LZ - T / 2 - .03); ck.rotation.y = Math.PI; group.add(ck);
+    const R = .3;
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(R + .03, R + .03, .05, 32), mat(0x1a1a1c, { roughness: .4, metalness: .5 }));
+    rim.rotation.x = Math.PI / 2; ck.add(rim);
+    const face = new THREE.Mesh(new THREE.CircleGeometry(R, 32), new THREE.MeshBasicMaterial({ map: tex })); face.position.z = .027; ck.add(face);
+    const hand = (len, w, color, z) => { const p = new THREE.Group(); p.position.z = z; ck.add(p);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, len, .004), new THREE.MeshBasicMaterial({ color })); m.position.y = len / 2 - .03; p.add(m); return p; };
+    const hH = hand(.17, .022, 0x1c1c1e, .031), hM = hand(.24, .014, 0x1c1c1e, .035), hS = hand(.26, .006, 0xc0262d, .039);
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(.012, .012, .01, 10), new THREE.MeshBasicMaterial({ color: 0xc0262d })); pin.rotation.x = Math.PI / 2; pin.position.z = .043; ck.add(pin);
+    return () => { const d = new Date(), s = d.getSeconds(), m = d.getMinutes() + s / 60, h = d.getHours() % 12 + m / 60, TAU = Math.PI * 2;
+      hS.rotation.z = -s / 60 * TAU; hM.rotation.z = -m / 60 * TAU; hH.rotation.z = -h / 12 * TAU; };
+  })();
+  clockHands();
+
   // dispensador de agua (garrafón) al otro lado de la entrada al santuario, con vasitos de papel:
   // cuerpo blanco, llaves roja (caliente) y azul (fría), bandeja de goteo y garrafón azul translúcido
   {
@@ -436,7 +462,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     { id: 'iglesia', name: 'MORIAH CHURCH – San Cristóbal · Epicentro de Avivamiento para las Naciones', minX: X0, maxX: X1, minZ: LZ, maxZ: Z1, pri: 6, text: '¡Bienvenido a la casa de Dios! Servicios: miércoles y viernes 8:00 PM · domingo 10:00 AM.', ref: 'Salmo 95:6' },
     { id: 'iglesia-lobby', name: 'Lobby de Moriah Church', minX: X0, maxX: X1, minZ: Z0, maxZ: LZ, pri: 6, text: 'Recepción, sala de espera y baños de damas y caballeros.', ref: 'Salmo 122:1' },
   ];
-  let li = 0, lt = 0, scrT = 0;
+  let li = 0, lt = 0, scrT = 0, clkT = 0;
   return {
     zones, cx, cz, seats, greeter,
     indoor: [{ name: 'la casa de Dios', msg: '⏸ En la casa de Dios el tiempo se detiene', rects: [[X0, X1, Z0, Z1], [cx - 5, cx + 5, Z0 - 5, Z0]], maxY: y0 + 9.5 }],
@@ -467,6 +493,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       // antes se redibujaba y se subía la pantalla 30 veces por segundo (tirones cerca del templo); ahora 4 veces por segundo
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
+      if ((clkT += dt) > .25) { clkT = 0; clockHands(); }   // reloj de pared del lobby
       neonM.emissiveIntensity = 1.6 + Math.sin(t * 2) * .5;   // el neón de la «M» late suave
       for (const b of beams) { b.b.rotation.z = Math.sin(t * b.sp * 1.4 + b.ph) * .55; b.b.rotation.x = Math.cos(t * b.sp + b.ph) * .4; }
       beamMats.forEach((m, k) => m.color.setHSL((t * .06 + k / 6) % 1, 1, .55));   // los colores van cambiando
