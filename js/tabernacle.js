@@ -286,6 +286,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     const arc = add(new THREE.TorusGeometry(r, .025, 8, 24, Math.PI), M.gold, mnX, lampY, mnZ); arc.rotation.set(0, Math.PI / 2, Math.PI);
     lamps.push([r, lampY], [-r, lampY]);
   });
+  // «Tres copas en forma de flor de almendro, una manzana y una flor en un brazo… y una manzana debajo de cada dos brazos» (Éxodo 25:33-35)
+  { const knobG = new THREE.SphereGeometry(.05, 12, 8), cupG = new THREE.CylinderGeometry(.045, .016, .075, 12);
+    [.18, .34, .5].forEach(r => {
+      add(knobG, M.gold, mnX, lampY - r, mnZ, { cast: false }); // manzana bajo cada par de brazos, sobre la caña
+      for (const a of [Math.PI * .25, Math.PI * .75]) add(cupG, M.gold, mnX, lampY - r * Math.sin(a) + .01, mnZ + r * Math.cos(a), { cast: false });
+    });
+    for (const y of [.45, .7, .95]) add(cupG, M.gold, mnX, y, mnZ, { cast: false }); // copas de almendro en la caña central (Éxodo 25:34)
+  }
   lamps.forEach(([dz]) => {
     add(new THREE.CylinderGeometry(.04, .025, .07, 10), M.gold, mnX, lampY + .02, mnZ + dz);
     const f = add(new THREE.ConeGeometry(.018, .07, 8), M.flame, mnX, lampY + .1, mnZ + dz, { cast: false, live: true }); f.userData.flame = true;
