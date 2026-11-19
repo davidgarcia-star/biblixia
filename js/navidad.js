@@ -212,7 +212,11 @@
       ['He aquí, la virgen concebirá y dará a luz un hijo, y le pondrán por nombre Emmanuel, que traducido significa: Dios con nosotros.', 'Mateo 1:23'],
       ['Porque os ha nacido hoy, en la ciudad de David, un Salvador, que es Cristo el Señor.', 'Lucas 2:11'],
       ['Gloria a Dios en las alturas, y en la tierra paz entre los hombres en quienes Él se complace.', 'Lucas 2:14'],
-      ['Y el Verbo se hizo carne, y habitó entre nosotros, y vimos su gloria, gloria como del unigénito del Padre, lleno de gracia y de verdad.', 'Juan 1:14']
+      ['Y el Verbo se hizo carne, y habitó entre nosotros, y vimos su gloria, gloria como del unigénito del Padre, lleno de gracia y de verdad.', 'Juan 1:14'],
+      ['Porque ninguna cosa será imposible para Dios.', 'Lucas 1:37'],
+      ['Y dio a luz a su hijo primogénito; le envolvió en pañales y le acostó en un pesebre, porque no había lugar para ellos en el mesón.', 'Lucas 2:7'],
+      ['Cuando vieron la estrella, se regocijaron sobremanera con gran alegría.', 'Mateo 2:10'],
+      ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
