@@ -270,7 +270,19 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       add(new THREE.CylinderGeometry(.055, .038, .04, 16), M.gold, tbX + sx * .24, topY + .02, tbZ, { cast: false });
       const inc = add(new THREE.SphereGeometry(.045, 12, 8), incM, tbX + sx * .24, topY + .038, tbZ, { cast: false }); inc.scale.set(1, .35, 1);
     } }
-  addBox(tbX - .55, tbX + .55, tbZ - .3, tbZ + .3, .8);
+  // «Le harás también alrededor un borde de un palmo menor de ancho… Le harás cuatro anillos de oro… y harás las varas de madera de acacia y las revestirás de oro» (Éxodo 25:25-28)
+  { const rimY = 1.5 * C + .075 + .035, hx = C + .03, hz = C / 2 + .03;
+    for (const s of [-1, 1]) {
+      box(2 * hx, .07, .025, M.gold, tbX, rimY, tbZ + s * hz, { cast: false });
+      box(.025, .07, 2 * hz, M.gold, tbX + s * hx, rimY, tbZ, { cast: false });
+    }
+    const ringY = 1.5 * C - .16;
+    for (const sz of [-1, 1]) {
+      const rz = tbZ + sz * (C / 2 + .035);
+      for (const sx of [-1, 1]) add(new THREE.TorusGeometry(.04, .011, 6, 12).rotateY(Math.PI / 2), M.gold, tbX + sx * (C - .1), ringY, rz, { cast: false });
+      add(new THREE.CylinderGeometry(.022, .022, 2 * C + .3, 8).rotateZ(Math.PI / 2), M.gold, tbX, ringY, rz);
+    } }
+  addBox(tbX - .95, tbX + .95, tbZ - .47, tbZ + .47, .8);
   // Candelabro de oro puro (lado sur): 7 lámparas
   const lampGlowMat = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
