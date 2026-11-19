@@ -350,7 +350,9 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   box(aL + .04, .04, aW + .04, M.gold, hhX, aH - .05, cz);                 // moldura de oro
   box(aL + .02, .05, aW + .02, M.gold, hhX, aH + .025, cz);               // propiciatorio
   for (const sz of [-1, 1]) { const pole = add(new THREE.CylinderGeometry(.03, .03, aL + 1.6, 10), M.gold, hhX + .4, .18, cz + sz * (aW / 2 + .05)); pole.rotation.z = Math.PI / 2; }
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.TorusGeometry(.05, .012, 6, 12), M.gold, hhX + sx * (aL / 2 - .12), .18, cz + sz * (aW / 2 + .01)).rotation.y = 0;
+  // «Fundirás cuatro anillos de oro para él y los pondrás en sus cuatro pies» (Éxodo 25:12): cada anillo queda de canto,
+  // pegado al costado del arca, y la vara de acacia cubierta de oro pasa justo por su centro (antes la vara lo atravesaba de lado)
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.TorusGeometry(.05, .012, 6, 12).rotateY(Math.PI / 2), M.gold, hhX + sx * (aL / 2 - .12), .18, cz + sz * (aW / 2 + .05), { cast: false });
   // Dos querubines de oro, uno frente al otro, con las alas extendidas hacia arriba cubriendo el propiciatorio
   const wingShape = new THREE.Shape(); wingShape.moveTo(0, 0); wingShape.quadraticCurveTo(.12, .42, .52, .5); wingShape.quadraticCurveTo(.3, .3, .34, .12); wingShape.quadraticCurveTo(.2, .1, 0, 0);
   const wingGeo = new THREE.ExtrudeGeometry(wingShape, { depth: .015, bevelEnabled: false });
@@ -369,7 +371,7 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   zones.push({ id: 'santisimo', name: 'El Lugar Santísimo', minX: tx0, maxX: veilX - .8, minZ: tz0, maxZ: tz1, pri: 5,
     text: 'Al Lugar Santísimo solo entraba el sumo sacerdote una vez al año con la sangre del sacrificio.', ref: 'Levítico 16; Hebreos 9:7; 10:19' });
   zones.push({ id: 'arca', name: 'El arca del pacto', minX: hhX - 1.6, maxX: hhX + 1.6, minZ: cz - 1.4, maxZ: cz + 1.4, pri: 6,
-    text: 'El arca del pacto, cubierta de oro, guardaba las tablas, el maná y la vara de Aarón.', ref: 'Éxodo 25:10-22; Hebreos 9:4' });
+    text: 'El arca del pacto, cubierta de oro, guardaba las tablas, el maná y la vara de Aarón. Sus varas de acacia cubiertas de oro pasaban por cuatro anillos de oro y nunca se quitaban de ellos.', ref: 'Éxodo 25:10-22; Hebreos 9:4' });
 
   /* ---------------- Columna de nube sobre la tienda ---------------- */
   const cloudTex = tex(128, 128, (g) => { const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,255,255,.85)'); gr.addColorStop(.6, 'rgba(245,245,250,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); });
