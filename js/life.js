@@ -169,9 +169,16 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const tail = box(.05, .012, .07, brownM, 0, .015, -.1, { cast: false, parent: bird }); tail.rotation.x = -.35;
       bird.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
       bird.position.set(bbx + .42, fy + .96, bbz); bird.rotation.y = -Math.PI / 2; group.add(bird);   // en el borde mirando al agua
+      // ondita en el agua cada vez que el gorrión toca el agua con el pico: un anillo que se abre y se desvanece
+      const rippleM = new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const ripple = new THREE.Mesh(new THREE.RingGeometry(.026, .036, 24), rippleM);
+      ripple.rotation.x = -Math.PI / 2; ripple.position.set(bbx + .22, fy + .908, bbz); ripple.raycast = () => {}; ripple.visible = false; ripple.userData.live = true; group.add(ripple);
       houseUpd.push(t => {
         const c = t % 5.5, dip = c < .9 ? Math.sin(c / .9 * Math.PI) : 0;                   // cada 5,5 s baja a beber
         neck.rotation.x = dip * .9; bird.rotation.x = dip * .25;
+        const rk = (c - .45) / 1.6;                                                          // la onda nace al tocar el agua
+        ripple.visible = rk > 0 && rk < 1;
+        if (ripple.visible) { ripple.scale.setScalar(1 + rk * 5); rippleM.opacity = .55 * (1 - rk); }
         tail.rotation.x = -.35 - dip * .3 + (c > 3 && c < 3.25 ? Math.sin((c - 3) * 25) * .2 : 0); // meneíto de cola
       });
       solid(bbx - .45, bbx + .45, bbz - .45, bbz + .45, fy + .9);
