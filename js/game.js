@@ -297,6 +297,8 @@ const TIMES = {
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
 const moonDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 42), THREE.MathUtils.degToRad(130));
+// de noche se enciende la lucecita de aceite dentro de las tiendas del campamento
+function campGlow() { try { if (world && world.camp && world.camp.doorM) world.camp.doorM.emissiveIntensity = save.time === 'noche' ? .6 : 0; } catch (e) {} }
 function applyTime(mode) {
   const T2 = TIMES[mode] || TIMES.atardecer; save.time = mode;
   skyDir.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - T2.elev), THREE.MathUtils.degToRad(T2.az));
@@ -315,6 +317,7 @@ function applyTime(mode) {
   if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? 4.5 : 2); }
   if (bloomPass) bloomPass.strength = T2.bloom * .55;
   if (typeof setNightLights === 'function') setNightLights(mode === 'noche');
+  campGlow();
   try { persist(); } catch (e) {}
 }
 
@@ -2207,6 +2210,7 @@ async function startLevelNow(i) {
   $('tRun').classList.toggle('active', runToggle); $('tRun').textContent = runToggle ? '🏃 CORRIENDO' : 'CORRER';
   $('hLevel').textContent = L.name; $('hGoal').textContent = goal;
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
+  campGlow();
   P.driving = false; if (P.car) { P.car = null; sound.carLoop(0); } honkBtns(false); driveUI(false);
   if (mate) { placeMate(); if (isPair()) setTimeout(() => toast('🌿 Adán y Eva van juntos · ' + (isTouch ? 'toca 👫' : 'pulsa Q') + ' para cambiar', '#7ef0a4'), 1800); }
   setTimeout(() => { if (state === 'play') toast('⏰ Toma los relojes azules para ganar +' + CLOCK_SECS + ' s', '#6fd0ff'); }, 3200);
@@ -3532,6 +3536,7 @@ const startLoop = () => { if (looping) return; looping = true; lastNow = perform
 const buildMenuWorld = async () => {
   const w = await buildWorld(LEVELS[0]); world = w; world.key = worldKey(0);
   if (world.ark && world.ark.rainbow) world.ark.rainbow.visible = save.time !== 'noche';
+  campGlow();
   // Compilar los sombreadores en segundo plano antes de mostrarlo (así no se congela en el celular)
   const cp = new THREE.PerspectiveCamera().copy(camera); const tx = world.desert.tcx + 34, tz = world.desert.tcz - 2;
   cp.position.set(tx + 20, 15, tz + 20); cp.lookAt(tx, 2, tz); cp.updateMatrixWorld(); updateCull(cp.position);

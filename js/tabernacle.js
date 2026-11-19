@@ -459,7 +459,12 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
   const sh = new THREE.Shape(); sh.moveTo(-2.6, 0); sh.lineTo(-2.6, .9); sh.quadraticCurveTo(-1.9, 1.9, -1.3, 1.95); sh.quadraticCurveTo(-.65, 1.6, 0, 2.15); sh.quadraticCurveTo(.65, 1.6, 1.3, 1.95); sh.quadraticCurveTo(1.9, 1.9, 2.6, .9); sh.lineTo(2.6, 0); sh.lineTo(-2.6, 0);
   const g = new THREE.ExtrudeGeometry(sh, { depth: 3.4, bevelEnabled: false }); g.translate(0, 0, -1.7);
   const uvA = g.attributes.uv; for (let i = 0; i < uvA.count; i++) uvA.setXY(i, uvA.getX(i) * .35, uvA.getY(i) * .35);
-  const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1, ...(hairB ? { bumpMap: hairB, bumpScale: 1.6 } : {}) }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
+  const tentM = new THREE.MeshStandardMaterial({ map: hairT, roughness: 1, ...(hairB ? { bumpMap: hairB, bumpScale: 1.6 } : {}) }), dark = new THREE.MeshStandardMaterial({ color: 0x0a0806, emissive: 0xffa64a, emissiveMap: (() => {
+    // de noche se ve dentro de cada tienda la luz cálida de una lamparita de aceite en el suelo (Proverbios 31:18; Salmo 119:105)
+    const c = document.createElement('canvas'); c.width = c.height = 64; const q = c.getContext('2d');
+    const gr = q.createRadialGradient(32, 58, 2, 32, 50, 46); gr.addColorStop(0, '#fff'); gr.addColorStop(.35, '#a86a3a'); gr.addColorStop(1, '#000');
+    q.fillStyle = gr; q.fillRect(0, 0, 64, 64); const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+  })(), emissiveIntensity: 0 }), rug = new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 1 });
   const cols = [0, 0, 0];
   // Fogatas para cocinar delante de algunas tiendas: anillo de piedras, leña y brasas (Éxodo 16:23; Levítico 6:13)
   const stoneM = new THREE.MeshStandardMaterial({ color: 0x6d655b, roughness: 1, flatShading: true }), woodM = new THREE.MeshStandardMaterial({ color: 0x4a3220, roughness: 1 });
@@ -548,6 +553,7 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
   }
   group.add(FL);
   return {
+    doorM: dark, // entrada de las tiendas: applyTime la enciende de noche
     firePts, // dónde están las fogatas (para sentir el calor y oír el fuego)
     // las llamas de las fogatas parpadean y se mecen como fuego de verdad
     update(t) {
