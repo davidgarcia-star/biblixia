@@ -384,6 +384,34 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // tele
     box(2, 1.1, .06, mat(0x101216, { roughness: .2, metalness: .3 }), cx - 4, fy + 1.45, Z0 + .55);
     box(2.6, .45, .45, darkM, cx - 4, fy + .36, Z0 + .55); box(2.62, .03, .47, woodM, cx - 4, fy + .6, Z0 + .55); solid(cx - 5.3, cx - 2.7, Z0 + .3, Z0 + .8, fy + .6);
+    {
+      // barra de sonido bajo la tele y dos portarretratos con fotos de la familia en los extremos del mueble
+      const top = fy + .615;
+      // pie de la tele: antes la pantalla flotaba frente al ventanal; ahora un cuello y una base la apoyan en el mueble
+      const standM = mat(0x22252b, { roughness: .4, metalness: .5 });
+      box(.1, .3, .05, standM, cx - 4, top + .15, Z0 + .52, { cast: false });
+      box(.5, .02, .18, standM, cx - 4, top + .01, Z0 + .5, { cast: false });
+      box(1.1, .07, .1, mat(0x15171b, { roughness: .5, metalness: .2 }), cx - 4, top + .035, Z0 + .66, { cast: false });
+      box(1.04, .05, .005, mat(0x2a2d33, { roughness: 1 }), cx - 4, top + .035, Z0 + .713, { cast: false }); // rejilla
+      const photo = (seed) => {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 80; const g = c.getContext('2d');
+        const sky = g.createLinearGradient(0, 0, 0, 80); sky.addColorStop(0, seed ? '#f6c27a' : '#8fc6ee'); sky.addColorStop(1, seed ? '#f3e2b8' : '#dff0fa');
+        g.fillStyle = sky; g.fillRect(0, 0, 64, 80);
+        g.fillStyle = seed ? '#d9b56e' : '#6fae5a'; g.fillRect(0, 58, 64, 22);
+        g.fillStyle = '#fff3c4'; g.beginPath(); g.arc(seed ? 14 : 50, 16, 7, 0, 7); g.fill();
+        const ppl = seed ? [[22, 1, '#2f6db3'], [42, 1, '#b8434a']] : [[16, 1, '#2f6db3'], [32, .7, '#f0b43a'], [48, 1, '#b8434a']];
+        for (const [x, s, col] of ppl) { g.fillStyle = col; g.fillRect(x - 6 * s, 64 - 26 * s, 12 * s, 26 * s); g.fillStyle = '#8a5a3c'; g.beginPath(); g.arc(x, 64 - 31 * s, 5 * s, 0, 7); g.fill(); }
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+      };
+      const frameM = mat(0x6b4a2a, { roughness: .6 });
+      [[-5.12, .25, 0], [-2.88, -.25, 1]].forEach(([dx, ry, seed]) => {
+        const f = new THREE.Group(); f.position.set(cx + dx, top, Z0 + .6); f.rotation.y = ry; group.add(f);
+        const fr = new THREE.Mesh(new THREE.BoxGeometry(.2, .25, .02), frameM); fr.position.set(0, .125, 0); fr.rotation.x = -.12; fr.castShadow = true; f.add(fr);
+        const pic = new THREE.Mesh(new THREE.PlaneGeometry(.16, .2), new THREE.MeshStandardMaterial({ map: photo(seed), roughness: .4 }));
+        pic.position.set(0, 0, .011); fr.add(pic);
+        f.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+      });
+    }
     // alfombra y planta grande
     box(3, .015, 2.2, mat(0x8a8f96, { roughness: 1 }), cx - 4, fy + .15, Z1 - 2.2, { cast: false });
     {
