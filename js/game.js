@@ -1198,6 +1198,17 @@ async function buildWorld(cfg) {
         const hk = new THREE.Mesh(hookG, M.woodDark); hk.position.set(0, .44, -sz * .07); lr.add(hk);
         lr.position.set(pierX0 + i * pierLen / 14, 1.12, pz0 + sz * 2.28); lr.rotation.x = sz * .06; group.add(lr);
       } }
+    // bitas de amarre de hierro (con cuerda enrollada al lado) donde atraca el yate y a mitad del muelle
+    { const mI = new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: .5, metalness: .6 }), mR = new THREE.MeshStandardMaterial({ color: 0xc9b48a, roughness: .9 });
+      const postG = new THREE.CylinderGeometry(.11, .14, .3, 12), capG = new THREE.CylinderGeometry(.17, .15, .07, 12), baseG = new THREE.CylinderGeometry(.2, .22, .04, 12), coilG = new THREE.TorusGeometry(.16, .035, 6, 18);
+      for (const bx of [pierX0 + .9, pierX0 + pierLen / 2]) for (const sz of [-1, 1]) {
+        const bz = pz0 + sz * 1.75;
+        const base = new THREE.Mesh(baseG, mI); base.position.set(bx, .62, bz); group.add(base);
+        const post = new THREE.Mesh(postG, mI); post.position.set(bx, .79, bz); post.castShadow = true; group.add(post);
+        const cap = new THREE.Mesh(capG, mI); cap.position.set(bx, .975, bz); cap.castShadow = true; group.add(cap);
+        for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(coilG, mR); c.rotation.x = -Math.PI / 2; c.scale.setScalar(1 - k * .18); c.position.set(bx + .5, .64 + k * .045, bz); group.add(c); }
+        addBox(bx - .16, bx + .16, bz - .16, bz + .16, 1.01);
+      } }
     addBox(pierX0 - 1, pierX1 + 2, pz0 - 2.2, pz0 + 2.2, .6);
     W.pier = { minX: pierX0 - 1.5, maxX: pierX1 + 2, minZ: pz0 - 2.7, maxZ: pz0 + 2.7 };
     addBox(pierX0 - 1, pierX1 - 2, pz0 - 2.6, pz0 - 2.2, 999); addBox(pierX0 - 1, pierX1 - 2, pz0 + 2.2, pz0 + 2.6, 999);
