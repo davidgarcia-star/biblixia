@@ -672,6 +672,25 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       return new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: .85, roughness: .4 });
     });
     let wbM = null;
+    // calendario de escritorio (de caballete) en cada escritorio: muestra la fecha real del dispositivo y cambia solo al pasar el día
+    const calC = document.createElement('canvas'); calC.width = 128; calC.height = 100; const calG = calC.getContext('2d');
+    const calTex = new THREE.CanvasTexture(calC); calTex.colorSpace = THREE.SRGBColorSpace; calTex.anisotropy = 4;
+    let calDia = '';
+    const pintaCal = () => {
+      const d = new Date(), key = d.toDateString(); if (key === calDia) return; calDia = key;
+      const MES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+      const DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+      calG.fillStyle = '#fbfaf6'; calG.fillRect(0, 0, 128, 100);
+      calG.fillStyle = '#c0392b'; calG.fillRect(0, 0, 128, 26);
+      calG.fillStyle = '#fff'; calG.textAlign = 'center'; calG.textBaseline = 'middle'; calG.font = '800 15px system-ui, sans-serif'; calG.fillText(MES[d.getMonth()], 64, 14);
+      calG.fillStyle = '#1e2228'; calG.font = '800 50px system-ui, sans-serif'; calG.fillText(String(d.getDate()), 64, 60);
+      calG.fillStyle = '#6a6f78'; calG.font = '600 13px system-ui, sans-serif'; calG.fillText(DIA[d.getDay()], 64, 90);
+      calTex.needsUpdate = true;
+    };
+    pintaCal();
+    { let calT = 0; officeUpd.push(t => { if (t - calT > 5) { calT = t; pintaCal(); } }); }
+    const calM = new THREE.MeshStandardMaterial({ map: calTex, roughness: .6 }), calBackM = new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: .6, side: THREE.DoubleSide });
+    const calGeo = new THREE.PlaneGeometry(.13, .1), calRingG = new THREE.TorusGeometry(.007, .0018, 4, 10);
     for (let i = 0; i < FLOORS; i++) { await pace();
       const y = fy(i);
       // losa con hueco sobre la escalera que llega a este piso
@@ -713,6 +732,11 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
           for (let q = 0; q < 6; q++) { const a = q / 6 * Math.PI * 2 + k, lf = new THREE.Mesh(succLeafG, succLeafM);
             lf.position.set(sx + Math.cos(a) * .018, ty + .085, sz + Math.sin(a) * .018); lf.rotation.set(Math.sin(a) * .7, 0, -Math.cos(a) * .7); lf.castShadow = false; group.add(lf); }
           const top = new THREE.Mesh(succLeafG, succLeafM); top.position.set(sx, ty + .1, sz); top.castShadow = false; group.add(top); }
+        // calendario de caballete junto al monitor, inclinado hacia quien trabaja, con dos argollas arriba
+        { const qx = dx + .45, qz = dz + .3, ty = y + .78, k2 = .3, hh = .05 * Math.cos(k2), dz2 = .05 * Math.sin(k2);
+          const fr = new THREE.Mesh(calGeo, calM); fr.rotation.set(-k2, Math.PI, 0, 'YXZ'); fr.position.set(qx, ty + hh, qz); group.add(fr);
+          const bk = new THREE.Mesh(calGeo, calBackM); bk.rotation.set(k2, Math.PI, 0, 'YXZ'); bk.position.set(qx, ty + hh, qz + 2 * dz2); group.add(bk);
+          for (const ox of [-.035, .035]) { const rg = new THREE.Mesh(calRingG, pcM); rg.rotation.y = Math.PI / 2; rg.position.set(qx + ox, ty + 2 * hh, qz + dz2); group.add(rg); } }
         // papelera de malla metálica junto al escritorio, con una bola de papel arrugado adentro
         { const px = dx + 1.08, pz = dz + .15;
           const bin = new THREE.Mesh(binG, binM); bin.position.set(px, y + .15, pz); bin.castShadow = true; group.add(bin);
