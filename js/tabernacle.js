@@ -290,6 +290,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       for (const sx of [-1, 1]) add(new THREE.TorusGeometry(.04, .011, 6, 12).rotateY(Math.PI / 2), M.gold, tbX + sx * (C - .1), ringY, rz, { cast: false });
       add(new THREE.CylinderGeometry(.022, .022, 2 * C + .3, 8).rotateZ(Math.PI / 2), M.gold, tbX, ringY, rz);
     } }
+  // utensilios de oro puro de la mesa: jarros y tazones para las libaciones (Éxodo 25:29), a cada lado de los panes
+  { const topY = 1.5 * C + .075;
+    for (const sx of [-1, 1]) {
+      const jx = tbX + sx * .6;
+      add(new THREE.CylinderGeometry(.032, .048, .11, 14), M.gold, jx, topY + .055, tbZ - .15, { cast: false });       // cuerpo del jarro
+      add(new THREE.CylinderGeometry(.04, .022, .04, 14), M.gold, jx, topY + .13, tbZ - .15, { cast: false });         // cuello y boca
+      add(new THREE.CylinderGeometry(.07, .04, .035, 18), M.gold, jx, topY + .018, tbZ + .16, { cast: false });        // tazón
+    } }
   addBox(tbX - .95, tbX + .95, tbZ - .47, tbZ + .47, .8);
   // Candelabro de oro puro (lado sur): 7 lámparas
   const lampGlowMat = (() => {
