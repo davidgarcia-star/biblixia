@@ -536,6 +536,12 @@ export function createHuman(opt = {}) {
     const band = mesh(new THREE.TorusGeometry(.225, .02, 8, 36), new THREE.MeshStandardMaterial({ map: efTex, metalness: .3, roughness: .5 }), root, 0, .93, 0); band.rotation.x = Math.PI / 2; band.scale.set(1, .8, 1);
     for (const s2 of [-1, 1]) { const ony = mesh(SG(.028, 12, 10), physM({ color: 0x1a1a1a, roughness: .1, clearcoat: 1 }), root, s2 * .13, 1.44, .02); const st = mesh(new THREE.BoxGeometry(.05, .16, .03), new THREE.MeshStandardMaterial({ map: efTex }), root, s2 * .12, 1.36, .14); st.rotation.x = -.3; }
     const plate = mesh(new THREE.BoxGeometry(.17, .2, .02), gold, root, 0, 1.26, .175); plate.rotation.x = -.08;
+    // cadenillas de oro puro trenzadas que atan el pectoral a las piedras de ónice de las hombreras (Éxodo 28:14, 22-25)
+    if (!lowQ) for (const s2 of [-1, 1]) {
+      const cv = new THREE.CatmullRomCurve3([new THREE.Vector3(s2 * .08, 1.355, .19), new THREE.Vector3(s2 * .104, 1.41, .172), new THREE.Vector3(s2 * .125, 1.45, .086)]);
+      mesh(new THREE.TubeGeometry(cv, 10, .0045, 5, false), gold, root);
+      for (let k = 1; k < 6; k++) { const pt = cv.getPoint(k / 6); mesh(new THREE.TorusGeometry(.0065, .0022, 4, 8), gold, root, pt.x, pt.y, pt.z).rotation.y = k % 2 ? Math.PI / 2 : 0; }
+    }
     const gems = [0xc0392b, 0xf1c40f, 0x27ae60, 0x16a085, 0x2c3e8f, 0xecf0f1, 0xe67e22, 0x8e44ad, 0x9b59b6, 0x3498db, 0x34495e, 0x1abc9c];
     gems.forEach((c, i) => { const col = i % 3, row = Math.floor(i / 3); mesh(new THREE.BoxGeometry(.034, .034, .02), physM({ color: c, roughness: .05, clearcoat: 1, metalness: .1 }), root, (col - 1) * .048, 1.335 - row * .045, .19).rotation.x = -.08; });
   }
