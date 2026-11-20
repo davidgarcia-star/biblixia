@@ -320,6 +320,12 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     // halo cálido alrededor de cada llama: las lámparas alumbraban el Lugar Santo (Éxodo 25:37)
     const h = new THREE.Sprite(lampGlowMat); h.position.set(mnX, lampY + .11, mnZ + dz); h.scale.setScalar(.2); h.renderOrder = 2; h.userData.halo = true; T.add(h);
   });
+  // «Sus despabiladeras y sus platillos serán de oro puro» (Éxodo 25:38): dos platillos al pie del candelabro, uno con las tenazas encima
+  { const dishG = new THREE.LatheGeometry([[0, 0], [.07, 0], [.095, .02], [.1, .028]].map(([x, y]) => new THREE.Vector2(x, y)), 20);
+    const goldDS = M.gold.clone(); goldDS.side = THREE.DoubleSide;
+    for (const s of [-1, 1]) add(dishG, goldDS, mnX, .066, mnZ + s * .4, { cast: false });
+    for (const a of [-.07, .07]) { const t = add(new THREE.CylinderGeometry(.007, .007, .2, 6).rotateZ(Math.PI / 2), M.gold, mnX, .094, mnZ + .4, { cast: false }); t.rotation.y = a; }
+  }
   addBox(mnX - .3, mnX + .3, mnZ - .6, mnZ + .6, 1.7);
   // Altar del incienso de oro: 1 × 1 × 2 codos con cuernos, delante del velo
   const inX = veilX + 1.2;
