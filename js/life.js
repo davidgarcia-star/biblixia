@@ -420,7 +420,27 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
     }
     // alfombra y planta grande
-    box(3, .015, 2.2, mat(0x8a8f96, { roughness: 1 }), cx - 4, fy + .15, Z1 - 2.2, { cast: false });
+    {
+      // alfombra tejida de la sala: fondo gris con trama, doble borde y rombos en el centro, y flecos de algodón en los dos extremos
+      const c = document.createElement('canvas'); c.width = 256; c.height = 188; const g = c.getContext('2d');
+      g.fillStyle = '#8a8f96'; g.fillRect(0, 0, 256, 188);
+      for (let y = 0; y < 188; y += 3) { g.fillStyle = y % 6 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; g.fillRect(0, y, 256, 1); }
+      g.strokeStyle = '#5d636b'; g.lineWidth = 8; g.strokeRect(10, 10, 236, 168);
+      g.strokeStyle = '#c9b48a'; g.lineWidth = 3; g.strokeRect(22, 22, 212, 144);
+      g.fillStyle = 'rgba(201,180,138,.55)';
+      for (const [x, y, s] of [[128, 94, 30], [78, 94, 14], [178, 94, 14]]) { g.beginPath(); g.moveTo(x, y - s); g.lineTo(x + s, y); g.lineTo(x, y + s); g.lineTo(x - s, y); g.closePath(); g.fill(); }
+      const rt = new THREE.CanvasTexture(c); rt.colorSpace = THREE.SRGBColorSpace; rt.anisotropy = 4;
+      const sideM = mat(0x7b8087, { roughness: 1 }), topM = new THREE.MeshStandardMaterial({ map: rt, roughness: 1 });
+      const rug = box(3, .015, 2.2, [sideM, sideM, topM, sideM, sideM, sideM], cx - 4, fy + .15, Z1 - 2.2, { cast: false });
+      rug.raycast = () => {};
+      const fringeG = new THREE.BoxGeometry(.012, .004, .07), fringeM = mat(0xece4cf, { roughness: 1 });
+      const fr = new THREE.InstancedMesh(fringeG, fringeM, 2 * 38), dm = new THREE.Object3D();
+      let n = 0;
+      for (const s of [-1, 1]) for (let k = 0; k < 38; k++) {
+        dm.position.set(cx - 4 - 1.44 + k * (2.88 / 37), fy + .145, Z1 - 2.2 + s * 1.13); dm.rotation.set(0, (Math.sin(k * 3.7 + s) * .12), 0); dm.updateMatrix(); fr.setMatrixAt(n++, dm.matrix);
+      }
+      fr.castShadow = false; fr.receiveShadow = true; fr.raycast = () => {}; group.add(fr);
+    }
     {
       // Biblia abierta sobre la mesa de centro: tapa de cuero, páginas con renglones y cinta roja
       const bb = new THREE.Group(); bb.position.set(cx - 4.15, fy + .48, Z1 - 2.12); bb.rotation.y = .35; group.add(bb);
