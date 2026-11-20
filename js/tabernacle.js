@@ -38,7 +38,15 @@ function embroidered(withCherubim, vertical = true) {
 
 export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const M = {
-    linen: new THREE.MeshStandardMaterial({ map: tex(256, 256, (g, W, H) => { g.fillStyle = '#f3efe4'; g.fillRect(0, 0, W, H); g.strokeStyle = 'rgba(120,110,90,.12)'; for (let i = 0; i < W; i += 3) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, H); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(W, i); g.stroke(); } }, [4, 1]), roughness: .95, side: THREE.DoubleSide }),
+    // lino fino torcido (Éxodo 27:9): trama tejida, pliegues verticales suaves de la tela colgada
+    // y dobladillo arriba (donde cuelga de los ganchos de plata) y abajo, para que no parezca una pared plana
+    linen: new THREE.MeshStandardMaterial({ map: tex(256, 256, (g, W, H) => {
+      g.fillStyle = '#f3efe4'; g.fillRect(0, 0, W, H);
+      for (let x = 0; x < W; x++) { const s = Math.sin(x / W * Math.PI * 6); g.fillStyle = s < 0 ? `rgba(110,98,74,${(-s * .13).toFixed(3)})` : `rgba(255,255,250,${(s * .10).toFixed(3)})`; g.fillRect(x, 0, 1, H); }
+      g.strokeStyle = 'rgba(120,110,90,.12)'; for (let i = 0; i < W; i += 3) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, H); g.stroke(); g.beginPath(); g.moveTo(0, i); g.lineTo(W, i); g.stroke(); }
+      g.fillStyle = 'rgba(120,108,84,.16)'; g.fillRect(0, 0, W, 7); g.fillRect(0, H - 10, W, 10);
+      g.fillStyle = 'rgba(90,80,60,.22)'; g.fillRect(0, 7, W, 1); g.fillRect(0, H - 11, W, 1);
+    }, [4, 1]), roughness: .95, side: THREE.DoubleSide }),
     screen: new THREE.MeshStandardMaterial({ map: embroidered(false), roughness: .9, side: THREE.DoubleSide }),
     veil: new THREE.MeshStandardMaterial({ map: embroidered(true), roughness: .9, side: THREE.DoubleSide }),
     ceiling: new THREE.MeshStandardMaterial({ map: embroidered(true, false), roughness: .9, side: THREE.DoubleSide }),
