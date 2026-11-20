@@ -224,6 +224,12 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   // bronce bruñido, más claro y brillante, que refleja el cielo como un espejo
   const mirrorBronze = new THREE.MeshStandardMaterial({ color: 0xd09050, metalness: 1, roughness: .16 });
   add(new THREE.CylinderGeometry(.35, .5, .7, 20), mirrorBronze, lavX, .35, cz);
+  // «Harás también una pila de bronce, con su base de bronce, para lavatorio» (Éxodo 30:18): pie ancho escalonado que
+  // asienta la base sobre la arena y un anillo moldeado donde la base recibe la pila
+  const footBronze = new THREE.MeshStandardMaterial({ color: 0xc08848, metalness: .7, roughness: .42 });
+  add(new THREE.CylinderGeometry(.6, .66, .07, 28), footBronze, lavX, .04, cz);
+  add(new THREE.CylinderGeometry(.53, .58, .06, 28), footBronze, lavX, .1, cz);
+  add(new THREE.TorusGeometry(.36, .035, 8, 28), mirrorBronze, lavX, .68, cz).rotation.x = Math.PI / 2;
   add(new THREE.LatheGeometry([[0, 0], [.3, .02], [.75, .2], [.85, .42], [.8, .45]].map(([x, y]) => new THREE.Vector2(x, y)), 32), mirrorBronze, lavX, .7, cz);
   // borde pulido del lavatorio que atrapa la luz
   add(new THREE.TorusGeometry(.815, .028, 8, 40), mirrorBronze, lavX, 1.15, cz).rotation.x = Math.PI / 2;
