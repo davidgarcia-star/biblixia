@@ -557,6 +557,18 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(1.8, .4, 2.2, trimM, bedX, fy + .2, bedZ); box(1.7, .22, 2.05, mat(0xf4f2ec, { roughness: .9 }), bedX, fy + .5, bedZ); box(1.72, .1, 1.3, mat(0x7a3b6e, { roughness: .9 }), bedX, fy + .62, bedZ - .3);
     box(1.2, .14, .4, mat(0xffffff, { roughness: .9 }), bedX, fy + .66, bedZ + .75); box(1.8, .9, .1, trimM, bedX, fy + .65, bedZ + 1.1); solid(bedX - .95, bedX + .95, bedZ - 1.1, bedZ + 1.15, fy + .62);
     {
+      // manta tejida doblada al pie de la cama: color arena con franjas crema y vino, y caída a los dos lados del colchón
+      const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
+      g.fillStyle = '#c9b79a'; g.fillRect(0, 0, 128, 64);
+      for (let y = 0; y < 64; y += 3) { g.fillStyle = y % 6 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.06)'; g.fillRect(0, y, 128, 1); } // punto tejido
+      for (const [y, col] of [[10, '#f3ead8'], [16, '#7a2e3a'], [46, '#7a2e3a'], [52, '#f3ead8']]) { g.fillStyle = col; g.fillRect(0, y, 128, 3); }
+      const mt = new THREE.CanvasTexture(c); mt.colorSpace = THREE.SRGBColorSpace; mt.anisotropy = 4;
+      const throwM = new THREE.MeshStandardMaterial({ map: mt, roughness: 1 });
+      const tz = bedZ - .78;
+      box(1.76, .05, .34, throwM, bedX, fy + .697, tz, { cast: false });                       // parte de arriba, sobre el edredón
+      for (const s of [-1, 1]) box(.03, .3, .34, throwM, bedX + s * .895, fy + .55, tz, { cast: false }); // caída por los lados
+    }
+    {
       // cuadro enmarcado sobre la cabecera de la cama con Josué 24:15 (LBLA)
       const c = document.createElement('canvas'); c.width = 512; c.height = 220; const g = c.getContext('2d');
       g.fillStyle = '#f7f1e3'; g.fillRect(0, 0, 512, 220); g.strokeStyle = '#b8913a'; g.lineWidth = 4; g.strokeRect(14, 14, 484, 192);
