@@ -362,9 +362,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     text: 'El Lugar Santo tenía la mesa de los panes, el candelabro de oro y el altar del incienso.', ref: 'Éxodo 25:23-40; 26:35; 30:1-8; Levítico 24:5-9' });
 
   /* ---------------- VELO: 4 columnas con basas de plata ---------------- */
+  // «Lo colgarás de cuatro columnas de acacia revestidas de oro; sus ganchos serán también de oro, sobre cuatro basas de plata» (Éxodo 26:32):
+  // cada columna lleva arriba, del lado del Lugar Santo, un gancho de oro de donde cuelga el velo
+  const hookArc = new THREE.TorusGeometry(.055, .014, 6, 12, Math.PI), hookStem = new THREE.CylinderGeometry(.014, .014, .1, 6);
   for (let i = 0; i < 4; i++) { await pace();
     const z = tz0 + (i + .5) / 4 * (tz1 - tz0);
     box(.28, .16, .28, M.silver, veilX, .08, z); cyl(.08, TH, M.gold, veilX, TH / 2, z, 12);
+    add(hookStem, M.gold, veilX + .1, TH - .16, z, { cast: false }).rotation.z = Math.PI / 2;          // espiga que sale de la columna
+    add(hookArc, M.gold, veilX + .205, TH - .16, z, { cast: false }).rotation.z = Math.PI;             // curva del gancho en «U», abierta hacia arriba
   }
   const vh = 5 * C; for (const s of [-1, 1]) { const p = add(new THREE.PlaneGeometry(vh - .58, TH - .1), M.veil, veilX, (TH - .1) / 2, cz + s * (vh + .58) / 2); p.rotation.y = Math.PI / 2; }
   addBox(veilX - .1, veilX + .1, tz0, cz - .58, TH); addBox(veilX - .1, veilX + .1, cz + .58, tz1, TH);
