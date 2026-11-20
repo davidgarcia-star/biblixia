@@ -167,7 +167,25 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
       }
     }
     const house = std({ color: 0xc8a878, roughness: .95 });
-    for (let k = 0; k < 7; k++) { const a = k * 2.1, rr = 4 + (k % 3) * 3; const hx = px + Math.cos(a) * rr, hz = pz + Math.sin(a) * rr * .7; box(3, 2.4 + (k % 2), 3, house, hx, 1.2, hz); addBox(hx - 1.5, hx + 1.5, hz - 1.5, hz + 1.5, 3); }
+    // casas de adobe con azotea plana rodeada de un pretil (Deuteronomio 22:8), puerta de madera mirando a la plaza y una ventanita
+    const doorM = std({ color: 0x5a3a22, roughness: .9 }), holeM = std({ color: 0x241810, roughness: 1 }), lintelM = std({ color: 0x7a5634, roughness: .9 });
+    for (let k = 0; k < 7; k++) {
+      const a = k * 2.1, rr = 4 + (k % 3) * 3; const hx = px + Math.cos(a) * rr, hz = pz + Math.sin(a) * rr * .7, hh = 2.4 + (k % 2), top = 1.2 + hh / 2;
+      box(3, hh, 3, house, hx, 1.2, hz); addBox(hx - 1.5, hx + 1.5, hz - 1.5, hz + 1.5, top + .32); // choque a la altura real (antes 3 m: se flotaba sobre las casas bajas)
+      box(3, .32, .14, house, hx, top + .16, hz - 1.43); box(3, .32, .14, house, hx, top + .16, hz + 1.43);       // pretil (frente y fondo)
+      box(.14, .32, 2.72, house, hx - 1.43, top + .16, hz); box(.14, .32, 2.72, house, hx + 1.43, top + .16, hz);  // pretil (lados)
+      const dx = px - hx, dz = pz - hz, alongX = Math.abs(dx) > Math.abs(dz), sg = alongX ? Math.sign(dx) || 1 : Math.sign(dz) || 1;
+      const face = 1.5 + .025;                                    // un poco por fuera de la pared: sin parpadeo
+      if (alongX) {
+        box(.05, 1.75, .9, doorM, hx + sg * face, .875 + .1, hz);   // puerta
+        box(.09, .14, 1.15, lintelM, hx + sg * (face + .02), 1.9, hz); // dintel de madera
+        box(.05, .4, .45, holeM, hx + sg * face, Math.min(top - .55, 2.1), hz + (k % 2 ? 1 : -1) * .95); // ventanita
+      } else {
+        box(.9, 1.75, .05, doorM, hx, .875 + .1, hz + sg * face);
+        box(1.15, .14, .09, lintelM, hx, 1.9, hz + sg * (face + .02));
+        box(.45, .4, .05, holeM, hx + (k % 2 ? 1 : -1) * .95, Math.min(top - .55, 2.1), hz + sg * face);
+      }
+    }
     out.zones.push({ id: 'jerico', name: 'Jericó', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'Por la fe cayeron los muros de Jericó después de rodearlos siete días.',
       ref: 'Josué 2:18-21; 6:15-25; Hebreos 11:30-31' });
