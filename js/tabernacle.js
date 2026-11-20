@@ -325,7 +325,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const inX = veilX + 1.2;
   box(C, 2 * C, C, M.gold, inX, C, cz);
   box(C + .06, .05, C + .06, M.gold, inX, 2 * C, cz);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(new THREE.ConeGeometry(.035, .1, 6), M.gold, inX + sx * .21, 2 * C + .07, cz + sz * .21);
+  // «Sus cuernos serán de una pieza con él… le harás una moldura de oro alrededor» (Éxodo 30:2-3): cuernos en las cuatro esquinas y corona de oro
+  { const hx = C / 2 + .03, rimY = 2 * C + .025 + .035, hornG = new THREE.CylinderGeometry(.022, .04, .13, 4).rotateY(Math.PI / 4);
+    for (const s of [-1, 1]) {
+      box(2 * hx, .07, .025, M.gold, inX, rimY, cz + s * hx, { cast: false });
+      box(.025, .07, 2 * hx, M.gold, inX + s * hx, rimY, cz, { cast: false });
+    }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) add(hornG, M.gold, inX + sx * .36, 2 * C + .025 + .065, cz + sz * .36);
+  }
   // «Le harás dos argollas de oro debajo de su moldura… y las varas de madera de acacia, y las revestirás de oro» (Éxodo 30:4-5)
   for (const sz of [-1, 1]) {
     const rz = cz + sz * (C / 2 + .035);
