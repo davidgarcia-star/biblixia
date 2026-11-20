@@ -242,6 +242,18 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
       const pa = wall.geometry.attributes.position; for (let i = 0; i < pa.count; i++) { const yy = pa.getY(i); if (yy > 0) pa.setX(i, pa.getX(i) + Math.sin(pa.getZ(i) * .3) * .4); }
       wall.geometry.computeVertexNormals();
       wall.position.set(px + sx * (gap / 2 + (ww / 2 - gap / 2 - 1) / 2), 4.5, pz + 2); P.add(wall); out.live.push({ kind: 'wave', obj: wall, base: 4.5 });
+      { // espuma blanca en la cresta de cada pared: «se amontonaron las aguas… se cuajaron los abismos» (Éxodo 15:8)
+        const Wd = ww / 2 - gap / 2 - 1, n = Math.max(12, Math.floor(L2 / .7));
+        const foam = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), std({ color: 0xf4fbff, emissive: 0x9fc4dc, emissiveIntensity: .15, roughness: .9, transparent: true, opacity: .9 }), n);
+        foam.castShadow = foam.receiveShadow = false; foam.raycast = () => {}; foam.frustumCulled = false;
+        const dm = new THREE.Object3D(), fd = [];
+        for (let i = 0; i < n; i++) {
+          const z = -L2 / 2 + (i + .5) * (L2 / n), x = -sx * Wd / 2 + Math.sin(z * .3) * .4 + sx * (.1 + rnd() * .45);
+          fd.push({ x, z: z + (rnd() - .5) * .3, s: .3 + rnd() * .35, ph: rnd() * 6.28 });
+        }
+        const upd = t => { for (let i = 0; i < n; i++) { const q = fd[i], k = 1 + Math.sin(t * 2.2 + q.ph) * .14; dm.position.set(q.x, 4.47 + Math.sin(t * 1.7 + q.ph) * .05, q.z); dm.scale.set(q.s * 1.2 * k, q.s * .38 * k, q.s * 2.1); dm.updateMatrix(); foam.setMatrixAt(i, dm.matrix); } foam.instanceMatrix.needsUpdate = true; };
+        upd(0); wall.add(foam); out.live.push({ kind: 'fn', update: upd });
+      }
       addBox(px + (sx < 0 ? -ww / 2 : gap / 2), px + (sx < 0 ? -gap / 2 : ww / 2), pz + 2 - L2 / 2, pz + 2 + L2 / 2, 999);
     }
     // peces que nadan dentro de las paredes de agua, a la vista desde el camino seco (Éxodo 15:8)
