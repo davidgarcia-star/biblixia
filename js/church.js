@@ -108,15 +108,35 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     g.fillStyle = '#ffd34d'; fit(g, 'HORARIO DE SERVICIOS', 900, 40, AB, 450); g.fillText('HORARIO DE SERVICIOS', 256, 72);
     g.fillStyle = '#f5c542'; g.fillRect(60, 92, 392, 4);
     [['MIÉRCOLES', '8:00 PM'], ['VIERNES', '8:00 PM'], ['DOMINGO', '10:00 AM']].forEach(([d, h], k) => {
-      const y = 158 + k * 72; g.font = `800 40px ${SU}`;
-      g.textAlign = 'left'; g.fillStyle = '#ffffff'; g.fillText(d, 52, y);
-      g.textAlign = 'right'; g.fillStyle = '#7fd8ff'; g.fillText(h, 460, y);
+      // cada columna se ajusta a su ancho para que el día y la hora nunca queden pegados
+      const y = 158 + k * 72;
+      g.textAlign = 'left'; g.fillStyle = '#ffffff'; fit(g, d, 800, 40, SU, 228); g.fillText(d, 52, y);
+      g.textAlign = 'right'; g.fillStyle = '#7fd8ff'; fit(g, h, 800, 40, SU, 160); g.fillText(h, 460, y);
     });
     g.textAlign = 'center'; g.fillStyle = '#e9e0ff'; g.font = `italic 600 28px ${SU}`; g.fillText('¡Te esperamos!', 256, 370);
   });
   box(3.1, 2.5, .08, mat(0xd9b24a, { metalness: .6, roughness: .35 }), cx - 5, y0 + 2.3, Z0 - .2, { cast: false });
   const sch = new THREE.Mesh(new THREE.PlaneGeometry(3, 2.34), new THREE.MeshStandardMaterial({ map: schTex, emissive: 0xffffff, emissiveMap: schTex, emissiveIntensity: .5 }));
   sch.position.set(cx - 5, y0 + 2.3, Z0 - .25); sch.rotation.y = Math.PI; group.add(sch);
+  // dos macetas altas de cerámica con plantas de lengua de suegra a los lados de la entrada (geometrías compartidas, con colisión)
+  {
+    const potM = mat(0x2b2f36, { roughness: .35, metalness: .15 }), rimM = mat(0xc9a446, { metalness: .6, roughness: .35 }), soilM = mat(0x3a2a1c, { roughness: 1 });
+    const leafM = mat(0x3f7a3a, { roughness: .6 }), leafM2 = mat(0x6b9a3c, { roughness: .6 });
+    const potG = new THREE.CylinderGeometry(.34, .26, .7, 18), rimG = new THREE.TorusGeometry(.335, .025, 6, 22), soilG = new THREE.CircleGeometry(.31, 16);
+    const leafG = new THREE.ConeGeometry(.07, 1, 4); leafG.translate(0, .5, 0); leafG.scale(1, 1, .35);
+    for (const sx of [-1, 1]) {
+      const px = cx + sx * 2.55, pz = Z0 - .62;
+      const pot = new THREE.Mesh(potG, potM); pot.position.set(px, y0 + .35, pz); pot.castShadow = pot.receiveShadow = true; group.add(pot);
+      const rim = new THREE.Mesh(rimG, rimM); rim.rotation.x = Math.PI / 2; rim.position.set(px, y0 + .7, pz); group.add(rim);
+      const soil = new THREE.Mesh(soilG, soilM); soil.rotation.x = -Math.PI / 2; soil.position.set(px, y0 + .66, pz); group.add(soil);
+      for (let k = 0; k < 9; k++) {
+        const a = k * 2.4 + sx, rr = k ? .06 + (k % 3) * .05 : 0, lf = new THREE.Mesh(leafG, k % 2 ? leafM2 : leafM);
+        lf.position.set(px + Math.cos(a) * rr, y0 + .64, pz + Math.sin(a) * rr);
+        lf.rotation.set(Math.sin(a) * (k ? .22 : .04), -a, Math.cos(a) * (k ? .22 : .04)); lf.scale.y = .75 + ((k * 37) % 5) * .1; lf.castShadow = true; group.add(lf);
+      }
+      solid(px - .34, px + .34, pz - .34, pz + .34, y0 + .7, y0);
+    }
+  }
   // «M» gigante y moderna en la pared lateral: panel de vidrio oscuro, letra dorada en 3D con contorno de neón y franjas de luz
   const neonM = new THREE.MeshStandardMaterial({ color: 0x0a2a40, emissive: 0x34c8ff, emissiveIntensity: 1.8 });
   {
