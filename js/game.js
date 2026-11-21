@@ -770,9 +770,12 @@ async function buildWorld(cfg) {
       }
       // Fuente central
       const fr = 4.2;
-      const basin = new THREE.Mesh(new THREE.CylinderGeometry(fr, fr + .2, .7, 40), M.concrete);
-      basin.position.set(cx, CURB + .35, cz); basin.castShadow = basin.receiveShadow = true; group.add(basin);
-      const wat = new THREE.Mesh(new THREE.CylinderGeometry(fr - .3, fr - .3, .1, 40), M.water); wat.position.set(cx, CURB + .62, cz); group.add(wat);
+      // estanque hueco: pared exterior inclinada, borde de 30 cm donde sentarse y fondo más bajo, para que el agua se vea
+      // (antes era un cilindro macizo cuya tapa tapaba el agua y la espuma)
+      const basinGeo = new THREE.LatheGeometry([new THREE.Vector2(fr + .2, 0), new THREE.Vector2(fr + .02, .72), new THREE.Vector2(fr - .3, .72), new THREE.Vector2(fr - .3, .45), new THREE.Vector2(.001, .45)], 40);
+      const basin = new THREE.Mesh(basinGeo, M.concrete);
+      basin.position.set(cx, CURB, cz); basin.castShadow = basin.receiveShadow = true; group.add(basin);
+      const wat = new THREE.Mesh(new THREE.CylinderGeometry(fr - .32, fr - .32, .1, 40), M.water); wat.position.set(cx, CURB + .62, cz); group.add(wat);
       const col = new THREE.Mesh(new THREE.CylinderGeometry(.35, .5, 2.6, 20), M.steel); col.position.set(cx, CURB + 1.6, cz); col.castShadow = true; group.add(col);
       const top = new THREE.Mesh(new THREE.TorusGeometry(.9, .12, 12, 40), M.gold); top.position.set(cx, CURB + 3.1, cz); top.userData.spin = true; group.add(top);
       addBox(cx - fr, cx + fr, cz - fr, cz + fr, CURB + .7);
@@ -787,12 +790,16 @@ async function buildWorld(cfg) {
             tex, geo: new THREE.TubeGeometry(curve, 20, .045, 6, false),
             mat: new THREE.MeshStandardMaterial({ map: tex, color: 0xd8f1ff, emissive: 0x6fa8c8, emissiveIntensity: .25, roughness: .1, transparent: true, opacity: .7, depthWrite: false }),
             foamGeo: new THREE.RingGeometry(2.55, 2.95, 40), foam: [],
+            // onda que nace donde caen los chorros y se abre hacia el borde del estanque desvaneciéndose
+            ripGeo: new THREE.RingGeometry(.965, 1, 48), rip: [],
+            ripMat: new THREE.MeshBasicMaterial({ color: 0xf4fcff, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
             foamMat: new THREE.MeshStandardMaterial({ color: 0xf2fbff, roughness: .6, transparent: true, opacity: .45, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
           };
         }
         const F = W.fountain;
         for (let k = 0; k < 8; k++) { const j = new THREE.Mesh(F.geo, F.mat); j.position.set(cx, CURB, cz); j.rotation.y = k * Math.PI / 4 + Math.PI / 8; j.renderOrder = 2; group.add(j); }
         const fm = new THREE.Mesh(F.foamGeo, F.foamMat); fm.rotation.x = -Math.PI / 2; fm.position.set(cx, CURB + .675, cz); fm.renderOrder = 2; group.add(fm); F.foam.push(fm);
+        const rp = new THREE.Mesh(F.ripGeo, F.ripMat); rp.rotation.x = -Math.PI / 2; rp.position.set(cx, CURB + .676, cz); rp.renderOrder = 2; group.add(rp); F.rip.push(rp);
       }
       // Bancos
       for (const [bx, bz, rot] of [[cx, cz - 6.5, 0], [cx, cz + 6.5, 0], [cx - 6.5, cz, 1], [cx + 6.5, cz, 1]]) {
@@ -3243,7 +3250,7 @@ function loopBody() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
-    if (world.fountain) { world.fountain.tex.offset.x = -t * 1.4; const s = 1 + Math.sin(t * 5) * .025; for (const f of world.fountain.foam) f.scale.set(s, s, 1); world.fountain.foamMat.opacity = .38 + Math.sin(t * 3.3) * .08; }
+    if (world.fountain) { world.fountain.tex.offset.x = -t * 1.4; const s = 1 + Math.sin(t * 5) * .025; for (const f of world.fountain.foam) f.scale.set(s, s, 1); world.fountain.foamMat.opacity = .38 + Math.sin(t * 3.3) * .08; const ph = (t * .55) % 1, rr = 2.95 + ph * .85; for (const f of world.fountain.rip) f.scale.set(rr, rr, 1); world.fountain.ripMat.opacity = .4 * (1 - ph) * Math.min(1, ph * 6); }
     if (world.fireflies) world.fireflies.update(t);
     if (world.camp) world.camp.update(t);
     if (world.priests) {
