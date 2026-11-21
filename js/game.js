@@ -1920,6 +1920,19 @@ function updateMate(dt, t) {
   mate.root.position.copy(MT.pos); mate.root.rotation.y = MT.heading;
   animateHuman(mate, dt, { speed: MT.speed, onGround: MT.onGround, vy: MT.vy, land: 0, t, swim: mSwim, kneel: mKneel, praise: mPraise, sit: mSit, gesture: P.smell > 0 ? 1 : 0 });
 }
+// Polvito al caer fuerte de un salto: unas nubecitas que se abren y se desvanecen (pocas y reutilizadas para no gastar memoria)
+const DUST = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(235,222,196,.9)'); gr.addColorStop(1, 'rgba(235,222,196,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const list = [];
+  for (let k = 0; k < 6; k++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, opacity: 0 })); sp.visible = false; sp.raycast = () => {}; sp.renderOrder = 2; scene.add(sp); list.push({ sp, t: 1, a: k / 6 * Math.PI * 2 }); }
+  return {
+    puff(x, y, z, k = 1) { for (const d of list) { d.t = 0; d.k = k; d.x = x; d.y = y; d.z = z; d.sp.visible = true; } },
+    update(dt) { for (const d of list) { if (d.t >= 1) continue; d.t = Math.min(1, d.t + dt * 1.6); const r = .25 + d.t * .9 * d.k; d.sp.position.set(d.x + Math.cos(d.a) * r, d.y + .1 + d.t * .25, d.z + Math.sin(d.a) * r); d.sp.scale.setScalar((.35 + d.t * .7) * d.k); d.sp.material.opacity = (1 - d.t) * .55; if (d.t >= 1) d.sp.visible = false; } }
+  };
+})();
 const P = { holdFwd: 0, pos: new THREE.Vector3(), vy: 0, onGround: true, heading: 0, speed: 0, inv: 0, phase: 0, land: 0 };
 const RADIUS = .32, STEP = .22, JUMP_V = 7.2, GRAV = 20, WALK = 4.3, RUN = 9.2, TURBO = 12.5;
 queueMicrotask(() => { if (isPair()) rebuildPlayer(); });
@@ -2801,7 +2814,7 @@ function update(dt) {
   if (!P.onGround) {
     P.vy -= GRAV * dt; P.pos.y += P.vy * dt;
     const f2 = floorAt(P.pos.x, P.pos.z, P.pos.y - P.vy * dt);
-    if (P.pos.y <= f2 && P.vy <= 0) { if (P.vy < -6) P.land = .25; if (P.vy < -3) sound.step('hard', true); P.pos.y = f2; P.vy = 0; P.onGround = true; }
+    if (P.pos.y <= f2 && P.vy <= 0) { if (P.vy < -6) { P.land = .25; DUST.puff(P.pos.x, f2, P.pos.z, Math.min(1.3, -P.vy / 9)); } if (P.vy < -3) sound.step('hard', true); P.pos.y = f2; P.vy = 0; P.onGround = true; }
   }
   if (P.land > 0) P.land -= dt;
   // Pasos: un sonido por cada pisada; más rápido al correr y se detiene al parar
@@ -3356,6 +3369,7 @@ function loopBody() {
   human.root.visible = !P.car && !(P.inv > 0 && Math.floor(t * 12) % 2) && !(isFP() && state !== 'map');
   if (P.smell > 0) P.smell -= dt;
   if (mate) { mate.root.visible = !P.car && (state === 'play' || state === 'pause' || state === 'talk' || state === 'verse' || state === 'map'); if (state === 'play') updateMate(dt, t); }
+  DUST.update(dt);
   if (state === 'play' || state === 'menu' || state === 'creator') animateHuman(human, dt, { reach: state === 'play' && world && !P.onGround && !P.climb && !P.swim ? tallAhead() : 0, speed: P.speed, onGround: P.onGround || !!P.climb, vy: P.vy, land: P.land, t, gesture: P.smell > 0 ? 1 : 0, climb: P.climb ? P.climb.t : -1, swim: state === 'play' && P.swim ? 1 : 0, kneel: P.kneel ? P.kneel.t / P.kneel.dur : -1, praise: P.praise ? P.praise.t : -1, sit: P.sit ? 1 : 0 });
 
   if (window.__freeCam) { /* cámara de pruebas */ }
