@@ -804,7 +804,23 @@ async function buildWorld(cfg) {
       // Bancos
       for (const [bx, bz, rot] of [[cx, cz - 6.5, 0], [cx, cz + 6.5, 0], [cx - 6.5, cz, 1], [cx + 6.5, cz, 1]]) {
         const bw = rot ? .6 : 2.4, bd = rot ? 2.4 : .6;
-        box(bw, .1, bd, M.wood, bx, CURB + .48, bz);
+        // asiento de tres listones de madera con rendijas entre ellos (antes era una sola tabla lisa)
+        for (const k of [-1, 0, 1]) box(rot ? .17 : 2.4, .08, rot ? 2.4 : .17, M.wood, bx + (rot ? k * .205 : 0), CURB + .49, bz + (rot ? 0 : k * .205));
+        // respaldo: dos listones inclinados hacia atrás sobre dos parales de metal, de espaldas a la fuente
+        // (el que se sienta mira hacia el agua)
+        {
+          const s = rot ? Math.sign(bx - cx) : Math.sign(bz - cz), tilt = .2, back = .3;
+          for (const e of [-1, 1]) {
+            const p = box(.05, .62, .05, M.darkMetal, bx + (rot ? s * back : e), CURB + .78, bz + (rot ? e : s * back));
+            if (rot) p.rotation.z = -s * tilt; else p.rotation.x = s * tilt;
+          }
+          for (const [hy, lean] of [[.76, .041], [.95, .08]]) {
+            const sl = box(rot ? .04 : 2.4, .13, rot ? 2.4 : .04, M.wood, bx + (rot ? s * (back + lean) : 0), CURB + hy, bz + (rot ? 0 : s * (back + lean)));
+            if (rot) sl.rotation.z = -s * tilt; else sl.rotation.x = s * tilt;
+          }
+          if (rot) addBox(bx + s * back - .1, bx + s * back + .1, bz - 1.2, bz + 1.2, CURB + 1.05);
+          else addBox(bx - 1.2, bx + 1.2, bz + s * back - .1, bz + s * back + .1, CURB + 1.05);
+        }
         box(rot ? .5 : .1, .45, rot ? .1 : .5, M.darkMetal, bx - (rot ? 0 : 1), CURB + .22, bz - (rot ? 1 : 0));
         box(rot ? .5 : .1, .45, rot ? .1 : .5, M.darkMetal, bx + (rot ? 0 : 1), CURB + .22, bz + (rot ? 1 : 0));
         addBox(bx - bw / 2, bx + bw / 2, bz - bd / 2, bz + bd / 2, CURB + .53);
