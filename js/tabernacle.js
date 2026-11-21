@@ -344,6 +344,14 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
     for (const s of [-1, 1]) add(dishG, goldDS, mnX, .066, mnZ + s * .4, { cast: false });
     for (const a of [-.07, .07]) { const t = add(new THREE.CylinderGeometry(.007, .007, .2, 6).rotateZ(Math.PI / 2), M.gold, mnX, .094, mnZ + .4, { cast: false }); t.rotation.y = a; }
   }
+  // «…sus despabiladeras, sus platillos y todos sus utensilios para el aceite con que lo sirven» (Números 4:9):
+  // una aceitera de oro con pico y asa junto al platillo, con el aceite puro de olivas para las lámparas (Éxodo 27:20)
+  { const jx = mnX + .28, jz = mnZ - .42, fy = .066;
+    const jarG = new THREE.LatheGeometry([[0, 0], [.045, 0], [.06, .04], [.058, .08], [.035, .115], [.022, .13], [.03, .15]].map(([x, y]) => new THREE.Vector2(x, y)), 18);
+    add(jarG, M.gold, jx, fy, jz, { cast: false });
+    add(new THREE.CylinderGeometry(.006, .012, .08, 8), M.gold, jx + .07, fy + .1, jz, { cast: false }).rotation.z = -.95; // pico inclinado hacia arriba
+    add(new THREE.TorusGeometry(.035, .007, 6, 12, Math.PI), M.gold, jx - .055, fy + .085, jz, { cast: false }).rotation.z = Math.PI / 2; // asa
+  }
   addBox(mnX - .3, mnX + .3, mnZ - .6, mnZ + .6, 1.7);
   // Altar del incienso de oro: 1 × 1 × 2 codos con cuernos, delante del velo
   const inX = veilX + 1.2;
