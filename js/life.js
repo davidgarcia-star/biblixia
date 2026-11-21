@@ -541,6 +541,35 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     { const food = buildFood(group, cx - 1.8, fy + .79, cz - 1.6); if (food.userData.update) houseUpd.push(food.userData.update); }
     buildChairs(group, cx - 1.8, fy + .14, cz - 1.6, [[-.95, 0, -Math.PI / 2], [.95, 0, Math.PI / 2]]);
     {
+      // cuadro de paisaje en la pared interior de la sala (antes lisa): verdes pastos y aguas de reposo con Salmos 23:2 (LBLA)
+      const c = document.createElement('canvas'); c.width = 768; c.height = 480; const g = c.getContext('2d');
+      const sky = g.createLinearGradient(0, 0, 0, 260); sky.addColorStop(0, '#7fb4e0'); sky.addColorStop(1, '#f6dcb0');
+      g.fillStyle = sky; g.fillRect(0, 0, 768, 480);
+      g.fillStyle = 'rgba(255,240,200,.9)'; g.beginPath(); g.arc(560, 120, 38, 0, 7); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.75)'; for (const [x, y, r] of [[150, 80, 26], [185, 72, 32], [222, 84, 24], [420, 60, 20], [448, 54, 26]]) { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); }
+      const hill = (col, y0, amp, f, ph) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, 480); for (let x = 0; x <= 768; x += 8) g.lineTo(x, y0 + Math.sin(x / 768 * Math.PI * f + ph) * amp); g.lineTo(768, 480); g.closePath(); g.fill(); };
+      hill('#8fae6a', 230, 26, 2, .5); hill('#6f9a4a', 270, 22, 3, 1.8); hill('#5a8a3a', 320, 14, 2.4, 3);
+      // arroyo tranquilo que serpentea entre los pastos
+      g.fillStyle = '#9fd0e8'; g.beginPath(); g.moveTo(330, 300);
+      for (let y = 300; y <= 400; y += 10) g.lineTo(330 + Math.sin(y / 30) * 40 - (y - 300) * .9, y);
+      for (let y = 400; y >= 300; y -= 10) g.lineTo(330 + Math.sin(y / 30) * 40 + (y - 300) * 1.6 + 14, y);
+      g.closePath(); g.fill();
+      // ovejitas pastando
+      for (const [x, y, s] of [[160, 345, 1], [215, 362, 1.15], [560, 350, 1.05], [610, 372, 1.2]]) {
+        g.fillStyle = '#fbfaf5'; for (const [dx, dy] of [[-9, 0], [0, -5], [9, 0], [0, 3]]) { g.beginPath(); g.arc(x + dx * s, y + dy * s, 9 * s, 0, 7); g.fill(); }
+        g.fillStyle = '#3a3330'; g.beginPath(); g.ellipse(x + 17 * s, y - 2 * s, 5 * s, 4 * s, 0, 0, 7); g.fill();
+        g.fillRect(x - 8 * s, y + 8 * s, 2.5 * s, 7 * s); g.fillRect(x + 6 * s, y + 8 * s, 2.5 * s, 7 * s);
+      }
+      g.fillStyle = 'rgba(30,24,16,.62)'; g.fillRect(0, 404, 768, 76);
+      g.fillStyle = '#fff6df'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'italic 600 24px Georgia, serif';
+      g.fillText('«En lugares de verdes pastos me hace descansar;', 384, 428); g.fillText('junto a aguas de reposo me conduce» – Salmos 23:2', 384, 458);
+      const pt = new THREE.CanvasTexture(c); pt.colorSpace = THREE.SRGBColorSpace; pt.anisotropy = 4;
+      const wx = cx + 1.5 - T / 2, pz = cz + 2.4, py = fy + 1.72;
+      box(.04, .98, 1.5, trimM, wx - .02, py, pz, { cast: false });
+      const pic = new THREE.Mesh(new THREE.PlaneGeometry(1.4, .875), new THREE.MeshStandardMaterial({ map: pt, roughness: .8 }));
+      pic.position.set(wx - .045, py, pz); pic.rotation.y = -Math.PI / 2; pic.receiveShadow = true; pic.raycast = () => {}; group.add(pic);
+    }
+    {
       // abanico de techo sobre la mesa del comedor: aspas de madera que giran suavemente
       const fan = new THREE.Group(); fan.position.set(cx - 1.8, fy + H, cz - 1.6); group.add(fan);
       const metM = mat(0x2a2b2e, { roughness: .35, metalness: .6 }), bladeM = mat(0x8a6240, { roughness: .7 });
