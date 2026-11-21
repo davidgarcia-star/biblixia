@@ -314,7 +314,7 @@ function applyTime(mode) {
   skyClouds.grp.children.forEach((c, i) => { c.visible = i < (LITE ? Math.min(T2.clouds, 8) : T2.clouds); });
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
-  if (typeof M !== 'undefined') { M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? 4.5 : 2); }
+  if (typeof M !== 'undefined') { M.timeMode = mode; M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? (m.userData.night ?? 4.5) : mode === 'atardecer' && m.userData.dusk != null ? m.userData.dusk : (m.userData.day ?? 2)); }
   if (bloomPass) bloomPass.strength = T2.bloom * .55;
   if (typeof setNightLights === 'function') setNightLights(mode === 'noche');
   campGlow();

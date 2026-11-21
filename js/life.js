@@ -296,7 +296,11 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     box(5.9, .2, 4.6, darkM, cx - 3.5, fy + H + 2.2, cz + 1.4, { cast: false });
     const lampM = new THREE.MeshStandardMaterial({ color: 0xfff4d8, emissive: 0xffe0a0, emissiveIntensity: 2 });
     // de noche las lámparas del techo brillan más cálidas y se ven desde la calle a través del ventanal (applyTime las ajusta)
-    M.homeLamps = [lampM]; if (M.lamp && M.lamp.emissiveIntensity > 5) lampM.emissiveIntensity = 4.5;
+    // las luces exteriores (balizas del camino, apliques de la puerta y franja LED del alero) tienen fotocelda:
+    // de día quedan casi apagadas y al caer la noche se encienden con fuerza
+    ledM.userData.day = .35; ledM.userData.dusk = 2.5; ledM.userData.night = 5;
+    M.homeLamps = [lampM, ledM];
+    { const night = M.lamp && M.lamp.emissiveIntensity > 5, dusk = !night && M.timeMode === 'atardecer'; for (const m of M.homeLamps) m.emissiveIntensity = night ? (m.userData.night ?? 4.5) : dusk && m.userData.dusk != null ? m.userData.dusk : (m.userData.day ?? 2); }
     for (const [lx, lz] of [[cx - 3, cz], [cx + 4, cz + 2]]) { box(.9, .04, .9, lampM, lx, fy + H - .05, lz, { cast: false }); }
     // luz empotrada bajo el alero de la entrada (aro negro + difusor cálido): de noche ilumina la llegada a la puerta
     for (const lz of [Z0 - .65, Z0 - 1.4]) {
