@@ -886,6 +886,28 @@ async function buildWorld(cfg) {
         }
       }
     }
+    // Palabra «PARE» pintada en el carril justo antes de la línea de pare, legible para quien llega al cruce
+    // (un solo InstancedMesh; queda entre la línea de pare y la tapa de alcantarilla, sin tocar la línea central)
+    const c = document.createElement('canvas'); c.width = 256; c.height = 160; const g = c.getContext('2d');
+    g.fillStyle = '#fff'; g.font = 'bold 150px Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.save(); g.translate(128, 80); g.scale(1, 1); g.fillText('PARE', 0, 6, 240); g.restore();
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const pareMat = new THREE.MeshStandardMaterial({ map: tex, color: 0xe9e9e4, roughness: .85, alphaTest: .5, transparent: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    const spots = [];
+    for (let i = 0; i <= N; i++) { const sc = streetCenters[i];
+      for (let j = 0; j < N; j++) {
+        const a = O + j * PITCH + STREET, b = a + BLOCK;
+        for (const [e, side] of [[b - 6.1, 1], [a + 6.1, -1]]) {
+          const off = gap + len / 2;
+          spots.push([e, .047, sc + side * off, side > 0 ? -Math.PI / 2 : Math.PI / 2]);   // calle horizontal (a lo largo de x)
+          spots.push([sc - side * off, .047, e, side > 0 ? Math.PI : 0]);                  // calle vertical (a lo largo de z)
+        }
+      }
+    }
+    const pare = new THREE.InstancedMesh(new THREE.PlaneGeometry(3.4, 2.4), pareMat, spots.length);
+    const dm = new THREE.Object3D();
+    spots.forEach(([x, y, z, rz], k) => { dm.position.set(x, y, z); dm.rotation.set(-Math.PI / 2, 0, rz); dm.updateMatrix(); pare.setMatrixAt(k, dm.matrix); });
+    pare.receiveShadow = true; group.add(pare);
   }
   // Tapas de alcantarilla de hierro fundido: un disco apenas elevado (sin superposición plana) en un carril de cada tramo de calle
   {
