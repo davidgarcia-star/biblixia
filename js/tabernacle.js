@@ -177,6 +177,10 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const tongueM = new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: .85, depthWrite: false });
   const tongues = [];
   for (let i = 0; i < 7; i++) { const f = new THREE.Mesh(new THREE.ConeGeometry(.16 + (i % 3) * .05, .7, 6).translate(0, .35, 0), tongueM); f.position.set(altX + Math.sin(i * 2.4) * aw * .3, ah + .04, cz + Math.cos(i * 1.7) * aw * .3); f.castShadow = false; T.add(f); tongues.push(f); }
+  // Chispas del holocausto que vuelan hacia arriba y se apagan en el aire (Job 5:7: «como las chispas vuelan hacia arriba»)
+  const sparkTex = tex(32, 32, (g) => { const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(.35, 'rgba(255,170,60,.9)'); gr.addColorStop(1, 'rgba(255,90,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); });
+  const sparks = [];
+  for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 })); s.renderOrder = 3; T.add(s); sparks.push({ s, k: (i * .618) % 1, sp: .55 + (i % 4) * .12, ox: Math.sin(i * 2.7) * aw * .3, oz: Math.cos(i * 1.9) * aw * .3, w: 1.3 + (i % 3) * .7 }); }
   zones.push({ id: 'altar', name: 'El altar de bronce', minX: altX - 3, maxX: altX + 3, minZ: cz - 3, maxZ: cz + 3, pri: 2,
     text: 'En el altar de bronce se ofrecían los holocaustos y apunta a Cristo, el Cordero de Dios.', ref: 'Éxodo 27:1-8; Levítico 6:13; Juan 1:29' });
   // Utensilios de bronce del altar junto a su lado norte: olla para las cenizas, pala, tazón, garfio y brasero (Éxodo 27:3)
@@ -473,6 +477,11 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
       // la gloria de Dios sobre el propiciatorio, entre los querubines, «respira» despacio con una luz suave (Éxodo 25:22; 40:34)
       { const p = Math.sin(t * 1.1) * .5 + Math.sin(t * 2.7 + 1) * .15; gs.scale.set(2.6 + p * .35, 2.6 + p * .45, 1); gs.position.y = 1.6 + p * .06; }
       for (const w of ripples) { const u = (t * .45 + w.k) % 1; w.r.scale.setScalar(.04 + u * .34); w.r.material.opacity = (1 - u) * Math.min(1, u * 8) * .5; }
+      for (const c of sparks) {
+        const u = (t * c.sp + c.k) % 1, y = ah + .15 + u * u * 3.2 + u * .8;
+        c.s.position.set(altX + c.ox * (1 - u * .4) + Math.sin(t * c.w + c.k * 20) * u * .35 + u * .5, y, cz + c.oz * (1 - u * .4) + Math.cos(t * c.w * .8 + c.k * 13) * u * .3);
+        c.s.scale.setScalar(.14 * (1 - u * .6)); c.s.material.opacity = Math.min(1, u * 10) * (1 - u) * (.75 + Math.sin(t * 30 + c.k * 40) * .25);
+      }
       for (let i = 0; i < tongues.length; i++) { const f = tongues[i]; f.scale.set(1, .7 + Math.abs(Math.sin(t * 11 + i * 1.9)) * .7 + Math.sin(t * 23 + i) * .12, 1); f.rotation.z = Math.sin(t * 6 + i) * .12; }
       let root = T; while (root.parent) root = root.parent;
       const fc = root.fog && root.fog.color, lum = fc ? Math.min(1, (fc.r * .3 + fc.g * .59 + fc.b * .11) * 1.25) : 1; // de noche el humo no brilla
