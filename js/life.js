@@ -638,6 +638,31 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         bib.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; o.raycast = () => {}; } });
         group.add(bib);
       }
+      {
+        // reloj despertador digital sobre la mesita: dígitos rojos con la hora real del dispositivo y los dos puntos que parpadean
+        const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
+        const ct = new THREE.CanvasTexture(c); ct.colorSpace = THREE.SRGBColorSpace;
+        let last = '';
+        const draw = () => {
+          const d = new Date(), h = d.getHours() % 12 || 12, m = String(d.getMinutes()).padStart(2, '0'), on = d.getSeconds() % 2 === 0;
+          const key = h + ':' + m + on; if (key === last) return; last = key;
+          g.fillStyle = '#0b0b0d'; g.fillRect(0, 0, 128, 64);
+          g.textBaseline = 'middle'; g.textAlign = 'right'; g.fillStyle = '#ff3b2f'; g.shadowColor = '#ff3b2f'; g.shadowBlur = 6;
+          g.font = '700 40px "Courier New", monospace'; g.fillText(String(h), 50, 34); g.textAlign = 'left'; g.fillText(m, 62, 34);
+          if (on) { g.fillRect(53, 22, 5, 5); g.fillRect(53, 40, 5, 5); }
+          g.shadowBlur = 0; g.font = '700 11px system-ui, sans-serif'; g.fillStyle = '#c42a22'; g.fillText(d.getHours() < 12 ? 'AM' : 'PM', 110, 14);
+          ct.needsUpdate = true;
+        };
+        draw();
+        const ck = new THREE.Group(), caseM = mat(0x1d1e22, { roughness: .4, metalness: .2 });
+        const body = new THREE.Mesh(new THREE.BoxGeometry(.13, .065, .055), caseM); body.position.y = .0325; ck.add(body);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(.04, .008, .02), mat(0x3a3c42, { roughness: .5 })); top.position.set(.03, .069, 0); ck.add(top); // botón de posponer
+        const scr = new THREE.Mesh(new THREE.PlaneGeometry(.112, .05), new THREE.MeshBasicMaterial({ map: ct, toneMapped: false })); scr.position.set(0, .034, .0285); ck.add(scr);
+        ck.position.set(nx + .165, fy + .67, nz - .12); ck.rotation.y = 2.75;    // mirando hacia la cama y hacia quien entra al cuarto
+        ck.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = o !== scr; o.raycast = () => {}; } });
+        group.add(ck);
+        houseUpd.push(draw);
+      }
     }
     {
       // pantuflas de felpa en el piso junto a la cama, listas para levantarse (decorativas, sin colisión)
