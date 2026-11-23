@@ -118,6 +118,22 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   box(3.1, 2.5, .08, mat(0xd9b24a, { metalness: .6, roughness: .35 }), cx - 5, y0 + 2.3, Z0 - .2, { cast: false });
   const sch = new THREE.Mesh(new THREE.PlaneGeometry(3, 2.34), new THREE.MeshStandardMaterial({ map: schTex, emissive: 0xffffff, emissiveMap: schTex, emissiveIntensity: .5 }));
   sch.position.set(cx - 5, y0 + 2.3, Z0 - .25); sch.rotation.y = Math.PI; group.add(sch);
+  // corona navideña grande sobre la puerta principal (solo en temporada: 1 nov – 9 ene, la misma regla que navidad.js)
+  if (window.Navidad && window.Navidad.activo) {
+    const wx = cx, wy = y0 + 4.35, wz = Z0 - T / 2 - .09, R = .6;
+    const wreath = new THREE.Group(); wreath.name = 'coronaTemplo'; wreath.position.set(wx, wy, wz); group.add(wreath);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R, .17, 8, 28), mat(0x1d5a30, { roughness: .9 })); wreath.add(ring);
+    const sprigM = mat(0x2a7340, { roughness: .85 }), sprigG = new THREE.ConeGeometry(.08, .28, 5);
+    for (let k = 0; k < 22; k++) { const a = k / 22 * Math.PI * 2, s = new THREE.Mesh(sprigG, sprigM); s.position.set(Math.cos(a) * R, Math.sin(a) * R, -.08); s.rotation.z = a + (k % 2 ? .6 : -.6); wreath.add(s); }
+    const berryM = mat(0xc01f2a, { roughness: .35 }), berryG = new THREE.SphereGeometry(.05, 8, 6);
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2 + .25, b = new THREE.Mesh(berryG, berryM); b.position.set(Math.cos(a) * R, Math.sin(a) * R, -.17); wreath.add(b); }
+    // piñas doradas y lazo rojo abajo con sus dos cintas
+    const coneM = mat(0xc9a446, { metalness: .6, roughness: .35 }), coneG = new THREE.SphereGeometry(.07, 8, 6); coneG.scale(1, 1.4, 1);
+    for (const a of [.6, 1.6, 2.6]) { const p = new THREE.Mesh(coneG, coneM); p.position.set(Math.cos(a) * R, Math.sin(a) * R, -.19); wreath.add(p); }
+    const bowM = mat(0xb3121f, { roughness: .45 }), bw = (w, h, d, x, y, z, rz) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bowM); m.position.set(x, y, z); m.rotation.z = rz; wreath.add(m); };
+    for (const s of [-1, 1]) { bw(.3, .17, .05, s * .16, -R, -.2, s * .35); bw(.08, .4, .03, s * .11, -R - .26, -.19, s * .25); }
+    bw(.11, .12, .06, 0, -R, -.23, 0);
+  }
   // dos macetas altas de cerámica con plantas de lengua de suegra a los lados de la entrada (geometrías compartidas, con colisión)
   {
     const potM = mat(0x2b2f36, { roughness: .35, metalness: .15 }), rimM = mat(0xc9a446, { metalness: .6, roughness: .35 }), soilM = mat(0x3a2a1c, { roughness: 1 });
