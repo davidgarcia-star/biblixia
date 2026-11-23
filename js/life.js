@@ -515,6 +515,15 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const starM = new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffb000, emissiveIntensity: .9, metalness: .6, roughness: .3 });
       const star = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .03, bevelEnabled: false }), starM);
       star.position.set(tx, base + 2.12, tz - .015); star.rotation.y = .6; group.add(star);
+      // regalitos envueltos debajo del árbol (del lado de la sala), con cinta en cruz y lazo encima
+      for (const [a, w, h, d, pc, rc] of [[.05, .26, .2, .22, 0x2f62c8, 0xe0b230], [.8, .2, .16, .2, 0xc0182a, 0xf2f2f0], [1.5, .24, .24, .18, 0x2a8a4a, 0xc0182a]]) {
+        const gx = tx + Math.cos(a) * .44, gz = tz + Math.sin(a) * .44, gy = base + h / 2 + .002;
+        const gift = box(w, h, d, mat(pc, { roughness: .5 }), gx, gy, gz); gift.rotation.y = a;
+        const ribM = mat(rc, { roughness: .35, metalness: .2 });
+        const r1 = box(w + .006, h + .006, .03, ribM, gx, gy, gz, { cast: false }); r1.rotation.y = a;
+        const r2 = box(.03, h + .006, d + .006, ribM, gx, gy, gz, { cast: false }); r2.rotation.y = a;
+        for (const s of [-1, 1]) { const lo = box(.07, .035, .025, ribM, gx, gy + h / 2 + .02, gz, { cast: false }); lo.rotation.set(0, a, s * .5); lo.position.x += Math.cos(a) * s * .03; lo.position.z -= Math.sin(a) * s * .03; }
+      }
       houseUpd.push(t => {
         for (let k = 0; k < 3; k++) lightMs[k].emissiveIntensity = .35 + (Math.sin(t * 2.2 + k * 2.1) * .5 + .5) * 1.5;
         starM.emissiveIntensity = .7 + Math.sin(t * 1.3) * .3;
