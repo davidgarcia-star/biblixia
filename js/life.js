@@ -1010,6 +1010,21 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         for (const dx of [-.16, .16]) cyl(.005, .005, topY - (ky + .28), frameM, kx + dx, (topY + ky + .28) / 2, kz, 4).castShadow = false;
         officeUpd.push(ck.userData.update);
       }
+      {
+        // letrero colgante con el número de piso donde llega la escalera (se lee por las dos caras)
+        const c = document.createElement('canvas'); c.width = 256; c.height = 128; const g = c.getContext('2d');
+        g.fillStyle = '#1d2733'; g.fillRect(0, 0, 256, 128);
+        g.strokeStyle = '#ffd34d'; g.lineWidth = 4; g.strokeRect(8, 8, 240, 112);
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillStyle = '#ffffff'; g.font = '900 50px system-ui, sans-serif'; g.fillText('PISO ' + (i + 1), 128, 54);
+        g.fillStyle = '#ffd34d'; g.font = '700 19px system-ui, sans-serif'; g.fillText(i === 0 ? '☕ Cafetería' : i === FLOORS - 1 ? '🏢 Oficinas · último piso' : '🏢 Oficinas', 128, 98);
+        const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+        const [sa, sb] = stairs[i > 0 ? (i - 1) % 2 : 0], nx = (sa + sb) / 2, nz = SZ1 + 1.4, ny = y + 2.35, topY = y + FH - .3;
+        const nM = new THREE.MeshBasicMaterial({ map: tx }); nM.color.setScalar(.92);
+        box(1.08, .56, .03, frameM, nx, ny, nz, { cast: false });
+        for (const s of [1, -1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(1, .5), nM); p.position.set(nx, ny, nz + s * .017); p.rotation.y = s > 0 ? 0 : Math.PI; group.add(p); }
+        for (const dx of [-.4, .4]) cyl(.004, .004, topY - (ny + .28), frameM, nx + dx, (topY + ny + .28) / 2, nz, 4).castShadow = false;
+      }
       // trabajadores de pie conversando
       if (i > 0) staticHuman({ gender: 'm', skin: SKINS[(r() * SKINS.length) | 0], top: 0x2e2e38, topStyle: 'traje', pants: 0x2e2e38, tie: 0x2a4a9a, hair: 'short' }, cx + 7, y, cz + 1.5, -1.6);
       if (i > 0) staticHuman({ gender: 'f', skin: SKINS[(r() * SKINS.length) | 0], top: 0xc0392b, topStyle: 'chaqueta', pants: 0x22243a, legwear: 'pantalon', hair: 'long' }, cx + 6, y, cz + 1.5, 1.6);
