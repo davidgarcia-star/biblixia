@@ -489,6 +489,38 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       }
       solid(plX - .3, plX + .3, plZ - .3, plZ + .3, fy + .14 + potH);
     }
+    if (window.Navidad && window.Navidad.activo) {
+      // arbolito de Navidad en la esquina de la sala junto al ventanal (solo en temporada, igual que la corona):
+      // pino de tres pisos en maceta roja, bolitas de colores, estrella dorada y lucecitas que titilan por turnos
+      const tx = X0 + .8, tz = Z0 + .85, base = fy + .14;
+      cyl(.24, .19, .34, mat(0xa3161f, { roughness: .45 }), tx, base + .17, tz, 18);
+      cyl(.05, .06, .3, mat(0x5a3d26, { roughness: .9 }), tx, base + .45, tz, 8);
+      const pineM = mat(0x1f5a32, { roughness: .85 }), pineM2 = mat(0x2a6e3e, { roughness: .85 });
+      const tiers = [[.62, .78, .92], [.48, .66, 1.36], [.32, .56, 1.76]];   // radio, alto, altura del centro
+      for (let k = 0; k < tiers.length; k++) { const [rr, hh, yy] = tiers[k]; const c = new THREE.Mesh(new THREE.ConeGeometry(rr, hh, 14), k % 2 ? pineM2 : pineM); c.position.set(tx, base + yy, tz); c.rotation.y = k * .4; c.castShadow = true; c.receiveShadow = true; group.add(c); }
+      const ballG = new THREE.SphereGeometry(.045, 10, 8), ballMs = [0xc0182a, 0xe0b230, 0x2f62c8, 0xd9dde2].map(c => mat(c, { roughness: .2, metalness: .5 }));
+      const lightG = new THREE.SphereGeometry(.022, 6, 5), lightMs = [0xffd36b, 0xff5a5a, 0x7fd0ff].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2 }));
+      let n = 0;
+      for (const [rr, hh, yy] of tiers) {
+        for (let k = 0; k < 9; k++, n++) {
+          const a = k / 9 * Math.PI * 2 + n * .37, low = k % 2 === 0, f = low ? .82 : .45; // bolitas abajo del piso, luces más arriba
+          const y = base + yy - hh / 2 + (1 - f) * hh + .02, rad = rr * f + .02;
+          const o = new THREE.Mesh(low ? ballG : lightG, low ? ballMs[n % 4] : lightMs[n % 3]);
+          o.position.set(tx + Math.cos(a) * rad, y, tz + Math.sin(a) * rad); o.raycast = () => {}; group.add(o);
+        }
+      }
+      // estrella dorada de cinco puntas que brilla en la punta del árbol
+      const sh = new THREE.Shape();
+      for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? .05 : .12; k ? sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+      const starM = new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffb000, emissiveIntensity: .9, metalness: .6, roughness: .3 });
+      const star = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .03, bevelEnabled: false }), starM);
+      star.position.set(tx, base + 2.12, tz - .015); star.rotation.y = .6; group.add(star);
+      houseUpd.push(t => {
+        for (let k = 0; k < 3; k++) lightMs[k].emissiveIntensity = .35 + (Math.sin(t * 2.2 + k * 2.1) * .5 + .5) * 1.5;
+        starM.emissiveIntensity = .7 + Math.sin(t * 1.3) * .3;
+      });
+      solid(tx - .6, tx + .6, tz - .6, tz + .6, base + 2.2);
+    }
     // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
     box(.7, .9, 3.2, cabM, X0 + .45, fy + .45, cz + 1.2); box(.75, .05, 3.25, counterM, X0 + .45, fy + .92, cz + 1.2); solid(X0, X0 + .85, cz - .4, cz + 2.8, fy + .95);
