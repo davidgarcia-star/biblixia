@@ -138,6 +138,28 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       box(.16, .34, .1, darkM, cx + sx, fy + 2.1, sz, { cast: false });
       for (const dy of [-.18, .18]) box(.12, .025, .07, ledM, cx + sx, fy + 2.1 + dy, sz, { cast: false, recv: false });
     }
+    { // polillas que revolotean alrededor de los apliques de la puerta solo de noche (de día y al atardecer no se ven)
+      const mothM = new THREE.MeshStandardMaterial({ color: 0xd8cfb8, emissive: 0x6a5f48, roughness: 1, side: THREE.DoubleSide }); // reflejan la luz del aplique
+      const wingG = new THREE.PlaneGeometry(.06, .04); wingG.rotateX(-Math.PI / 2); wingG.translate(.03, 0, 0);
+      const moths = [];
+      for (const sx of [-1.15, 1.05]) for (let k = 0; k < 3; k++) {
+        const mo = new THREE.Group(), wings = [];
+        for (const s of [-1, 1]) { const w = new THREE.Mesh(wingG, mothM); w.scale.x = s; w.raycast = () => {}; mo.add(w); wings.push([w, s]); }
+        mo.visible = false; group.add(mo);
+        moths.push({ mo, wings, x: cx + sx, z: Z0 - (sx < 0 ? .16 : .225) - .2, ph: k * 2.1 + sx * 3, sp: 1.6 + k * .45 });
+      }
+      houseUpd.push(t => {
+        const night = !!(M.lamp && M.lamp.emissiveIntensity > 5);
+        for (const m of moths) {
+          m.mo.visible = night; if (!night) continue;
+          const a = t * m.sp + m.ph, r0 = .16 + Math.sin(t * 1.3 + m.ph) * .07;   // vuelo errático en lazos junto a la luz
+          m.mo.position.set(m.x + Math.cos(a) * r0, fy + 2.1 + Math.sin(a * 1.7) * .22, m.z + Math.sin(a) * r0 * .7);
+          m.mo.rotation.y = -a;
+          const f = Math.sin(t * 30 + m.ph) * .9;                                     // aleteo muy rápido
+          for (const [w, s] of m.wings) w.rotation.z = s * f;
+        }
+      });
+    }
     { // dos maceteros altos de concreto con arbustos redondos a los lados de la entrada
       const potM = mat(0x8d8a85, { roughness: .9 }), soilM = mat(0x3a2a1c, { roughness: 1 });
       const leafM = [mat(0x2f6b2a, { roughness: .85 }), mat(0x3d7d33, { roughness: .85 })];
