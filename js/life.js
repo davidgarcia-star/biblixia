@@ -310,6 +310,30 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     // letrero de pie sobre el borde del alero de la entrada (antes quedaba metido bajo el alero y el techo, y se cortaba)
     sign('MI CASA', '', cx, fy + H + .01, Z0 - 1.86, Math.PI).scale.setScalar(.8);
     box(2.12, .04, .06, darkM, cx, fy + H - .25, Z0 - 1.83, { cast: false });         // listón que lo sostiene
+    if (window.Navidad && window.Navidad.activo) {
+      // luces navideñas colgadas en ondas a lo largo del borde del techo del frente (solo en temporada, como la corona):
+      // bombillitos de 4 colores que titilan por turnos; de día casi apagados y de noche brillan con fuerza
+      const L = HW * 2 + 1.4, zF = Z0 - .78, yTop = fy + H + .02, n = Math.round(L / .32), sag = .12;
+      const pts = [];
+      for (let k = 0; k <= n * 4; k++) { const u = k / (n * 4), x = cx - L / 2 + u * L, w = (u * n) % 1; pts.push(new THREE.Vector3(x, yTop - Math.sin(w * Math.PI) * sag, zF)); }
+      const wire = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n * 8, .008, 4, false), darkM);
+      wire.raycast = () => {}; group.add(wire);
+      const cols = [0xff3040, 0x30e060, 0x3a8cff, 0xffc830], bulbG = new THREE.SphereGeometry(.038, 8, 6), capG = new THREE.CylinderGeometry(.014, .014, .03, 6);
+      const xmM = cols.map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .4, roughness: .3 }));
+      const dummy = new THREE.Object3D(), per = [[], [], [], []];
+      for (let k = 0; k < n; k++) per[k % 4].push(new THREE.Vector3(cx - L / 2 + (k + .5) / n * L, yTop - sag - .055, zF));
+      const caps = new THREE.InstancedMesh(capG, darkM, n); caps.raycast = () => {};
+      per.forEach((list, c) => {
+        const im = new THREE.InstancedMesh(bulbG, xmM[c], list.length); im.raycast = () => {};
+        list.forEach((p, i) => { dummy.position.copy(p); dummy.scale.set(1, 1.45, 1); dummy.updateMatrix(); im.setMatrixAt(i, dummy.matrix); });
+        group.add(im);
+      });
+      for (let k = 0; k < n; k++) { dummy.position.set(cx - L / 2 + (k + .5) / n * L, yTop - sag - .005, zF); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); caps.setMatrixAt(k, dummy.matrix); }
+      group.add(caps);
+      const lvl = () => (M.lamp && M.lamp.emissiveIntensity > 5) ? 4 : M.timeMode === 'atardecer' ? 2.4 : .5;
+      houseUpd.push(t => { const b = lvl(); xmM.forEach((m, c) => { const on = Math.sin(t * 2.2 - c * Math.PI / 2) > -.35; m.emissiveIntensity = b * (on ? 1 : .18); }); });
+      xmM.forEach(m => { m.emissiveIntensity = lvl(); });
+    }
     const glass = winGlass;
     // patio trasero: terraza de madera y piscina (no se puede caminar dentro)
     const pX = cx - 2, pZ = Z1 + 5, pW = 8, pD = 3.6;
