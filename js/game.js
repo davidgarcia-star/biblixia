@@ -1558,6 +1558,7 @@ async function buildWorld(cfg) {
   W.cull = buildCull(group);
   // Las piezas pequeñas (dedos, botones, tazas, hojas…) ya no proyectan sombra del sol: casi no se notaba y duplicaba el trabajo
   group.traverse(o => { if (o.castShadow && o.isMesh && !o.isInstancedMesh && o.geometry) { const g = o.geometry; if (!g.boundingSphere) g.computeBoundingSphere(); const sc = o.matrixWorld.getMaxScaleOnAxis(); if (g.boundingSphere.radius * sc < .45) o.castShadow = false; } });
+  W.trees = trees; // para que caigan hojitas de los árboles cercanos
   W.start = new THREE.Vector3(startX, 0, startZ);
   W.startYaw = Math.atan2(-startX, -startZ);
   return W;
@@ -3171,6 +3172,49 @@ const butterflies = (() => {
     }
   };
 })();
+// Hojas que caen: de día y al atardecer, de vez en cuando se desprende una hojita de un árbol cercano,
+// baja meciéndose y girando, se queda un momento en el suelo y desaparece (pocas piezas reutilizadas)
+const fallingLeaves = (() => {
+  const grp = new THREE.Group(), list = [], n = LITE ? 5 : 10;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, -.09, .045, 0, -.02, 0, 0, .09, 0, 0, -.09, 0, 0, .09, -.045, 0, -.02], 3)); geo.computeVertexNormals();
+  const mats = [0x6f9a2e, 0x9bb03a, 0xc9a43a, 0xb5772e, 0x5c8a2a].map(c => new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide }));
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(geo, mats[i % mats.length]); m.castShadow = false; m.frustumCulled = false; m.visible = false; grp.add(m);
+    list.push({ m, st: 0, wait: Math.random() * 6, x: 0, y: 0, z: 0, gy: 0, vy: .5, ph: Math.random() * 6.28, sw: 1, rest: 0, sc: 1 });
+  }
+  grp.visible = false; scene.add(grp);
+  const INDOOR = new Set(['casa', 'oficinas', 'iglesia', 'iglesia-lobby', 'arca-dentro', 'santo', 'santisimo', 'mar']);
+  let chk = 0, inside = false, near = [];
+  return {
+    update(dt, t, cp) {
+      if (!world || !world.trees || stars.visible || state !== 'play') { grp.visible = false; return; }
+      if ((chk -= dt) <= 0) {
+        chk = .6; const inZ = (x, z) => (world.zones || []).some(z2 => INDOOR.has(z2.id) && x > z2.minX && x < z2.maxX && z > z2.minZ && z < z2.maxZ);
+        inside = inZ(cp.x, cp.z) || inZ(P.pos.x, P.pos.z);
+        near = world.trees.filter(([x, z]) => Math.hypot(x - P.pos.x, z - P.pos.z) < 24);
+      }
+      grp.visible = !inside; if (inside) return;
+      for (const k of list) {
+        if (k.st === 0) { // esperando para desprenderse
+          k.m.visible = false; if ((k.wait -= dt) > 0 || !near.length) continue;
+          const [tx, tz, base] = near[(Math.random() * near.length) | 0], a = Math.random() * 6.28, d = .9 + Math.random() * 1.3;
+          k.x = tx + Math.cos(a) * d; k.z = tz + Math.sin(a) * d; k.y = (base > .7 ? CURB + .5 : CURB) + 2.4 + Math.random() * 1.2;
+          k.gy = floorAt(k.x, k.z, 1) + .015; k.vy = .45 + Math.random() * .3; k.sw = .6 + Math.random() * .6; k.sc = 1.2 + Math.random() * .6; k.st = 1;
+        }
+        if (k.st === 1) { // cayendo: se mece de lado a lado y gira
+          k.y -= k.vy * dt; const s = Math.sin(t * 1.8 * k.sw + k.ph);
+          k.m.position.set(k.x + s * .35, k.y, k.z + Math.cos(t * 1.3 * k.sw + k.ph) * .2);
+          k.m.rotation.set(s * .9, t * 2.2 * k.sw + k.ph, Math.cos(t * 2.6 + k.ph) * .7); k.m.scale.setScalar(k.sc); k.m.visible = true;
+          if (k.y <= k.gy) { k.y = k.gy; k.st = 2; k.rest = 2.5 + Math.random() * 2; k.m.position.y = k.gy; k.m.rotation.set(0, k.m.rotation.y, 0); }
+        } else if (k.st === 2) { // en el suelo un ratito y luego se desvanece encogiéndose
+          k.rest -= dt; k.m.scale.setScalar(k.sc * Math.min(1, Math.max(0, k.rest / .6)));
+          if (k.rest <= 0) { k.st = 0; k.wait = 1.5 + Math.random() * 5; k.m.visible = false; }
+        }
+      }
+    }
+  };
+})();
 // Estrellas fugaces: de noche, de vez en cuando cruza el cielo una estela brillante (Salmo 19:1)
 const shootingStar = (() => {
   const pos = new Float32Array(6), col = new Float32Array([1, 1, .95, 0, 0, 0]);
@@ -3289,6 +3333,7 @@ function loopBody() {
     fireflies.update(dt, elapsed, camera.position);
     butterflies.update(dt, elapsed, camera.position);
     shootingStar.update(dt, camera.position);
+    fallingLeaves.update(dt, elapsed, camera.position);
   }
 
   if (world) {
