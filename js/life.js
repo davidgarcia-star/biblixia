@@ -481,6 +481,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const waterM = new THREE.MeshStandardMaterial({ color: 0x29a8d8, emissiveMap: wt, roughness: .05, metalness: .1, emissive: 0xffffff, emissiveIntensity: 1, transparent: true, opacity: .9 });
       box(pW, .02, pD, waterM, pX, fy + .17, pZ, { cast: false });
       houseUpd.push(t => { wt.offset.set(t * .018, Math.sin(t * .35) * .04 + t * .01); });
+      // luces sumergidas de la piscina: tres focos redondos en cada lado largo, bajo el agua; al atardecer y de noche
+      // se encienden y el agua brilla turquesa desde adentro (sin luces nuevas en la escena, solo brillo del material)
+      const lensM = new THREE.MeshStandardMaterial({ color: 0xbfefff, emissive: 0x8fe6ff, emissiveIntensity: .05, roughness: .2 });
+      const lensG = new THREE.CircleGeometry(.13, 20); lensG.rotateX(-Math.PI / 2);
+      for (const sz of [-1, 1]) for (const dx of [-2.6, 0, 2.6]) {
+        const L = new THREE.Mesh(lensG, lensM); L.position.set(pX + dx, fy + .164, pZ + sz * (pD / 2 - .28));
+        L.raycast = () => {}; L.castShadow = false; group.add(L);
+      }
+      const dayC = new THREE.Color(0x29a8d8), nightC = new THREE.Color(0x3fd6f0);
+      let lastN = -1;
+      houseUpd.push(() => {
+        const n = (M.lamp && M.lamp.emissiveIntensity > 5) ? 1 : M.timeMode === 'atardecer' ? .55 : 0;
+        if (n === lastN) return; lastN = n;
+        lensM.emissiveIntensity = n ? 1.2 + n * 2.2 : .05;
+        waterM.color.copy(dayC).lerp(nightC, n); waterM.emissiveIntensity = 1 + n * .9;
+      });
     }
     solid(pX - pW / 2, pX + pW / 2, pZ - pD / 2, pZ + pD / 2, fy + 1.4);
     {
