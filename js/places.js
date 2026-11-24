@@ -112,6 +112,27 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
       fg.scale.set(1.1, 1.1, 1); fg.position.set(lx + .25, ly + .16, lz); P.add(fg);
       out.live.push({ kind: 'fn', update: t => { const f = .85 + Math.sin(t * 11) * .08 + Math.sin(t * 17.3) * .07; flame.scale.set(1, f, 1); fg.material.opacity = .55 + f * .3; } });
     }
+    // fogata de los pastores junto al rebaño: «velaban y guardaban las vigilias de la noche sobre su rebaño» (Lucas 2:8)
+    {
+      const fx0 = px + 8.4, fz0 = pz + 7, fy = .1; // lejos de la moneda (px + 8, pz + 3) y de las ovejas
+      const stone = std({ color: 0x7c766c, roughness: 1 }), log = std({ color: 0x5a3a22, roughness: .95 }), coal = std({ color: 0x2a1a12, emissive: 0xff5a1a, emissiveIntensity: .9, roughness: 1 });
+      const stG = new THREE.DodecahedronGeometry(.16, 0);
+      for (let k = 0; k < 9; k++) { const a = k / 9 * Math.PI * 2; const s = add(stG, stone, fx0 + Math.cos(a) * .62, fy + .08, fz0 + Math.sin(a) * .62); s.scale.set(1.1, .7, 1); s.rotation.set(k, k * 1.7, 0); }
+      add(new THREE.CylinderGeometry(.42, .42, .04, 14), coal, fx0, fy + .03, fz0);
+      for (let k = 0; k < 3; k++) { const l = add(new THREE.CylinderGeometry(.06, .07, .9, 7), log, fx0, fy + .16, fz0); l.rotation.set(Math.PI / 2 - .35, k / 3 * Math.PI * 2, 0, 'YXZ'); }
+      const fm = new THREE.MeshBasicMaterial({ color: 0xffa23a, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false });
+      const fm2 = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: .85, blending: THREE.AdditiveBlending, depthWrite: false });
+      const f1 = new THREE.Mesh(new THREE.ConeGeometry(.26, .75, 9), fm); f1.position.set(fx0, fy + .5, fz0); P.add(f1);
+      const f2 = new THREE.Mesh(new THREE.ConeGeometry(.14, .45, 8), fm2); f2.position.set(fx0, fy + .4, fz0); P.add(f2);
+      const fgl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xff8a30, opacity: .7 }));
+      fgl.scale.set(3, 3, 1); fgl.position.set(fx0, fy + .55, fz0); P.add(fgl);
+      addBox(fx0 - .75, fx0 + .75, fz0 - .75, fz0 + .75, .5);
+      out.live.push({ kind: 'fn', update: t => {
+        const a = .85 + Math.sin(t * 9.1) * .1 + Math.sin(t * 15.7) * .07, b = .9 + Math.sin(t * 12.3 + 1) * .1;
+        f1.scale.set(1 + Math.sin(t * 7) * .06, a, 1); f1.rotation.y = t * .8; f2.scale.set(1, b, 1);
+        fgl.material.opacity = .5 + a * .25; fgl.scale.set(2.8 + a * .4, 2.8 + a * .4, 1);
+      } });
+    }
     // estrella
     const starSh = new THREE.Shape(); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + Math.PI / 2, r2 = k % 2 ? .45 : 1.2; k ? starSh.lineTo(Math.cos(a) * r2, Math.sin(a) * r2) : starSh.moveTo(Math.cos(a) * r2, Math.sin(a) * r2); }
     const star = new THREE.Mesh(new THREE.ExtrudeGeometry(starSh, { depth: .25, bevelEnabled: false }), std({ color: 0xfff2b0, emissive: 0xffd34d, emissiveIntensity: 3 })); star.position.set(px, 13, pz); P.add(star); out.live.push({ kind: 'spin', obj: star });
