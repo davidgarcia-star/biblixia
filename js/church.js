@@ -337,6 +337,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   })();
   clockHands();
 
+  const jugBubbles = [];
   // dispensador de agua (garrafón) al otro lado de la entrada al santuario, con vasitos de papel:
   // cuerpo blanco, llaves roja (caliente) y azul (fría), bandeja de goteo y garrafón azul translúcido
   {
@@ -357,6 +358,13 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
     box(.012, .24, .03, grey, wx + .172, fl + .78, wz - .05, { cast: false });
     solid(wx - .19, wx + .19, wz - .19, wz + .19, fl + 1.45);
     acts.push({ x: wx, z: wz - .9, y: y0, label: '💧 Tomar agua del dispensador', fn: () => fx('water'), r: 1.3 });
+    // burbujitas: cada ~8 s sube un «glu-glu» de aire por dentro del garrafón, como cuando alguien se sirve agua
+    const bubM = new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: .7, depthWrite: false });
+    const bubG = new THREE.SphereGeometry(1, 8, 6);
+    for (let k = 0; k < 5; k++) {
+      const b = new THREE.Mesh(bubG, bubM); b.scale.setScalar(.012 + (k % 3) * .005); b.renderOrder = 3; b.visible = false; b.name = "burbuja-garrafon"; b.userData.live = true; group.add(b);   // «live»: que no se una con las piezas fijas
+      jugBubbles.push({ m: b, x: wx + Math.sin(k * 2.4) * .025, z: wz + Math.cos(k * 2.4) * .025, d: k * .22, y0: fl + 1.09, y1: fl + 1.4 });
+    }
   }
 
   // --- SANTUARIO: tarima, pantalla gigante, luces, banda, predicador ---
@@ -530,6 +538,8 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
       if ((scrT += dt) > .25 && Math.hypot(cx - camPos.x, cz - camPos.z) < 45) { scrT = 0; drawScreen(li, t); }
       if (Math.hypot(cx - camPos.x, cz - camPos.z) < 45) updMotes(t);
       if ((clkT += dt) > .25) { clkT = 0; clockHands(); }   // reloj de pared del lobby
+      { const c = t % 8; for (const b of jugBubbles) { const u = (c - b.d) / 1.1;   // burbujas del garrafón
+        b.m.visible = u > 0 && u < 1; if (b.m.visible) b.m.position.set(b.x + Math.sin(t * 9 + b.d * 7) * .006, b.y0 + (b.y1 - b.y0) * u, b.z); } }
       neonM.emissiveIntensity = 1.6 + Math.sin(t * 2) * .5;   // el neón de la «M» late suave
       for (const b of beams) { b.b.rotation.z = Math.sin(t * b.sp * 1.4 + b.ph) * .55; b.b.rotation.x = Math.cos(t * b.sp + b.ph) * .4; }
       beamMats.forEach((m, k) => m.color.setHSL((t * .06 + k / 6) % 1, 1, .55));   // los colores van cambiando
