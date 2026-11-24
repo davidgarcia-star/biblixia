@@ -800,6 +800,23 @@ async function buildWorld(cfg) {
         for (let k = 0; k < 8; k++) { const j = new THREE.Mesh(F.geo, F.mat); j.position.set(cx, CURB, cz); j.rotation.y = k * Math.PI / 4 + Math.PI / 8; j.renderOrder = 2; group.add(j); }
         const fm = new THREE.Mesh(F.foamGeo, F.foamMat); fm.rotation.x = -Math.PI / 2; fm.position.set(cx, CURB + .675, cz); fm.renderOrder = 2; group.add(fm); F.foam.push(fm);
         const rp = new THREE.Mesh(F.ripGeo, F.ripMat); rp.rotation.x = -Math.PI / 2; rp.position.set(cx, CURB + .676, cz); rp.renderOrder = 2; group.add(rp); F.rip.push(rp);
+        // guirnalda navideña alrededor de la pared exterior del estanque, con bombillitos de colores que titilan por turnos
+        // (solo en temporada: 1 nov – 9 ene, la misma regla que navidad.js; no toca el borde donde la gente se sienta)
+        if (window.Navidad && window.Navidad.activo) {
+          if (!F.xmas) F.xmas = {
+            garM: new THREE.MeshStandardMaterial({ color: 0x1f5e33, roughness: .9 }),
+            bulbG: new THREE.SphereGeometry(.055, 8, 6),
+            bulbM: [0xff3344, 0xffd23a, 0x3fa9ff, 0x4dff7a].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: .9, roughness: .3 })),
+          };
+          const X = F.xmas, gy = CURB + .58, gR = fr + .085;
+          const gar = new THREE.Mesh(new THREE.TorusGeometry(gR, .055, 6, 64), X.garM); gar.rotation.x = Math.PI / 2; gar.position.set(cx, gy, cz); group.add(gar);
+          const NB = 40, per = NB / X.bulbM.length, dm = new THREE.Object3D();
+          X.bulbM.forEach((bm, ci) => {
+            const im = new THREE.InstancedMesh(X.bulbG, bm, per); im.castShadow = false;
+            for (let k = 0; k < per; k++) { const a = (k * X.bulbM.length + ci) / NB * Math.PI * 2; dm.position.set(cx + Math.cos(a) * (gR + .07), gy - .03, cz + Math.sin(a) * (gR + .07)); dm.updateMatrix(); im.setMatrixAt(k, dm.matrix); }
+            im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); group.add(im);
+          });
+        }
       }
       // Bancos
       for (const [bx, bz, rot] of [[cx, cz - 6.5, 0], [cx, cz + 6.5, 0], [cx - 6.5, cz, 1], [cx + 6.5, cz, 1]]) {
@@ -3388,6 +3405,7 @@ function loopBody() {
       p.neck.rotation.x = peck * 1.1; p.neck.position.set(0, .16 - peck * .07, .08 + peck * .04);
       p.pg.rotation.y = p.yaw + Math.sin(t * .35 * p.sp + p.k) * .9;
     }
+    if (world.fountain && world.fountain.xmas) world.fountain.xmas.bulbM.forEach((m, i) => { m.emissiveIntensity = .35 + .9 * Math.max(0, Math.sin(t * 2.2 - i * Math.PI / 2)); });
     if (world.fountain) { world.fountain.tex.offset.x = -t * 1.4; const s = 1 + Math.sin(t * 5) * .025; for (const f of world.fountain.foam) f.scale.set(s, s, 1); world.fountain.foamMat.opacity = .38 + Math.sin(t * 3.3) * .08; const ph = (t * .55) % 1, rr = 2.95 + ph * .85; for (const f of world.fountain.rip) f.scale.set(rr, rr, 1); world.fountain.ripMat.opacity = .4 * (1 - ph) * Math.min(1, ph * 6); }
     if (world.fireflies) world.fireflies.update(t);
     if (world.camp) world.camp.update(t);
