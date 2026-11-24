@@ -825,6 +825,41 @@ async function buildWorld(cfg) {
         box(rot ? .5 : .1, .45, rot ? .1 : .5, M.darkMetal, bx + (rot ? 0 : 1), CURB + .22, bz + (rot ? 1 : 0));
         addBox(bx - bw / 2, bx + bw / 2, bz - bd / 2, bz + bd / 2, CURB + .53);
       }
+      // Palomas que picotean migajas en el piso de la plaza, entre la fuente y los bancos (Mateo 10:16: «inocentes como palomas»)
+      {
+        if (!W.pigeonKit) W.pigeonKit = {
+          body: new THREE.SphereGeometry(.1, 10, 8), head: new THREE.SphereGeometry(.05, 8, 6),
+          beak: new THREE.ConeGeometry(.013, .045, 5).rotateX(Math.PI / 2), tail: new THREE.BoxGeometry(.09, .018, .12),
+          leg: new THREE.CylinderGeometry(.006, .006, .07, 4), eye: new THREE.SphereGeometry(.009, 5, 4),
+          grayM: new THREE.MeshStandardMaterial({ color: 0x8e939c, roughness: .85 }),
+          neckM: new THREE.MeshStandardMaterial({ color: 0x4f6b6a, roughness: .45, metalness: .25, emissive: 0x24363a, emissiveIntensity: .25 }),
+          darkM: new THREE.MeshStandardMaterial({ color: 0x4a4e57, roughness: .9 }),
+          footM: new THREE.MeshStandardMaterial({ color: 0xc9605a, roughness: .7 }),
+          eyeM: new THREE.MeshBasicMaterial({ color: 0xe8741e }),
+        };
+        if (!W.pigeons) W.pigeons = [];
+        // azar propio (no se toca el azar del nivel, así la ciudad y las monedas quedan igual que antes)
+        let ps = (Math.abs(Math.round(cx * 73 + cz * 151)) % 9973) + 7; const pr = () => (ps = ps * 16807 % 2147483647) / 2147483647;
+        const K = W.pigeonKit, n = 5 + Math.floor(pr() * 3);
+        for (let i = 0; i < n; i++) {
+          // en los pasillos entre la fuente y los jardines, a un lado de los bancos (ni dentro de los jardines ni de los bancos)
+          const along = (pr() < .5 ? -1 : 1) * (4.8 + pr() * 1.2), side = (pr() < .5 ? -1 : 1) * (1.7 + pr() * 1.8), onX = pr() < .5;
+          const pg = new THREE.Group(); pg.position.set(cx + (onX ? along : side), CURB, cz + (onX ? side : along)); pg.rotation.y = pr() * Math.PI * 2; pg.scale.setScalar(1.2);
+          const bodyG = new THREE.Group(), headG = new THREE.Group();
+          const mk = (geo, m, x, y, z, par = bodyG) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = false; par.add(o); return o; };
+          const b = mk(K.body, K.grayM, 0, .12, 0); b.scale.set(.85, .8, 1.35);
+          const t = mk(K.tail, K.darkM, 0, .12, -.15); t.rotation.x = -.25;
+          for (const s of [-1, 1]) { mk(K.leg, K.footM, s * .03, .035, .01); const w = mk(K.body, K.darkM, s * .055, .135, -.02); w.scale.set(.3, .45, 1.05); }
+          const neck = new THREE.Group(); neck.position.set(0, .16, .08); pg.add(neck);   // pivote del cuello: la cabeza baja a picotear
+          const hd = mk(K.head, K.neckM, 0, .05, .04, headG);
+          mk(K.beak, K.darkM, 0, .045, .1, headG);
+          for (const s of [-1, 1]) mk(K.eye, K.eyeM, s * .035, .062, .065, headG);
+          hd.scale.set(.95, 1, 1.05);
+          // cada paloma se une en pocas mallas (cuerpo fijo y cabeza móvil) para no sumar llamadas de dibujo
+          pg.add(bakeStatic(bodyG, [], false)); neck.add(bakeStatic(headG, [], false));
+          group.add(pg); W.pigeons.push({ pg, neck, k: pr() * 10, sp: .8 + pr() * .6, yaw: pg.rotation.y });
+        }
+      }
       // Plataformas escalonadas con luz LED
       const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]].sort(() => r() - .5).slice(0, 2);
       for (const [px, pz] of corners) {
@@ -3346,6 +3381,13 @@ function loopBody() {
     if (world.clocks) for (const c of world.clocks) if (!c.taken) { c.body.rotation.y = t * 1.6 + c.phase; c.g.position.y = c.y + Math.sin(t * 2 + c.phase) * .15; }
     world.group.children.forEach(o => { if (o.userData.spin) o.rotation.y = t; });
     if (world.tab) world.tab.update(t);
+    // palomas: bajan la cabeza a picotear a ratos y giran un poco sobre sí mismas (solo cerca, para no gastar)
+    if (world.pigeons) for (const p of world.pigeons) {
+      if (Math.abs(p.pg.position.x - camera.position.x) > 45 || Math.abs(p.pg.position.z - camera.position.z) > 45) continue;
+      const u = (t * p.sp + p.k) % 3, peck = u < 1.2 ? Math.max(0, Math.sin(u / 1.2 * Math.PI * 3)) : 0;
+      p.neck.rotation.x = peck * 1.1; p.neck.position.set(0, .16 - peck * .07, .08 + peck * .04);
+      p.pg.rotation.y = p.yaw + Math.sin(t * .35 * p.sp + p.k) * .9;
+    }
     if (world.fountain) { world.fountain.tex.offset.x = -t * 1.4; const s = 1 + Math.sin(t * 5) * .025; for (const f of world.fountain.foam) f.scale.set(s, s, 1); world.fountain.foamMat.opacity = .38 + Math.sin(t * 3.3) * .08; const ph = (t * .55) % 1, rr = 2.95 + ph * .85; for (const f of world.fountain.rip) f.scale.set(rr, rr, 1); world.fountain.ripMat.opacity = .4 * (1 - ph) * Math.min(1, ph * 6); }
     if (world.fireflies) world.fireflies.update(t);
     if (world.camp) world.camp.update(t);
