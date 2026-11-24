@@ -236,6 +236,72 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
       solid(kx - .3, kx + .3, kz - .3, kz + .3, ky + .2);
     }
+    { // casita de madera del perro «FIEL» en el jardín delantero, con su perro echado delante: jadea, mueve la cola y mira a los lados
+      // «El justo se preocupa de la vida de su ganado» (Proverbios 12:10)
+      const hx = cx + 10.5, hz = z0 + 10, hy = fy + .04;
+      const plankM = mat(0xb5793f, { roughness: .8 }), roofM = mat(0x8c2f24, { roughness: .7 }), holeM = mat(0x16110c, { roughness: 1 });
+      box(1.0, .8, 1.1, plankM, hx, hy + .4, hz);                                                   // cuerpo de la casita
+      for (let k = 1; k < 5; k++) box(1.02, .015, 1.12, mat(0x8f5c2e, { roughness: .9 }), hx, hy + k * .16, hz, { cast: false }); // juntas de las tablas
+      const gable = new THREE.Shape(); gable.moveTo(-.5, 0); gable.lineTo(.5, 0); gable.lineTo(0, .38); gable.closePath();
+      const gG = new THREE.ShapeGeometry(gable);
+      for (const s of [-1, 1]) { const gm = new THREE.Mesh(gG, plankM); gm.position.set(hx, hy + .8, hz + s * .55); if (s < 0) gm.rotation.y = Math.PI; group.add(gm); } // frontones
+      const slope = Math.atan2(.38, .5), rl = Math.hypot(.5, .38) + .1;
+      for (const s of [-1, 1]) { const r = box(rl, .05, 1.3, roofM, hx + s * .25, hy + .8 + .19 + .03, hz); r.rotation.z = -s * slope; } // techo a dos aguas
+      box(.06, .06, 1.32, mat(0x5a1c15, { roughness: .7 }), hx, hy + 1.2, hz, { cast: false });   // cumbrera
+      // puerta en arco (hueco oscuro) en el frente, hacia la calle
+      const arch = new THREE.Shape(); arch.moveTo(-.2, 0); arch.lineTo(.2, 0); arch.lineTo(.2, .38); arch.absarc(0, .38, .2, 0, Math.PI, false); arch.closePath();
+      const door = new THREE.Mesh(new THREE.ShapeGeometry(arch, 10), holeM); door.position.set(hx, hy + .02, hz - .556); door.rotation.y = Math.PI; door.raycast = () => {}; group.add(door);
+      { // letrero con el nombre sobre la puerta
+        const c = document.createElement('canvas'); c.width = 128; c.height = 48; const g = c.getContext('2d');
+        g.fillStyle = '#f3e3c3'; g.fillRect(0, 0, 128, 48); g.strokeStyle = '#6b4220'; g.lineWidth = 4; g.strokeRect(3, 3, 122, 42);
+        g.fillStyle = '#6b2a1a'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '900 30px Georgia, serif'; g.fillText('FIEL', 64, 26);
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+        const pl = new THREE.Mesh(new THREE.PlaneGeometry(.34, .13), new THREE.MeshStandardMaterial({ map: t, roughness: .8 }));
+        pl.position.set(hx, hy + .9, hz - .56); pl.rotation.y = Math.PI; pl.raycast = () => {}; group.add(pl);
+      }
+      solid(hx - .55, hx + .55, hz - .6, hz + .6, hy + 1.2);
+      // plato de acero con agua junto a la casita
+      const steelM = mat(0xc4cad0, { metalness: .85, roughness: .25 });
+      const bwl = new THREE.Mesh(new THREE.CylinderGeometry(.17, .13, .07, 18, 1, true), steelM); bwl.position.set(hx + .78, hy + .035, hz - .7); group.add(bwl);
+      const bwW = new THREE.Mesh(new THREE.CircleGeometry(.155, 18), new THREE.MeshStandardMaterial({ color: 0x6aa7c0, roughness: .05, metalness: .1 }));
+      bwW.rotation.x = -Math.PI / 2; bwW.position.set(hx + .78, hy + .055, hz - .7); bwW.raycast = () => {}; group.add(bwW);
+      // el perro, echado como esfinge delante de la puerta (frente local +x, girado para mirar hacia la calle)
+      const coatM = mat(0xc8924a, { roughness: .9 }), lightM = mat(0xeed7ad, { roughness: .9 }), darkN = mat(0x1a1410, { roughness: .4 });
+      const dog = new THREE.Group(); dog.position.set(hx - .05, hy, hz - 1.15); dog.rotation.y = Math.PI / 2 + .25; group.add(dog);
+      const torso = new THREE.Group(); dog.add(torso);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10), coatM); body.scale.set(1.65, .72, .82); body.position.set(-.06, .15, 0); torso.add(body);
+      const chest = new THREE.Mesh(new THREE.SphereGeometry(.14, 12, 9), lightM); chest.scale.set(.9, 1.1, .95); chest.position.set(.2, .2, 0); torso.add(chest);
+      for (const s of [-1, 1]) { const hip = new THREE.Mesh(new THREE.SphereGeometry(.11, 10, 8), coatM); hip.scale.set(1.3, .8, .7); hip.position.set(-.24, .1, s * .12); dog.add(hip); } // ancas
+      for (const s of [-1, 1]) {                                                                   // patas delanteras estiradas
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(.04, .045, .3, 8), coatM); leg.rotation.z = Math.PI / 2; leg.position.set(.36, .045, s * .075); dog.add(leg);
+        const paw = new THREE.Mesh(new THREE.SphereGeometry(.05, 8, 6), lightM); paw.scale.set(1.3, .65, 1); paw.position.set(.52, .035, s * .075); dog.add(paw);
+      }
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(.09, .016, 6, 16), mat(0xc0282a, { roughness: .5 })); collar.position.set(.3, .3, 0); collar.rotation.y = Math.PI / 2; collar.rotation.x = .5; dog.add(collar);
+      const tag = new THREE.Mesh(new THREE.CylinderGeometry(.022, .022, .006, 10), mat(0xe0b230, { metalness: .8, roughness: .3 })); tag.rotation.z = Math.PI / 2; tag.position.set(.37, .22, 0); dog.add(tag);
+      const head = new THREE.Group(); head.position.set(.34, .38, 0); dog.add(head);
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(.1, 12, 9), coatM); skull.scale.set(1.05, .95, .9); head.add(skull);
+      const snout = new THREE.Mesh(new THREE.SphereGeometry(.055, 10, 7), lightM); snout.scale.set(1.5, .8, .9); snout.position.set(.1, -.03, 0); head.add(snout);
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(.02, 8, 6), darkN); nose.position.set(.18, -.015, 0); head.add(nose);
+      for (const s of [-1, 1]) { const eye = new THREE.Mesh(new THREE.SphereGeometry(.014, 8, 6), darkN); eye.position.set(.075, .03, s * .048); head.add(eye); }
+      const ears = [];
+      for (const s of [-1, 1]) {                                                                   // orejas caídas
+        const piv = new THREE.Group(); piv.position.set(-.01, .06, s * .075); head.add(piv);
+        const ear = new THREE.Mesh(new THREE.BoxGeometry(.06, .12, .02), mat(0xa8763a, { roughness: .9 })); ear.position.y = -.05; ear.rotation.x = s * .25; piv.add(ear); ears.push([piv, s]);
+      }
+      const tongue = new THREE.Mesh(new THREE.BoxGeometry(.05, .012, .035), mat(0xe0707a, { roughness: .5 })); tongue.position.set(.13, -.075, 0); head.add(tongue);
+      const tail = new THREE.Group(); tail.position.set(-.38, .12, 0); dog.add(tail);
+      const tailM = new THREE.Mesh(new THREE.CylinderGeometry(.018, .032, .26, 7), coatM); tailM.rotation.z = Math.PI / 2 + .35; tailM.position.set(-.12, -.04, 0); tail.add(tailM);
+      dog.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; o.raycast = () => {}; } });
+      houseUpd.push(t => {
+        const pant = Math.sin(t * 9) * .5 + .5;                                                    // jadeo rápido con la lengua afuera
+        torso.scale.set(1, 1 + pant * .035, 1 + pant * .02); tongue.position.y = -.075 - pant * .012;
+        tail.rotation.y = Math.sin(t * 7.5) * .55;                                                 // mueve la cola contento
+        const c = t % 9, look = c < 2.2 ? Math.sin(c / 2.2 * Math.PI) * .6 : c > 5 && c < 6.8 ? -Math.sin((c - 5) / 1.8 * Math.PI) * .5 : 0;
+        head.rotation.y = look; head.rotation.z = Math.sin(t * .8) * .05;                          // mira a un lado y al otro
+        const e = t % 6.5; for (const [piv, s] of ears) piv.rotation.x = s * (e > 4 && e < 4.25 ? Math.sin((e - 4) * 40) * .25 : 0); // sacudida de orejas
+      });
+      solid(hx - .45, hx + .45, hz - 1.75, hz - .6, hy + .45);
+    }
     { // dos mariposas que revolotean alrededor de los arbustos de los maceteros de la entrada, batiendo las alas
       const wingG = new THREE.CircleGeometry(.055, 10); wingG.translate(.05, 0, 0);
       for (const [px, col, ph] of [[cx - 1.6, 0xf2a33a, 0], [cx + 1.55, 0xf4f1e6, 2.1]]) {
