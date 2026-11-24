@@ -80,8 +80,14 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     addBox(px - 1.8, px - 1, pz - 1, pz - .2, 1.8); addBox(px + 1.1, px + 1.9, pz - .8, pz, 1.8);
     const ovejas = [];
     for (let k = 0; k < 4; k++) { const sh = makeAnimal('oveja'); const sx3 = px - 6 + k * 3.5, sz3 = pz + 6 + (k % 2) * 2; sh.position.set(sx3, 0, sz3); sh.rotation.y = k; P.add(sh); addBox(sx3 - .6, sx3 + .6, sz3 - .6, sz3 + .6, 1); ovejas.push({ o: sh, r0: k, per: 8 + k * 2.1, ph: k * 2.9 }); }
+    // corderito junto a su madre que de vez en cuando da un saltito juguetón: «los collados como corderitos» (Salmo 114:4)
+    const lamb = makeAnimal('oveja'); lamb.scale.setScalar(.55); const lx0 = px - .8, lz0 = pz + 8.7; lamb.position.set(lx0, 0, lz0); lamb.rotation.y = 2.4; P.add(lamb);
+    addBox(lx0 - .35, lx0 + .35, lz0 - .35, lz0 + .35, .6);
     // las ovejas de los pastores no están quietas: de vez en cuando giran despacio en su sitio dando pasitos, como cuando pastan (Lucas 2:8)
     out.live.push({ kind: 'fn', update: t => {
+      { const c = t % 3.7, hop = c < .9 ? Math.sin(c / .9 * Math.PI * 2) : 0, up = Math.max(0, hop);
+        lamb.position.y = up * .22; lamb.rotation.x = c < .9 ? -hop * .12 : 0; lamb.rotation.y = 2.4 + Math.sin(t * .23) * .5;
+        const legs = lamb.userData.legs; if (legs) legs.forEach((l, j) => { l.rotation.x = up * (j < 2 ? -.5 : .5); }); }
       for (const m of ovejas) {
         const c = (t + m.ph) % m.per, k = THREE.MathUtils.smoothstep(c, 0, 1.6), n = Math.floor((t + m.ph) / m.per), ang = q => m.r0 + (q % 2 ? .6 : 0);
         m.o.rotation.y = ang(n - 1) + (ang(n) - ang(n - 1)) * k;
