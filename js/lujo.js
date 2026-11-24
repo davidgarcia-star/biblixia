@@ -35,6 +35,32 @@ const common = () => ({
   seat: std(0xc89a6a, { roughness: .7 }),
 });
 
+// Placas (matrículas) delantera y trasera: blancas con borde azul, «BIBLIXIA» arriba y «JUAN 3:16» grande.
+// Una sola textura y un solo material para todas (no suma llamadas de dibujo después de hornear el auto).
+let _plateMat = null;
+function plateMat() {
+  if (_plateMat) return _plateMat;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 120; const x = c.getContext('2d');
+  x.fillStyle = '#f4f6f8'; x.fillRect(0, 0, 256, 120);
+  x.fillStyle = '#1f4e9c'; x.fillRect(0, 0, 256, 30);
+  x.strokeStyle = '#1f4e9c'; x.lineWidth = 8; x.strokeRect(4, 4, 248, 112);
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = '#ffffff'; x.font = '800 20px system-ui, sans-serif'; x.fillText('BIBLIXIA', 128, 16);
+  x.fillStyle = '#16181c'; x.font = '900 52px system-ui, sans-serif'; x.fillText('JUAN 3:16', 128, 76, 232);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  _plateMat = new THREE.MeshStandardMaterial({ map: t, roughness: .45, metalness: .1 });
+  return _plateMat;
+}
+function plates(g, front, rear) {
+  // [y, z] de cada placa; la delantera mira hacia +z y la trasera hacia -z (con su marquito negro detrás)
+  for (const [[y, z], back] of [[front, false], [rear, true]]) {
+    const fr = new THREE.Mesh(new THREE.BoxGeometry(.37, .19, .015), std(0x0c0c0e, { roughness: .4 }));
+    fr.position.set(0, y, z + (back ? .009 : -.009)); g.add(fr);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(.34, .16), plateMat());
+    p.position.set(0, y, z + (back ? -.003 : .003)); if (back) p.rotation.y = Math.PI; g.add(p);
+  }
+}
+
 // Deportivo bajo de dos puertas
 export function makeSportsCar(color = 0xf4f5f7) {
   const g = new THREE.Group(), C = common();
@@ -58,6 +84,7 @@ export function makeSportsCar(color = 0xf4f5f7) {
   const grille = new THREE.Mesh(new THREE.BoxGeometry(1.2, .14, .05), C.black); grille.position.set(0, .42, 2.33); g.add(grille);
   for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.18, .08, .1), paint); m.position.set(s * 1.02, 1.0, .35); g.add(m); }
   for (const s of [-1, 1]) { const st = new THREE.Mesh(new THREE.BoxGeometry(.45, .45, .45), C.seat); st.position.set(s * .36, .78, -.25); g.add(st); }
+  plates(g, [.35, 2.47], [.53, -2.43]);
   const wheels = [[-.92, 1.38], [.92, 1.38], [-.94, -1.35], [.94, -1.35]].map(([x, z]) => wheel(g, x, z, .36, .3, C.rim, C.tire, C.disc));
   bakeInPlace(g, wheels.map(w => w.userData.steer));
   g.userData = { kind: 'deportivo', wheels, len: 4.7, wid: 2.0, seatY: .5, top: 36 };
@@ -134,6 +161,7 @@ export function makePickup(color = 0xf4f5f7) {
   // salpicaderas negras y espejos
   for (const [z] of [[1.75], [-1.55]]) for (const s of [-1, 1]) { const fl = new THREE.Mesh(new THREE.TorusGeometry(.5, .07, 6, 16, Math.PI), trim); fl.position.set(s * 1.0, .45, z); fl.rotation.y = Math.PI / 2; g.add(fl); }
   for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.22, .15, .12), C.black); m.position.set(s * 1.1, 1.55, 1.15); g.add(m); }
+  plates(g, [.62, 2.96], [.95, -2.76]);
   const wheels = [[-.95, 1.75], [.95, 1.75], [-.95, -1.55], [.95, -1.55]].map(([x, z]) => wheel(g, x, z, .45, .34, C.rim, C.tire, C.disc));
   bakeInPlace(g, wheels.map(w => w.userData.steer));
   g.userData = { kind: 'pickup', wheels, len: 5.6, wid: 2.15, seatY: 1.0, top: 27 };
