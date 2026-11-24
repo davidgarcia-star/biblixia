@@ -297,8 +297,8 @@ const TIMES = {
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
 const moonDir = new THREE.Vector3().setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 42), THREE.MathUtils.degToRad(130));
-// de noche se enciende la lucecita de aceite dentro de las tiendas del campamento
-function campGlow() { try { if (world && world.camp && world.camp.doorM) world.camp.doorM.emissiveIntensity = save.time === 'noche' ? .6 : 0; } catch (e) {} }
+// de noche se enciende la lucecita de aceite dentro de las tiendas del campamento; el maná del suelo solo se ve de día
+function campGlow() { try { if (world && world.camp && world.camp.doorM) world.camp.doorM.emissiveIntensity = save.time === 'noche' ? .6 : 0; if (world && world.camp && world.camp.manna) world.camp.manna.visible = (save.time || 'dia') === 'dia'; } catch (e) {} }
 function applyTime(mode) {
   const T2 = TIMES[mode] || TIMES.atardecer; save.time = mode;
   skyDir.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - T2.elev), THREE.MathUtils.degToRad(T2.az));

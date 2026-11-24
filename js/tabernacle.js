@@ -548,6 +548,7 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
   const ropeG = new THREE.CylinderGeometry(.012, .012, 1, 4), ropeM = new THREE.MeshStandardMaterial({ color: 0xb59a6a, roughness: 1 });
   const stakeG = new THREE.CylinderGeometry(.025, .015, .28, 5), stakeM = new THREE.MeshStandardMaterial({ color: 0x6a4a2a, roughness: 1 }), UPV = new THREE.Vector3(0, 1, 0);
   let nTent = 0;
+  const mannaPts = [], tentsAt = [], hsh = n => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
   const pts = [];
   for (let i = 0; i < 36; i++) {
     const a = i / 36 * Math.PI * 2;
@@ -570,6 +571,12 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
       const wx = x + Math.cos(ry) * sx * 3.2 + Math.sin(ry) * lz, wz = z - Math.sin(ry) * sx * 3.2 + Math.cos(ry) * lz; addBox(wx - .2, wx + .2, wz - .2, wz + .2, .35);
     }
     const r2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.2), rug); r2.rotation.x = -Math.PI / 2; r2.position.set(0, .1, 2.6); t.add(r2);
+    tentsAt.push([x, z, ry]);
+    // maná de la mañana esparcido en el suelo frente a la tienda (se reparte con su propio hash para no cambiar el resto del mundo)
+    for (let k = 0; k < (lite ? 32 : 64); k++) {
+      const h1 = hsh(nTent * 31 + k), h2 = hsh(nTent * 57 + k * 3 + 7), lx = (h1 - .5) * 6.4, lz = 3.3 + h2 * 4.2;
+      mannaPts.push([x + Math.cos(ry) * lx + Math.sin(ry) * lz, z - Math.sin(ry) * lx + Math.cos(ry) * lz, hsh(k * 13 + nTent)]);
+    }
     if (nTent % 3 === 1) for (const [jx, jz, js] of [[1.55, 2.75, 1], [1.95, 3.05, .8]]) { const j = new THREE.Mesh(jarG, jarM); j.position.set(jx, 0, jz); j.scale.setScalar(js); j.castShadow = true; t.add(j); }
     if (nTent++ % 3 === 0) {
       const f = new THREE.Group(); f.position.set(0, 0, 4.6); t.add(f);
@@ -617,6 +624,21 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
   }
   S.updateMatrixWorld(true);
   group.add(bakeStatic(S));
+  // El maná de cada mañana alrededor del campamento: «una cosa delgada, como copos, menuda, como la escarcha sobre la tierra»
+  // (Éxodo 16:14). Copitos blancos sobre la arena (que está a 6 cm), en una sola malla instanciada (una sola llamada de dibujo); solo se ve de día,
+  // porque «cuando el sol calentaba, se derretía» (Éxodo 16:21): applyTime lo esconde al atardecer y de noche.
+  // se quitan los copitos que caerían debajo de una tienda, su alfombra, sus estacas o su fogata (también de las tiendas vecinas)
+  for (let i = mannaPts.length - 1; i >= 0; i--) {
+    const [mx, mz] = mannaPts[i];
+    for (const [tx, tz, ry] of tentsAt) {
+      const dx = mx - tx, dz = mz - tz, lx = Math.cos(ry) * dx - Math.sin(ry) * dz, lz = Math.sin(ry) * dx + Math.cos(ry) * dz;
+      if ((Math.abs(lx) < 3.5 && lz > -2.1 && lz < 3.3) || (Math.abs(lx) < 1 && Math.abs(lz - 4.6) < 1)) { mannaPts.splice(i, 1); break; }
+    }
+  }
+  const mannaG = new THREE.CircleGeometry(.07, 6).rotateX(-Math.PI / 2);
+  const manna = new THREE.InstancedMesh(mannaG, new THREE.MeshStandardMaterial({ color: 0xf4f0e2, roughness: .55, emissive: 0x2a2822 }), mannaPts.length);
+  { const o = new THREE.Object3D(); mannaPts.forEach(([mx, mz, r], i) => { o.position.set(mx, .08, mz); o.rotation.set(0, r * 6.3, 0); o.scale.set(.7 + r * .9, 1, .6 + (1 - r) * .8); o.updateMatrix(); manna.setMatrixAt(i, o.matrix); }); }
+  manna.castShadow = false; manna.receiveShadow = true; manna.name = 'mana'; FL.add(manna);
   // Humo tenue que sube de las fogatas y se deshace en el aire (Éxodo 16:23)
   const smokeM = new THREE.MeshLambertMaterial({ color: 0x9a948c, transparent: true, opacity: .24, depthWrite: false }), smokeG = new THREE.IcosahedronGeometry(.2, 1), puffs = [];
   for (const f of fires) if (f.userData.b === 1) for (let k = 0; k < 4; k++) {
@@ -625,6 +647,7 @@ export async function buildCamp({ group, addBox, addObb, cx, cz, rnd, radiusX, r
   group.add(FL);
   return {
     doorM: dark, // entrada de las tiendas: applyTime la enciende de noche
+    manna, // maná en el suelo: applyTime lo muestra solo de día (Éxodo 16:21)
     firePts, // dónde están las fogatas (para sentir el calor y oír el fuego)
     // las llamas de las fogatas parpadean y se mecen como fuego de verdad
     update(t) {
