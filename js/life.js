@@ -1115,6 +1115,22 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const aguja = box(.003, .028, .002, mat(0xc0283a), ex + .006, top + .435, fz + .012, { cast: false }); aguja.rotation.z = -.6;
       const wand = cyl(.007, .007, .2, chrM, ex + .21, top + .2, fz + .05, 8); wand.rotation.x = .25; wand.castShadow = false;   // lanceta de vapor
       for (let k = 0; k < 4; k++) cyl(.03, .024, .05, cupM, ex - .15 + k * .1, top + .525, Z1 - 2.1, 12).castShadow = false;       // tazas sobre la máquina
+      // la máquina prepara un espresso de vez en cuando: un chorrito fino de café cae del portafiltro y la tacita se va llenando
+      {
+        const sx = ex - .12, sz = fz + .047, sTop = top + .25, sBot = top + .074;
+        const chorro = cyl(.0035, .0045, 1, mat(0x4a2612, { roughness: .25 }), sx, (sTop + sBot) / 2, sz, 8);
+        chorro.name = 'chorro-espresso'; chorro.castShadow = false; chorro.raycast = () => {}; chorro.visible = false; chorro.userData.live = true;
+        const cafe = cyl(.0205, .0205, .003, mat(0x6b3a1c, { roughness: .3 }), sx, top + .04, sz, 14);   // café con crema dentro de la tacita
+        cafe.castShadow = false; cafe.raycast = () => {}; cafe.visible = false; cafe.userData.live = true;
+        const P = 9, D = 3.2;  // cada 9 s, durante 3,2 s cae el café
+        officeUpd.push(t => {
+          const u = t % P, pour = u < D, lleno = Math.min(1, u / D);
+          chorro.visible = pour;
+          if (pour) { const L = (sTop - sBot) * Math.min(1, u * 4); chorro.scale.set(1, L, 1); chorro.position.y = sTop - L / 2; }
+          cafe.visible = u > .25 && u < P - .6;
+          cafe.position.y = top + .042 + lleno * .03;
+        });
+      }
     }
     {
       // caja registradora sobre el mostrador (pantallita verde hacia el cliente) y frasco de propinas de vidrio con monedas
