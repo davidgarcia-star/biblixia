@@ -276,6 +276,37 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       });
       solid(kx - .3, kx + .3, kz - .3, kz + .3, ky + .2);
     }
+    { // aspersor de impacto en la grama delantera: de día va regando en abanico, girando de un lado a otro con chorritos que caen en arco
+      // «Él riega los montes desde sus aposentos; del fruto de sus obras se sacia la tierra» (Salmo 104:13). De tarde y de noche se apaga.
+      const sx = cx - 4.5, sz = z0 + 9.2, sy = fy + .04;
+      const blackM = mat(0x1d1f22, { roughness: .6 }), brassM = mat(0xc9a24a, { metalness: .8, roughness: .3 });
+      box(.16, .05, .16, blackM, sx, sy + .025, sz, { cast: false });                              // base enterrada en la grama
+      box(.035, .16, .035, blackM, sx, sy + .13, sz, { cast: false });                             // tubo
+      const head = new THREE.Group(); head.position.set(sx, sy + .22, sz); group.add(head);
+      const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(.014, .02, .14, 8), brassM); nozzle.rotation.z = Math.PI / 2 - .7; nozzle.position.x = .05; head.add(nozzle); // boquilla inclinada
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(.12, .015, .02), brassM); arm.position.set(.02, .05, 0); head.add(arm); // brazo del martillito
+      head.traverse(o => { if (o.isMesh) { o.raycast = () => {}; } });
+      const N = 150, pos = new Float32Array(N * 3), seed = [];
+      for (let k = 0; k < N; k++) { seed.push([Math.random(), .85 + Math.random() * .3, (Math.random() - .5) * .14]); pos[k * 3] = sx; pos[k * 3 + 1] = sy + .26; pos[k * 3 + 2] = sz; } // arrancan en la boquilla (así el ocultado por distancia las ubica bien)
+      const dropG = new THREE.BufferGeometry(); dropG.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const dc = document.createElement('canvas'); dc.width = dc.height = 32; const dg = dc.getContext('2d'), gr = dg.createRadialGradient(16, 16, 2, 16, 16, 15);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.55, 'rgba(225,244,255,.8)'); gr.addColorStop(1, 'rgba(225,244,255,0)'); dg.fillStyle = gr; dg.fillRect(0, 0, 32, 32); // gotita redonda
+      const drops = new THREE.Points(dropG, new THREE.PointsMaterial({ map: new THREE.CanvasTexture(dc), color: 0xeaf7ff, size: .08, transparent: true, opacity: .85, depthWrite: false }));
+      drops.frustumCulled = false; drops.raycast = () => {}; group.add(drops);
+      const VH = 3, VY = 2.6, G = 9.8, LIFE = 2 * VY / G;
+      const ang = tt => -Math.PI / 2 + Math.sin(tt * .45) * 1.1;                                  // barre un abanico mirando hacia la calle
+      houseUpd.push(t => {
+        const on = (M.timeMode || 'dia') === 'dia';
+        drops.visible = on; if (!on) return;
+        const a = ang(t); head.rotation.y = -a; arm.rotation.y = Math.sin(t * 14) * .35;          // el martillito golpea y la cabeza avanza
+        for (let k = 0; k < N; k++) {
+          const [ph, sp, jit] = seed[k], p = (t / LIFE + ph) % 1, tau = p * LIFE, a0 = ang(t - tau) + jit; // cada gota sale en la dirección que tenía la boquilla
+          const d = VH * sp * tau;
+          pos[k * 3] = sx + Math.cos(a0) * d; pos[k * 3 + 1] = Math.max(sy + .05, sy + .26 + VY * sp * tau - .5 * G * tau * tau); pos[k * 3 + 2] = sz + Math.sin(a0) * d;
+        }
+        dropG.attributes.position.needsUpdate = true;
+      });
+    }
     { // casita de madera del perro «FIEL» en el jardín delantero, con su perro echado delante: jadea, mueve la cola y mira a los lados
       // «El justo se preocupa de la vida de su ganado» (Proverbios 12:10)
       const hx = cx + 10.5, hz = z0 + 10, hy = fy + .04;
