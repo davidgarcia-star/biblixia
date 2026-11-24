@@ -43,6 +43,46 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
   const box = (w, h, d, m, x, y, z, { cast = true, recv = true, parent = group } = {}) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = cast; b.receiveShadow = recv; parent.add(b); return b; };
   const cyl = (rt, rb, h, m, x, y, z, seg = 16) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), m); c.position.set(x, y, z); c.castShadow = true; c.receiveShadow = true; group.add(c); return c; };
   const solid = (minX, maxX, minZ, maxZ, top, bottom = 0) => addBox(minX, maxX, minZ, maxZ, top, bottom);
+  // arbolito de Navidad (solo en temporada): pino de tres pisos en maceta roja, bolitas de colores, estrella dorada,
+  // lucecitas que titilan por turnos y regalitos debajo; se usa en la sala de la casa y en la cafetería de las oficinas
+  const xmasTree = (tx, tz, base, upd) => {
+    cyl(.24, .19, .34, mat(0xa3161f, { roughness: .45 }), tx, base + .17, tz, 18);
+    cyl(.05, .06, .3, mat(0x5a3d26, { roughness: .9 }), tx, base + .45, tz, 8);
+    const pineM = mat(0x1f5a32, { roughness: .85 }), pineM2 = mat(0x2a6e3e, { roughness: .85 });
+    const tiers = [[.62, .78, .92], [.48, .66, 1.36], [.32, .56, 1.76]];   // radio, alto, altura del centro
+    for (let k = 0; k < tiers.length; k++) { const [rr, hh, yy] = tiers[k]; const c = new THREE.Mesh(new THREE.ConeGeometry(rr, hh, 14), k % 2 ? pineM2 : pineM); c.position.set(tx, base + yy, tz); c.rotation.y = k * .4; c.castShadow = true; c.receiveShadow = true; group.add(c); }
+    const ballG = new THREE.SphereGeometry(.045, 10, 8), ballMs = [0xc0182a, 0xe0b230, 0x2f62c8, 0xd9dde2].map(c => mat(c, { roughness: .2, metalness: .5 }));
+    const lightG = new THREE.SphereGeometry(.022, 6, 5), lightMs = [0xffd36b, 0xff5a5a, 0x7fd0ff].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2 }));
+    let n = 0;
+    for (const [rr, hh, yy] of tiers) {
+      for (let k = 0; k < 9; k++, n++) {
+        const a = k / 9 * Math.PI * 2 + n * .37, low = k % 2 === 0, f = low ? .82 : .45; // bolitas abajo del piso, luces más arriba
+        const y = base + yy - hh / 2 + (1 - f) * hh + .02, rad = rr * f + .02;
+        const o = new THREE.Mesh(low ? ballG : lightG, low ? ballMs[n % 4] : lightMs[n % 3]);
+        o.position.set(tx + Math.cos(a) * rad, y, tz + Math.sin(a) * rad); o.raycast = () => {}; group.add(o);
+      }
+    }
+    // estrella dorada de cinco puntas que brilla en la punta del árbol
+    const sh = new THREE.Shape();
+    for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? .05 : .12; k ? sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+    const starM = new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffb000, emissiveIntensity: .9, metalness: .6, roughness: .3 });
+    const star = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .03, bevelEnabled: false }), starM);
+    star.position.set(tx, base + 2.12, tz - .015); star.rotation.y = .6; group.add(star);
+    // regalitos envueltos debajo del árbol (del lado de la sala), con cinta en cruz y lazo encima
+    for (const [a, w, h, d, pc, rc] of [[.05, .26, .2, .22, 0x2f62c8, 0xe0b230], [.8, .2, .16, .2, 0xc0182a, 0xf2f2f0], [1.5, .24, .24, .18, 0x2a8a4a, 0xc0182a]]) {
+      const gx = tx + Math.cos(a) * .44, gz = tz + Math.sin(a) * .44, gy = base + h / 2 + .002;
+      const gift = box(w, h, d, mat(pc, { roughness: .5 }), gx, gy, gz); gift.rotation.y = a;
+      const ribM = mat(rc, { roughness: .35, metalness: .2 });
+      const r1 = box(w + .006, h + .006, .03, ribM, gx, gy, gz, { cast: false }); r1.rotation.y = a;
+      const r2 = box(.03, h + .006, d + .006, ribM, gx, gy, gz, { cast: false }); r2.rotation.y = a;
+      for (const s of [-1, 1]) { const lo = box(.07, .035, .025, ribM, gx, gy + h / 2 + .02, gz, { cast: false }); lo.rotation.set(0, a, s * .5); lo.position.x += Math.cos(a) * s * .03; lo.position.z -= Math.sin(a) * s * .03; }
+    }
+    upd.push(t => {
+      for (let k = 0; k < 3; k++) lightMs[k].emissiveIntensity = .35 + (Math.sin(t * 2.2 + k * 2.1) * .5 + .5) * 1.5;
+      starM.emissiveIntensity = .7 + Math.sin(t * 1.3) * .3;
+    });
+    solid(tx - .6, tx + .6, tz - .6, tz + .6, base + 2.2);
+  };
   const act = (x, z, y, label, fn, rad = 1.6) => acts.push({ x, z, y, label, fn, r: rad });
   // vapor suave que sube de las cafeteras (se anima solo cuando el jugador está cerca)
   const steams = []; let steamTex = null;
@@ -604,43 +644,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     if (window.Navidad && window.Navidad.activo) {
       // arbolito de Navidad en la esquina de la sala junto al ventanal (solo en temporada, igual que la corona):
       // pino de tres pisos en maceta roja, bolitas de colores, estrella dorada y lucecitas que titilan por turnos
-      const tx = X0 + .8, tz = Z0 + .85, base = fy + .14;
-      cyl(.24, .19, .34, mat(0xa3161f, { roughness: .45 }), tx, base + .17, tz, 18);
-      cyl(.05, .06, .3, mat(0x5a3d26, { roughness: .9 }), tx, base + .45, tz, 8);
-      const pineM = mat(0x1f5a32, { roughness: .85 }), pineM2 = mat(0x2a6e3e, { roughness: .85 });
-      const tiers = [[.62, .78, .92], [.48, .66, 1.36], [.32, .56, 1.76]];   // radio, alto, altura del centro
-      for (let k = 0; k < tiers.length; k++) { const [rr, hh, yy] = tiers[k]; const c = new THREE.Mesh(new THREE.ConeGeometry(rr, hh, 14), k % 2 ? pineM2 : pineM); c.position.set(tx, base + yy, tz); c.rotation.y = k * .4; c.castShadow = true; c.receiveShadow = true; group.add(c); }
-      const ballG = new THREE.SphereGeometry(.045, 10, 8), ballMs = [0xc0182a, 0xe0b230, 0x2f62c8, 0xd9dde2].map(c => mat(c, { roughness: .2, metalness: .5 }));
-      const lightG = new THREE.SphereGeometry(.022, 6, 5), lightMs = [0xffd36b, 0xff5a5a, 0x7fd0ff].map(c => new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2 }));
-      let n = 0;
-      for (const [rr, hh, yy] of tiers) {
-        for (let k = 0; k < 9; k++, n++) {
-          const a = k / 9 * Math.PI * 2 + n * .37, low = k % 2 === 0, f = low ? .82 : .45; // bolitas abajo del piso, luces más arriba
-          const y = base + yy - hh / 2 + (1 - f) * hh + .02, rad = rr * f + .02;
-          const o = new THREE.Mesh(low ? ballG : lightG, low ? ballMs[n % 4] : lightMs[n % 3]);
-          o.position.set(tx + Math.cos(a) * rad, y, tz + Math.sin(a) * rad); o.raycast = () => {}; group.add(o);
-        }
-      }
-      // estrella dorada de cinco puntas que brilla en la punta del árbol
-      const sh = new THREE.Shape();
-      for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? .05 : .12; k ? sh.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : sh.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); }
-      const starM = new THREE.MeshStandardMaterial({ color: 0xffd34d, emissive: 0xffb000, emissiveIntensity: .9, metalness: .6, roughness: .3 });
-      const star = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: .03, bevelEnabled: false }), starM);
-      star.position.set(tx, base + 2.12, tz - .015); star.rotation.y = .6; group.add(star);
-      // regalitos envueltos debajo del árbol (del lado de la sala), con cinta en cruz y lazo encima
-      for (const [a, w, h, d, pc, rc] of [[.05, .26, .2, .22, 0x2f62c8, 0xe0b230], [.8, .2, .16, .2, 0xc0182a, 0xf2f2f0], [1.5, .24, .24, .18, 0x2a8a4a, 0xc0182a]]) {
-        const gx = tx + Math.cos(a) * .44, gz = tz + Math.sin(a) * .44, gy = base + h / 2 + .002;
-        const gift = box(w, h, d, mat(pc, { roughness: .5 }), gx, gy, gz); gift.rotation.y = a;
-        const ribM = mat(rc, { roughness: .35, metalness: .2 });
-        const r1 = box(w + .006, h + .006, .03, ribM, gx, gy, gz, { cast: false }); r1.rotation.y = a;
-        const r2 = box(.03, h + .006, d + .006, ribM, gx, gy, gz, { cast: false }); r2.rotation.y = a;
-        for (const s of [-1, 1]) { const lo = box(.07, .035, .025, ribM, gx, gy + h / 2 + .02, gz, { cast: false }); lo.rotation.set(0, a, s * .5); lo.position.x += Math.cos(a) * s * .03; lo.position.z -= Math.sin(a) * s * .03; }
-      }
-      houseUpd.push(t => {
-        for (let k = 0; k < 3; k++) lightMs[k].emissiveIntensity = .35 + (Math.sin(t * 2.2 + k * 2.1) * .5 + .5) * 1.5;
-        starM.emissiveIntensity = .7 + Math.sin(t * 1.3) * .3;
-      });
-      solid(tx - .6, tx + .6, tz - .6, tz + .6, base + 2.2);
+      xmasTree(X0 + .8, Z0 + .85, fy + .14, houseUpd);
     }
     // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
@@ -1097,6 +1101,8 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     }
     // planta baja: cafetería con barista
     const y0 = fy(0);
+    // arbolito de Navidad en la esquina delantera izquierda de la cafetería, junto al vidrio: se ve desde la calle (solo en temporada)
+    if (window.Navidad && window.Navidad.activo) xmasTree(X0 + 1, Z0 + 1, y0 + .1, officeUpd);
     box(4, 1.05, .8, mat(0x6a4a2a), cx - 4, y0 + .52, Z1 - 2); box(4.1, .06, .9, mat(0x2a2420, { roughness: .3 }), cx - 4, y0 + 1.07, Z1 - 2); solid(cx - 6, cx - 2, Z1 - 2.45, Z1 - 1.55, y0 + 1.1, y0);
     box(.5, .5, .4, mat(0xa8b0b8, { metalness: .9, roughness: .25 }), cx - 5, y0 + 1.35, Z1 - 2); steam(cx - 5, y0 + 1.65, Z1 - 2);
     staticHuman({ gender: 'f', skin: SKINS[3], top: 0x2e7d4f, topStyle: 'camiseta', pants: 0x1a1a1e, legwear: 'pantalon', hair: 'long' }, cx - 4, y0, Z1 - 1.2, Math.PI, 'work');
