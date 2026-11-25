@@ -292,7 +292,7 @@ const birds = (() => {
   };
 })();
 const TIMES = {
-  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.5, hemiI: .3, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc6cdd1, fogN: 130, fogF: 900, env: .55, win: .04, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
+  dia: { name: '☀️ Día', elev: 24, az: 215, turb: 2.5, ray: 1, mie: .004, sunC: 0xfff1dc, sunI: 3.5, hemiI: .3, hemiS: 0xd0e4ff, hemiG: 0x5a4a3a, exp: .5, fog: 0xc4d6ea, fogN: 160, fogF: 950, env: .55, win: .04, cloudC: 0xffffff, cloudO: .95, stars: false, bloom: .22, clouds: 90 },
   atardecer: { name: '🌅 Atardecer', elev: 3.2, az: 250, turb: 9, ray: 2.6, mie: .008, sunC: 0xff8a40, sunI: 2.2, hemiI: .42, hemiS: 0xffc8a0, hemiG: 0x3a2a24, exp: .62, fog: 0xd89a70, fogN: 110, fogF: 760, env: .7, win: .9, clouds: 45, cloudC: 0xffb08a, cloudO: .8, stars: false, bloom: .35 },
   noche: { name: '🌙 Noche', elev: -12, az: 200, turb: 1, ray: .4, mie: .002, sunC: 0xa8c4ff, sunI: 1.15, hemiI: .34, hemiS: 0x4a5a9a, hemiG: 0x1a1e28, exp: 1.15, fog: 0x0c1428, fogN: 70, fogF: 520, env: .35, win: 1.8, clouds: 25, cloudC: 0x6a7a9a, cloudO: .35, stars: true, bloom: .6 },
 };
@@ -315,52 +315,43 @@ function applyTime(mode) {
   skyClouds.mats.forEach(m => { m.color.set(T2.cloudC); m.opacity = T2.cloudO; });
   if (typeof facadeMats !== 'undefined') facadeMats.forEach(m => m.emissiveIntensity = T2.win);
   if (typeof M !== 'undefined') { M.timeMode = mode; M.lamp.emissiveIntensity = T2.stars ? 7 : 3; M.led.emissiveIntensity = T2.stars ? 4 : 2.2; if (M.homeLamps) M.homeLamps.forEach(m => m.emissiveIntensity = T2.stars ? (m.userData.night ?? 4.5) : mode === 'atardecer' && m.userData.dusk != null ? m.userData.dusk : (m.userData.day ?? 2)); }
-  if (bloomPass) bloomPass.strength = T2.bloom * .9;
+  if (bloomPass) bloomPass.strength = T2.bloom * .55;
   if (typeof setNightLights === 'function') setNightLights(mode === 'noche');
   campGlow();
   try { persist(); } catch (e) {}
 }
 
-// Efectos modernos: resplandor (bloom) y acabado de cine estilo GTA IV (computadoras y celulares buenos; nunca en modo liviano)
+// Efectos modernos: resplandor (bloom) en computadoras
 let composer = null, bloomPass = null;
-// Acabado «GTA IV»: color algo apagado y cálido (luces ámbar, sombras grisáceas), contraste fuerte,
-// negros de película, nitidez, lente con leve aberración en los bordes, viñeta y grano fino
+// Acabado cinematográfico (computadoras): brillo suave en luces, corrección de color, viñeta y grano fino
 const GradeShader = {
-  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, px: { value: new THREE.Vector2(1 / innerWidth, 1 / innerHeight) }, vig: { value: .42 }, sat: { value: .86 }, contrast: { value: 1.12 }, tint: { value: 1 }, fade: { value: .045 }, sharp: { value: .35 }, ca: { value: .006 } },
+  uniforms: { tDiffuse: { value: null }, time: { value: 0 }, vig: { value: .32 }, sat: { value: 1.1 }, contrast: { value: 1.07 }, warm: { value: .035 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 px; uniform float time, vig, sat, contrast, tint, fade, sharp, ca; varying vec2 vUv;
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float time, vig, sat, contrast, warm; varying vec2 vUv;
     float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main(){
-      vec2 q = vUv - .5; float r2 = dot(q, q);
-      vec2 off = q * ca * r2 * 4.;                                              // lente: aberración leve solo en los bordes
-      vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
-      vec3 b = (texture2D(tDiffuse, vUv + vec2(px.x, 0.)).rgb + texture2D(tDiffuse, vUv - vec2(px.x, 0.)).rgb
-              + texture2D(tDiffuse, vUv + vec2(0., px.y)).rgb + texture2D(tDiffuse, vUv - vec2(0., px.y)).rgb) * .25;
-      c += (c - b) * sharp;                                                     // nitidez (texturas más definidas)
+      vec3 c = texture2D(tDiffuse, vUv).rgb;
       float l = dot(c, vec3(.2126, .7152, .0722));
-      c = mix(vec3(l), c, sat);                                                 // color algo apagado, más real
-      c = (c - .5) * contrast + .5;                                             // contraste de cine
-      vec3 tone = mix(vec3(.95, 1., 1.01), vec3(1.07, 1., .86), smoothstep(.12, .85, l)); // luces ámbar, sombras grisáceas
-      c = mix(c, c * tone, tint);
-      c = mix(vec3(fade, fade * .95, fade * .85), vec3(1.), c);                 // negros de película (no negro puro)
-      c *= 1. - vig * r2 * 1.6;                                                 // viñeta
-      c += (h(vUv * 1000. + time) - .5) * .02;                                  // grano de película
+      c = mix(vec3(l), c, sat);                                   // color más vivo
+      c = (c - .5) * contrast + .5;                               // contraste de cine
+      c += vec3(warm, warm * .4, -warm) * smoothstep(.45, 1., l); // luces cálidas
+      c += vec3(-warm * .2, 0., warm * .25) * (1. - smoothstep(0., .35, l)); // sombras apenas frías (el asfalto se ve gris, no azul)
+      vec2 q = vUv - .5; c *= 1. - vig * dot(q, q) * 1.6;          // viñeta
+      c += (h(vUv * 1000. + time) - .5) * .018;                    // grano de película
       gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
     }`
 };
 let gradePass = null;
-if (!LITE && QL < 2) {
+if (!isTouch && !LITE && QL < 2) {
   try {
-    // en celulares se usa menos suavizado y sin resplandor: el acabado de color sí se ve igual
-    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: isTouch ? 2 : QL ? 2 : 4 });
+    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: QL ? 2 : 4 });
     composer = new EffectComposer(renderer, rt);
     composer.addPass(new RenderPass(scene, camera));
-    bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .2, .55, .86);
-    bloomPass.enabled = !isTouch; composer.addPass(bloomPass); composer.addPass(new OutputPass());
+    bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), .14, .5, .92);
+    bloomPass.enabled = false; composer.addPass(bloomPass); composer.addPass(new OutputPass());
     gradePass = new ShaderPass(GradeShader); composer.addPass(gradePass);
-    if (isTouch) { gradePass.uniforms.sharp.value = .25; gradePass.uniforms.ca.value = 0; }
-    addEventListener('resize', () => { composer.setSize(innerWidth, innerHeight); gradePass.uniforms.px.value.set(1 / innerWidth, 1 / innerHeight); });
-  } catch (e) { composer = null; gradePass = null; }
+    addEventListener('resize', () => { composer.setSize(innerWidth, innerHeight); });
+  } catch (e) { composer = null; }
 }
 
 /* =========================================================
@@ -3098,10 +3089,7 @@ function updateCamera(dt, follow = true) {
   cam.look.lerp(tmpV2.set(head.x, head.y + upLook, head.z), Math.min(1, dt * 14));
   camera.lookAt(cam.look);
   // sensación de velocidad: la cámara se abre un poco al correr
-  const run = THREE.MathUtils.clamp((P.speed - WALK) / (TURBO - WALK), 0, 1);
-  // cámara de mano: al correr se mece un poco, como en GTA (a pie, no manejando)
-  if (run > 0 && !P.driving) { const ph = human.phase; camera.position.y += Math.abs(Math.sin(ph)) * .045 * run; camera.rotateZ(Math.sin(ph) * .006 * run); }
-  const fovT = 58 + run * 9;
+  const fovT = 58 + THREE.MathUtils.clamp((P.speed - WALK) / (TURBO - WALK), 0, 1) * 9;
   if (Math.abs(camera.fov - fovT) > .05) { camera.fov += (fovT - camera.fov) * Math.min(1, dt * 4); camera.updateProjectionMatrix(); }
 }
 
