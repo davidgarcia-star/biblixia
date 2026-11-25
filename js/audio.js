@@ -271,6 +271,19 @@ export class Sound {
       o.connect(trem).connect(g).connect(bus); o.start(t0); o.stop(t0 + .1); am.start(t0); am.stop(t0 + .1);
     }
   }
+  // Búho lejano de noche: «uu… u-uuuu» grave y suave que baja un poquito de tono al final
+  // («soy como el búho de las soledades», Salmo 102:6); solo si el audio ya fue activado por el jugador
+  owl(vol = .5, pan = 0) {
+    const a = this.ctx; if (!a || a.state !== 'running' || !this.sfxOn || vol < .01) return;
+    const bus = this._bus(vol, pan), t = a.currentTime, f = 360 + Math.random() * 60;
+    const lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(bus);   // suena lejano y aterciopelado
+    for (const [dt, d, k] of [[0, .32, 1], [.62, .14, 1.04], [.82, .7, 1.02]]) {
+      const o = a.createOscillator(), g = a.createGain(), t0 = t + dt; o.type = 'sine';
+      o.frequency.setValueAtTime(f * k, t0); o.frequency.linearRampToValueAtTime(f * k * .93, t0 + d);
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.09, t0 + .06); g.gain.setValueAtTime(.09, t0 + d * .6); g.gain.linearRampToValueAtTime(0, t0 + d);
+      o.connect(g).connect(lp); o.start(t0); o.stop(t0 + d + .02);
+    }
+  }
   // Canto de pajaritos de día: unos trinos cortos, agudos y suaves (solo si el audio ya fue activado por el jugador)
   birdsong(vol = .5, pan = 0) {
     const a = this.ctx; if (!a || a.state !== 'running' || !this.sfxOn || vol < .01) return;
