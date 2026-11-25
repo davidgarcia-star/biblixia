@@ -363,6 +363,23 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     box(2.2, 2.6, .2, std({ color: 0x050403 }), px + 8, 1.3, pz + 2.95);
     const st = add(new THREE.CylinderGeometry(1.6, 1.6, .5, 24), rock, px + 11.2, 1.6, pz + 2.6); st.rotation.x = Math.PI / 2; addBox(px + 10, px + 12.4, pz + 2.2, pz + 3, 3);
     const lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xfff3c8 })); lg.scale.set(5, 5, 1); lg.position.set(px + 8, 1.6, pz + 2.7); P.add(lg);
+    { // el ángel vestido de blanco junto al sepulcro vacío señala la entrada: «No está aquí, porque ha resucitado» (Mateo 28:2-6)
+      const ax = px + 9.75, az = pz + 1.55; // entre la entrada y la piedra removida, lejos del tesoro
+      const an = createHuman({ detail: .6, outfit: 'robe', robe: 0xfbfaf4, mantle: 0xf1ead2, sash: 0xe8c860, hairColor: 0xe9cf8c, hair: 'long', skin: 0xd9a77e });
+      an.arms[1].shoulder.rotation.set(-.35, 0, 1.15); an.arms[1].elbow.rotation.x = -.15; // brazo extendido hacia la entrada de la tumba
+      an.arms[0].shoulder.rotation.set(-.5, 0, -.12); an.arms[0].elbow.rotation.x = -1.1;  // la otra mano al pecho
+      const ab = bakeStatic(an.root); ab.position.set(ax, 0, az); ab.rotation.y = Math.PI; S.add(ab); addBox(ax - .35, ax + .35, az - .35, az + .35, 1.8);
+      // alas blancas: dos plumajes planos a la espalda que se mecen despacio (sin sombras, una sola geometría)
+      const wsh = new THREE.Shape(); wsh.moveTo(0, 0); wsh.bezierCurveTo(.35, .55, .95, .85, 1.25, .75); wsh.bezierCurveTo(1.05, .45, .95, .05, .7, -.45);
+      wsh.bezierCurveTo(.5, -.75, .25, -.85, .12, -.7); wsh.lineTo(0, 0);
+      const wG = new THREE.ShapeGeometry(wsh, 12), wM = std({ color: 0xffffff, emissive: 0xfff6dc, emissiveIntensity: .35, roughness: .8, side: THREE.DoubleSide });
+      const wings = new THREE.Group(); wings.position.set(ax, 1.32, az + .12); wings.rotation.y = Math.PI; P.add(wings);
+      const ws = [];
+      for (const sx of [-1, 1]) { const piv = new THREE.Group(); piv.position.x = sx * .06; const w = new THREE.Mesh(wG, wM); w.scale.set(sx * .62, .62, .62); w.castShadow = w.receiveShadow = false; w.raycast = () => {}; piv.add(w); wings.add(piv); ws.push([piv, sx]); }
+      const ag = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xfff1c8, opacity: .55 }));
+      ag.scale.set(3, 3.6, 1); ag.position.set(ax, 1.15, az + .25); ag.raycast = () => {}; P.add(ag);
+      out.live.push({ kind: 'fn', update: t => { const f = Math.sin(t * 1.4) * .12; for (const [piv, sx] of ws) piv.rotation.y = sx * (.55 + f); ag.material.opacity = .45 + Math.sin(t * 1.1) * .1; } });
+    }
     // huerto
     for (let k = 0; k < 6; k++) { const tr = add(new THREE.IcosahedronGeometry(1.4, 1), std({ color: 0x3f6b2a, roughness: .9 }), px + 3 + k * 2.4, 2.6, pz + 12); add(new THREE.CylinderGeometry(.12, .16, 2, 6), wood, px + 3 + k * 2.4, 1, pz + 12); addBox(px + 2.8 + k * 2.4, px + 3.2 + k * 2.4, pz + 11.8, pz + 12.2, 4); }
     // flores silvestres en el huerto junto al sepulcro (Juan 19:41): pocas instancias, un solo dibujado por color
