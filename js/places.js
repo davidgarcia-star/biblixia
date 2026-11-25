@@ -279,6 +279,37 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     const pitch = add(new THREE.CircleGeometry(.34, 14), std({ color: 0x0c0a08, roughness: .15, metalness: .1 }), potX, .53, fz);
     pitch.rotation.x = -Math.PI / 2;
     addBox(potX - .4, potX + .4, fz - .4, fz + .4, .6);
+    { // Horno de ladrillos encendido y ladrillos de barro secándose al sol: «Vamos, fabriquemos ladrillos y cozámoslos bien» (Génesis 11:3)
+      const kx = px - s0 * .28 - 3.2, kz = fz + .4;
+      const kilnM = std({ map: brickTex('#8a4a2a', 'rgba(40,20,10,.7)', [3, 1]), roughness: .95 });
+      const dome = add(new THREE.SphereGeometry(1.15, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), kilnM, kx, 0, kz); dome.scale.y = 1.05;
+      add(new THREE.CylinderGeometry(.22, .26, .35, 10), kilnM, kx, 1.33, kz); // chimenea corta
+      addBox(kx - 1.15, kx + 1.15, kz - 1.15, kz + 1.15, 1.3);
+      // boca del horno con brasas que titilan (sin luces nuevas: solo brillo propio)
+      const emberM = new THREE.MeshStandardMaterial({ color: 0x2a0c04, emissive: 0xff5a14, emissiveIntensity: 1.2, roughness: 1 });
+      const mouth = new THREE.Mesh(new THREE.CircleGeometry(.36, 14, 0, Math.PI), emberM);
+      mouth.position.set(kx, .11, kz + 1.12); mouth.castShadow = mouth.receiveShadow = false; mouth.raycast = () => {}; P.add(mouth);
+      // humo que sube de la chimenea y se desvanece
+      const smokeM = new THREE.MeshLambertMaterial({ color: 0x8c857c, transparent: true, opacity: .35, depthWrite: false });
+      const puffG = new THREE.SphereGeometry(.22, 8, 6), puffs = [];
+      for (let k = 0; k < 5; k++) { const m = new THREE.Mesh(puffG, smokeM.clone()); m.castShadow = m.receiveShadow = false; m.raycast = () => {}; P.add(m); puffs.push(m); }
+      // ladrillos de barro crudo puestos en filas sobre la tierra para que se sequen (uno solo InstancedMesh, sin sombras)
+      const rows = 3, cols = 6, mud = new THREE.InstancedMesh(new THREE.BoxGeometry(.42, .1, .22), std({ color: 0x9a7650, roughness: 1 }), rows * cols);
+      mud.castShadow = false; mud.receiveShadow = true; mud.raycast = () => {};
+      const dm = new THREE.Object3D();
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        dm.position.set(kx - 1.25 + c * .5, .16, kz + 2.1 + r * .36); dm.rotation.y = (rnd() - .5) * .08; dm.updateMatrix(); mud.setMatrixAt(r * cols + c, dm.matrix);
+      }
+      P.add(mud);
+      out.live.push({ kind: 'fn', update(t) {
+        emberM.emissiveIntensity = 1.05 + Math.sin(t * 7.3) * .18 + Math.sin(t * 13.1) * .1;
+        for (let k = 0; k < puffs.length; k++) {
+          const q = puffs[k], f = ((t * .35 + k / puffs.length) % 1);
+          q.position.set(kx + Math.sin(t * .8 + k) * .12 + f * .5, 1.55 + f * 3.2, kz + Math.cos(t * .6 + k) * .1);
+          q.scale.setScalar(.6 + f * 2.2); q.material.opacity = .32 * (1 - f) * Math.min(1, f * 6);
+        }
+      } });
+    }
     out.zones.push({ id: 'babel', name: 'La torre de Babel', minX: px - ww / 2, maxX: px + ww / 2, minZ: zN, maxZ: zS, pri: 2,
       text: 'Usaron ladrillo en lugar de piedra y asfalto en lugar de mezcla, pero el SEÑOR confundió su lengua cuando quisieron una torre hasta el cielo.',
       ref: 'Génesis 11:1-9' });
