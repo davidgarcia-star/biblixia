@@ -133,10 +133,18 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
       const fgl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xff8a30, opacity: .7 }));
       fgl.scale.set(3, 3, 1); fgl.position.set(fx0, fy + .55, fz0); P.add(fgl);
       addBox(fx0 - .75, fx0 + .75, fz0 - .75, fz0 + .75, .5);
+      // humo gris que sube de la fogata, se ensancha y se desvanece (5 sprites reutilizados, sin luces nuevas)
+      const humo = [];
+      for (let k = 0; k < 5; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, color: 0x8a847c, opacity: 0 })); s.position.set(fx0, fy + .9, fz0); P.add(s); humo.push(s); }
       out.live.push({ kind: 'fn', update: t => {
         const a = .85 + Math.sin(t * 9.1) * .1 + Math.sin(t * 15.7) * .07, b = .9 + Math.sin(t * 12.3 + 1) * .1;
         f1.scale.set(1 + Math.sin(t * 7) * .06, a, 1); f1.rotation.y = t * .8; f2.scale.set(1, b, 1);
         fgl.material.opacity = .5 + a * .25; fgl.scale.set(2.8 + a * .4, 2.8 + a * .4, 1);
+        for (let k = 0; k < humo.length; k++) {
+          const c = ((t / 4.5) + k / humo.length) % 1, s = humo[k], sz = .5 + c * 1.6;
+          s.position.set(fx0 + Math.sin(t * .4 + k) * .25 + c * .6, fy + .9 + c * 3.2, fz0 + c * .3);
+          s.scale.set(sz, sz, 1); s.material.opacity = Math.sin(c * Math.PI) * .32;
+        }
       } });
     }
     // estrella
