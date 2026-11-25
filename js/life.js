@@ -138,6 +138,20 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const num = new THREE.Mesh(new THREE.PlaneGeometry(.26, .13), new THREE.MeshStandardMaterial({ map: nt, roughness: .5 }));
       num.position.set(bx, fy + 1.12, bz - .245); num.rotation.y = Math.PI; group.add(num);
       const flag = box(.03, .2, .05, mat(0xc0282a, { roughness: .5 }), bx + .17, fy + 1.3, bz + .1, { cast: false }); flag.rotation.z = -.2; // banderita roja
+      if (window.Navidad && window.Navidad.activo) {
+        // adorno navideño del buzón (solo en temporada, como la corona): ramita de pino enrollada al poste con bayas rojas
+        // y un moño rojo de dos lazos con cintas colgantes mirando hacia la calle (pocas mallas, sin luces nuevas)
+        const pineM = mat(0x1f5a2c, { roughness: .9 }), bowM = mat(0xc8102e, { roughness: .4 });
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(.075, .035, 6, 14), pineM); ring.rotation.x = Math.PI / 2; ring.position.set(bx, fy + .82, bz); group.add(ring);
+        const berryG = new THREE.SphereGeometry(.018, 6, 5);
+        for (let k = 0; k < 5; k++) { const a = k * 1.26 + .4, b = new THREE.Mesh(berryG, bowM); b.position.set(bx + Math.cos(a) * .1, fy + .83 + (k % 2) * .02, bz + Math.sin(a) * .1); group.add(b); }
+        const fz = bz - .125;
+        for (const sx of [-1, 1]) {
+          const loop = new THREE.Mesh(new THREE.TorusGeometry(.055, .017, 6, 10), bowM); loop.position.set(bx + sx * .06, fy + .87, fz); loop.scale.set(1, .7, 1); group.add(loop);
+          const tail = new THREE.Mesh(new THREE.BoxGeometry(.03, .13, .008), bowM); tail.position.set(bx + sx * .03, fy + .78, fz); tail.rotation.z = sx * .35; group.add(tail);
+        }
+        const knot = new THREE.Mesh(new THREE.SphereGeometry(.024, 8, 6), bowM); knot.position.set(bx, fy + .87, fz); group.add(knot);
+      }
       solid(bx - .16, bx + .16, bz - .25, bz + .25, fy + 1.37);
     }
     box(HW * 2, .14, HD * 2, floorM, cx, fy + .07, cz, { cast: false });
