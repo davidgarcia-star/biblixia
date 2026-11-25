@@ -565,6 +565,42 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
   const ripples = [0, 1, 2].map(() => { const r = new THREE.Mesh(new THREE.RingGeometry(.42, .5, 28), ripM.clone()); r.rotation.x = -Math.PI / 2; r.position.set(cx0, .2, zc); r.renderOrder = 6; r.visible = false; J.add(r); return r; });
   J.traverse(m => { if (m.isMesh && m !== water && !ripples.includes(m)) m.castShadow = true; });
 
+  // pececitos que de vez en cuando saltan fuera del agua del Jordán y caen con una onda (sin sombras ni luces nuevas)
+  const fishM = new THREE.MeshStandardMaterial({ color: 0x9aa6ae, roughness: .35, metalness: .45 }), finM = new THREE.MeshStandardMaterial({ color: 0x6e7a82, roughness: .5, metalness: .3 });
+  const fishBodyG = new THREE.SphereGeometry(.07, 8, 6); fishBodyG.scale(.55, .7, 1.9);
+  const fishTailG = new THREE.ConeGeometry(.06, .1, 4); fishTailG.rotateX(-Math.PI / 2); fishTailG.translate(0, 0, -.17); fishTailG.scale(.35, 1, 1);
+  const fishSplM = new THREE.MeshBasicMaterial({ color: 0xe8f6ff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+  const fish = [0, 1].map(k => {
+    const yaw = new THREE.Group(), body = new THREE.Group(); yaw.name = 'pezJordan'; yaw.add(body); yaw.visible = false; J.add(yaw);
+    body.add(new THREE.Mesh(fishBodyG, fishM)); const tail = new THREE.Mesh(fishTailG, finM); body.add(tail);
+    const spl = new THREE.Mesh(new THREE.RingGeometry(.12, .17, 20), fishSplM.clone()); spl.rotation.x = -Math.PI / 2; spl.renderOrder = 6; spl.visible = false; J.add(spl);
+    yaw.traverse(o => { o.raycast = () => {}; }); spl.raycast = () => {};
+    return { yaw, body, tail, spl, wait: 2 + k * 3.5 + Math.random() * 3, u: -1, x: 0, z: 0, dir: 1, sx: 0, sz: 0, st: -1 };
+  });
+  const FJ = .85, FL = 1.1;                                       // duración y largo del salto
+  const updFish = (dt, t, wy0) => {
+    for (const f of fish) {
+      if (f.u < 0) {
+        f.wait -= dt; if (f.wait > 0) continue;
+        // lejos de Juan y del que se bautiza, dentro del cauce
+        let zz = zc + (Math.random() < .5 ? -1 : 1) * (5 + Math.random() * 22); zz = Math.max(z0 + 3, Math.min(z1 - 3, zz));
+        f.dir = Math.random() < .5 ? -1 : 1; f.x = mx(zz) + (Math.random() - .5) * HW * 1.2; f.z = zz - f.dir * FL / 2; f.u = 0;
+        f.yaw.rotation.y = f.dir > 0 ? 0 : Math.PI; f.yaw.visible = true;
+        f.sx = f.x; f.sz = f.z; f.st = 0;                          // onda al salir
+      }
+      if (f.u >= 0) {
+        f.u += dt / FJ; const u = Math.min(1, f.u);
+        f.yaw.position.set(f.x, wy0 + Math.sin(Math.PI * u) * .55 - .05, f.z + f.dir * FL * u);
+        f.body.rotation.x = -Math.atan2(Math.cos(Math.PI * u) * .55 * Math.PI, FL);   // la nariz sigue la curva del salto
+        f.tail.rotation.y = Math.sin(t * 28) * .5;                // colea en el aire
+        if (f.u >= 1) { f.u = -1; f.yaw.visible = false; f.wait = 4 + Math.random() * 7; f.sx = f.x; f.sz = f.z + f.dir * FL; f.st = 0; }
+      }
+      if (f.st >= 0) {
+        f.st += dt; const on = f.st < 1.4; f.spl.visible = on;
+        if (on) { f.spl.position.set(f.sx, wy0 + .02, f.sz); f.spl.scale.setScalar(1 + f.st * 2.4); f.spl.material.opacity = .6 * (1 - f.st / 1.4); } else f.st = -1;
+      }
+    }
+  };
   let cyc = 0, praiseT = -1, cool = 0;
   const tmp = new THREE.Vector3();
   return {
@@ -578,6 +614,7 @@ export async function buildJordan({ group, addBox, x, z0, z1, rnd }) {
     update(t, dt, pp, onSanto) {
       const near = Math.hypot(cx0 - pp.x, zc - pp.z) < 130; J.visible = near; if (!near) return;
       water.position.y = .16 + Math.sin(t * 1.4) * .01;
+      updFish(dt, t, water.position.y);
       // ciclo del bautismo: de pie, lo sumerge hacia atrás en el agua y lo levanta
       cyc = (cyc + dt) % 7;
       const dip = cyc < 2 ? 0 : cyc < 3 ? (cyc - 2) : cyc < 4 ? 1 : cyc < 5 ? 1 - (cyc - 4) : 0, e = dip * dip * (3 - 2 * dip);
