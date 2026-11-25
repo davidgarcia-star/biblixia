@@ -1304,6 +1304,24 @@ async function buildWorld(cfg) {
       const ball = new THREE.Mesh(new THREE.SphereGeometry(.22, 16, 12), new THREE.MeshStandardMaterial({ map: ballTex, roughness: .4 })); ball.castShadow = true; group.add(ball);
       W.beachBall = { obj: ball, cx: O - 18, cz: Zc - 36 };
     }
+    // cangrejitos rojos en la arena mojada: caminan de lado junto a la orilla, se detienen y mueven las tenazas
+    W.crabs = [];
+    {
+      const cM = new THREE.MeshStandardMaterial({ color: 0xd2491f, roughness: .6 }), eM = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: .3 });
+      const bodyG = new THREE.SphereGeometry(.13, 10, 6).scale(1, .45, .8), clawG = new THREE.SphereGeometry(.05, 8, 5).scale(1.4, .7, 1), legG = new THREE.BoxGeometry(.012, .012, .13).translate(0, 0, .065), eyeG = new THREE.SphereGeometry(.018, 6, 4);
+      for (let i = 0; i < 6; i++) {
+        let cz = O + 14 + r() * (T + SZ - 28); if (Math.abs(cz - Zc) < 9) cz += 18;
+        const g = new THREE.Group(), cx = SX + 2.2 + r() * 4;
+        g.add(new THREE.Mesh(bodyG, cM));
+        for (const sd of [-1, 1]) { const e = new THREE.Mesh(eyeG, eM); e.position.set(-.1, .07, sd * .04); g.add(e); }
+        const claws = [], legs = [];
+        for (const sd of [-1, 1]) { const c = new THREE.Mesh(clawG, cM); c.position.set(-.15, .02, sd * .09); g.add(c); claws.push(c); }
+        for (const sd of [-1, 1]) for (let k = 0; k < 3; k++) { const l = new THREE.Mesh(legG, cM); l.position.set(-.05 + k * .06, 0, sd * .08); l.rotation.set(sd * .5, sd > 0 ? 0 : Math.PI, 0); l.userData.base = sd * .5; l.userData.ph = k * 2.1; g.add(l); legs.push(l); }
+        g.traverse(o => { if (o.isMesh) { o.castShadow = false; o.raycast = () => {}; } });
+        g.position.set(cx, .12, cz); group.add(g);
+        W.crabs.push({ obj: g, claws, legs, cx, cz, ph: r() * 10, sp: .5 + r() * .4, run: 1.2 + r() * 1.5 });
+      }
+    }
     // muelle de madera
     const pierLen = 70, pz0 = Zc, pierX1 = SX + 2, pierX0 = SX - pierLen;
     const deck = new THREE.Mesh(new THREE.BoxGeometry(pierLen + 2, .3, 4.4), M.wood); deck.position.set((pierX0 + pierX1) / 2, .45, pz0); deck.castShadow = deck.receiveShadow = true; group.add(deck);
@@ -3475,6 +3493,15 @@ function loopBody() {
     if (world.placeLive) for (const it of world.placeLive) { if (it.kind === 'spin') it.obj.rotation.y = t * .8; else if (it.kind === 'barrier') it.obj.material.opacity = .2 + Math.sin(t * 2) * .08; else if (it.kind === 'wave') it.obj.position.y = it.base + Math.sin(t * 1.3) * .15; else if (it.kind === 'fn') it.update(t); }
     if (world.ship) { world.ship.rotation.x = Math.sin(t * .7) * .035; world.ship.rotation.z = Math.sin(t * .5) * .012; world.ship.position.y = Math.sin(t * .9) * .14; const sl = world.ship.userData.sail; if (sl) sl.scale.z = 1 + Math.sin(t * 2.2) * .12; const ud = world.ship.userData; if (ud.radar) ud.radar.rotation.y = t * 2.5; if (ud.flag) waveFlag(ud.flag, t); }
     if (world.gulls) for (const gl of world.gulls) { gl.a += dt * gl.sp; const cx = gl.cx + Math.cos(gl.a) * gl.rad, cz = gl.cz + Math.sin(gl.a) * gl.rad; gl.obj.position.set(cx, gl.y + Math.sin(t * .6 + gl.ph) * 1.2, cz); gl.obj.rotation.set(0, Math.atan2(-Math.sin(gl.a) * gl.sp, Math.cos(gl.a) * gl.sp), -Math.sign(gl.sp) * .3); const flap = Math.sin(t * .35 + gl.ph) > .3 ? Math.sin(t * 9 + gl.ph) * .55 : .12 + Math.sin(t * 1.5 + gl.ph) * .05; for (const w of gl.wings) w.rotation.z = flap * w.userData.sd; }
+    if (world.crabs) for (const cb of world.crabs) {
+      if (Math.abs(cb.cx - P.pos.x) > 60 || Math.abs(cb.cz - P.pos.z) > 60) continue;   // solo se animan cuando el jugador está cerca
+      const s = Math.sin(t * cb.sp + cb.ph), v = Math.cos(t * cb.sp + cb.ph), mov = s * s * s, vel = Math.abs(3 * s * s * v);
+      cb.obj.position.z = cb.cz + mov * cb.run;
+      cb.obj.position.y = .12 + Math.abs(Math.sin(t * 18 + cb.ph)) * .008 * Math.min(1, vel * 2);
+      for (const l of cb.legs) l.rotation.x = l.userData.base + Math.sin(t * 22 + l.userData.ph) * .35 * Math.min(1, vel * 2);
+      const pinch = vel < .15 ? Math.max(0, Math.sin(t * 6 + cb.ph)) * .5 : 0;
+      cb.claws[0].rotation.y = pinch; cb.claws[1].rotation.y = -pinch;
+    }
     if (world.foam) world.foam.material.opacity = .45 + Math.sin(t * 1.4) * .2;
     if (world.sails) for (const sb of world.sails) { sb.a += dt * (sb.speed || .02); sb.obj.position.set(sb.cx + Math.cos(sb.a) * sb.r * 1.4, Math.sin(t + sb.a) * .15, sb.cz + Math.sin(sb.a) * sb.r); sb.obj.rotation.y = -sb.a; sb.obj.rotation.x = Math.sin(t * .8 + sb.a) * .03; }
     for (let i = flying.length - 1; i >= 0; i--) {
