@@ -198,6 +198,18 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
           const piv = new THREE.Group(); piv.position.set(0, Hh + 1.2, out2 * 1.4); rg.add(piv);
           const cord = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, 5.4, 6), std({ color: 0xc8102e, emissive: 0x500010 })); cord.position.y = -2.7; piv.add(cord);
           out.live.push({ kind: 'fn', update: t => { piv.rotation.x = -out2 * (.05 + Math.sin(t * 1.3) * .035 + Math.sin(t * 2.9) * .015); piv.rotation.z = Math.sin(t * .9) * .03; } });
+          // tallos de lino puestos en orden sobre el terrado, donde Rahab escondió a los espías (Josué 2:6):
+          // dos manojos de tallos secos tendidos sobre la azotea, apoyados en ella (un solo InstancedMesh, sin sombras)
+          {
+            const NL = 36, stalk = new THREE.InstancedMesh(new THREE.CylinderGeometry(.018, .018, 1.25, 5).rotateZ(Math.PI / 2), std({ color: 0xc9b07a, roughness: 1 }), NL);
+            stalk.castShadow = false; const dm = new THREE.Object3D(), roofY = Hh + 2.6 + .018;
+            for (let k = 0; k < NL; k++) {
+              const b = k < NL / 2 ? -1 : 1, i = k % (NL / 2), row = i % 9, layer = Math.floor(i / 9);
+              dm.position.set(b * .68 + Math.sin(k * 7.3) * .04, roofY + layer * .032, -.55 + row * .14 + layer * .07 + Math.sin(k * 3.1) * .015);
+              dm.rotation.set(0, Math.sin(k * 5.7) * .06, 0); dm.updateMatrix(); stalk.setMatrixAt(k, dm.matrix);
+            }
+            stalk.instanceMatrix.needsUpdate = true; stalk.computeBoundingSphere(); rg.add(stalk);
+          }
         }
       }
     }
