@@ -227,6 +227,54 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         }
         solid(px - .27, px + .27, pz - .27, pz + .27, fy + .76);
       }
+      { // florecitas rojas de cayena en los arbustos y un colibrí que de día va de un macetero al otro a libar
+        // «Mirad las aves del cielo, que no siembran, ni siegan, ni recogen en graneros, y sin embargo, vuestro Padre celestial las alimenta» (Mateo 6:26)
+        const flM = mat(0xd8243a, { roughness: .6 }), ctrM = mat(0xf2c94c, { roughness: .6 }), flG = new THREE.SphereGeometry(.042, 7, 5), ctG = new THREE.SphereGeometry(.013, 5, 4);
+        const spots = [];
+        for (const sx of [-1.6, 1.55]) {
+          const px = cx + sx, pz = Z0 - .5, by = fy + .14 + .88;
+          for (const [a, h] of [[-1.9, .05], [-1.4, .16], [-1.05, -.04], [-2.3, -.08], [-.6, .1]]) {   // del lado de la calle (‑z)
+            const fx = px + Math.cos(a) * .325, fz = pz + Math.sin(a) * .325, f = new THREE.Mesh(flG, flM);
+            f.position.set(fx, by + h, fz); f.scale.set(1, .55, 1); f.rotation.set(Math.sin(a) * .9, 0, Math.cos(a) * .9); f.raycast = () => {}; group.add(f);
+            const c = new THREE.Mesh(ctG, ctrM); c.position.set(fx + Math.cos(a) * .03, by + h + .006, fz + Math.sin(a) * .03); c.raycast = () => {}; group.add(c);
+          }
+          spots.push([px + Math.cos(-1.4) * .48, by + .16, pz + Math.sin(-1.4) * .48, px, pz]);       // punto donde se queda suspendido
+        }
+        const hb = new THREE.Group(), greenM = mat(0x2f9e6a, { metalness: .35, roughness: .35 }), throatM = mat(0xc4123a, { metalness: .3, roughness: .35 });
+        const hbBody = new THREE.Mesh(new THREE.SphereGeometry(.03, 8, 6), greenM); hbBody.scale.set(.8, .8, 1.5); hbBody.rotation.x = .5; hb.add(hbBody);
+        const hbHead = new THREE.Mesh(new THREE.SphereGeometry(.021, 8, 6), greenM); hbHead.position.set(0, .03, .03); hb.add(hbHead);
+        const thr = new THREE.Mesh(new THREE.SphereGeometry(.016, 7, 5), throatM); thr.position.set(0, .018, .038); hb.add(thr);   // gorguera roja
+        const bill = new THREE.Mesh(new THREE.CylinderGeometry(.002, .004, .06, 5), mat(0x151515)); bill.rotation.x = Math.PI / 2; bill.position.set(0, .03, .08); hb.add(bill); // pico largo y fino
+        const tl = new THREE.Mesh(new THREE.ConeGeometry(.011, .04, 4), greenM); tl.rotation.x = -Math.PI / 2 - .6; tl.position.set(0, -.02, -.05); hb.add(tl);
+        const wingM = new THREE.MeshStandardMaterial({ color: 0x9fb8b0, transparent: true, opacity: .55, side: THREE.DoubleSide, depthWrite: false });
+        const wingG = new THREE.PlaneGeometry(.075, .022); wingG.translate(.0375, 0, 0);
+        const hbW = [];
+        for (const s of [-1, 1]) { const w = new THREE.Mesh(wingG, wingM); w.scale.x = s; w.position.set(s * .012, .015, 0); hb.add(w); hbW.push([w, s]); }
+        hb.traverse(o => { if (o.isMesh) o.raycast = () => {}; });
+        hb.name = 'colibri'; hb.visible = false; group.add(hb);
+        const CYC = 9;   // 3,5 s libando en cada macetero y 1 s de vuelo entre uno y otro
+        houseUpd.push(t => {
+          const on = (M.timeMode || 'dia') === 'dia';
+          hb.visible = on; if (!on) return;
+          const c = t % (CYC * 2), i = c < CYC ? 0 : 1, k = c % CYC;
+          const A = spots[i], B = spots[1 - i];
+          let x, y, z, yaw;
+          if (k < 7.6) {                                                    // suspendido frente a las flores, entrando y saliendo el pico
+            const sub = Math.floor(k / 2.6), dip = Math.max(0, Math.sin((k % 2.6) / 2.6 * Math.PI * 2)) * .06;
+            const ox = (sub - 1) * .07;
+            const dx = A[3] - A[0], dz = A[4] - A[2], L = Math.hypot(dx, dz);
+            x = A[0] + dx / L * dip + ox; z = A[2] + dz / L * dip; y = A[1] + Math.sin(t * 5) * .012 - sub * .03;
+            yaw = Math.atan2(dx, dz);
+          } else {                                                          // vuela rápido en arco al otro macetero
+            const p = (k - 7.6) / 1.4, e = p * p * (3 - 2 * p);
+            x = A[0] + (B[0] - A[0]) * e; z = A[2] + (B[2] - A[2]) * e - Math.sin(p * Math.PI) * .5; y = A[1] + (B[1] - A[1]) * e + Math.sin(p * Math.PI) * .35;
+            yaw = Math.atan2(B[0] - A[0], B[2] - A[2]);
+          }
+          hb.position.set(x, y, z); hb.rotation.y = yaw;
+          const f = Math.sin(t * 70) * 1.1;                                 // aleteo zumbante
+          for (const [w, s] of hbW) w.rotation.z = s * f;
+        });
+      }
     }
     { // bebedero de piedra para pajaritos en el jardín delantero, con un gorrión que se inclina a beber
       const bbx = cx - 6, bbz = z0 + 6.5, stoneM = mat(0xb9b2a6, { roughness: .95 });
