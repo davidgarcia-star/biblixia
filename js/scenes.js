@@ -28,6 +28,7 @@ const SPECIES = {
   cebra: { body: [1.6, .85, .58], leg: 1.0, legR: .07, neck: .75, neckUp: .9, head: [.6, .32, .25], pattern: 'zebra', color: '#f2f2ee', mane: '#111', ears: 'horse', tail: .6, tuft: '#111' },
   camello: { body: [2.0, 1.0, .75], leg: 1.45, legR: .08, neck: 1.0, neckUp: .7, neckCurve: true, head: [.55, .3, .26], color: '#c7a06a', hump: 1, ears: 'small', tail: .5 },
   caballo: { body: [1.85, .95, .62], leg: 1.05, legR: .08, neck: .85, neckUp: .95, head: [.62, .34, .26], color: '#7a4422', mane: '#1a0e06', ears: 'horse', tail: .8, tuft: '#1a0e06' },
+  burro: { body: [1.3, .78, .5], leg: .78, legR: .06, neck: .55, neckUp: .85, head: [.58, .32, .24], color: '#8c857c', mane: '#3a332c', ears: 'horse', earLong: 1.7, tail: .55, tuft: '#2a241e' },
   oveja: { body: [1.05, .62, .6], leg: .45, legR: .045, neck: .2, head: [.32, .24, .2], color: '#efe9dc', headColor: '#2a2420', wool: true, ears: 'sheep', tail: .15 },
   oso: { body: [1.7, 1.05, .9], leg: .65, legR: .14, neck: .3, head: [.5, .42, .42], color: '#4a2e1a', ears: 'round', tail: .1, feet: 'paw' },
   ciervo: { body: [1.35, .7, .45], leg: .95, legR: .055, neck: .55, neckUp: 1, head: [.4, .24, .2], color: '#9a6a3a', ears: 'horse', horns: 'antler', tail: .18 },
@@ -87,7 +88,7 @@ export function makeAnimal(kind, scaleK = 1) {
   for (const sx of [-1, 1]) {
     add(new THREE.SphereGeometry(Math.max(.018, hh * .07), 10, 8), dark, sx * hw * .42, hh * .12, hl * .12, head);
     add(new THREE.SphereGeometry(Math.max(.01, hh * .035), 8, 6), dark, sx * hw * .14, -hh * .14, hl * .97, head);
-    if (s.ears === 'horse' || s.ears === 'small') { const e = add(new THREE.ConeGeometry(hw * .14, hh * (s.ears === 'horse' ? .55 : .35), 8), furM, sx * hw * .3, hh * .48, -hl * .05, head); e.rotation.z = -sx * .25; }
+    if (s.ears === 'horse' || s.ears === 'small') { const e = add(new THREE.ConeGeometry(hw * .14, hh * (s.ears === 'horse' ? .55 : .35) * (s.earLong || 1), 8), furM, sx * hw * .3, hh * .48, -hl * .05, head); e.rotation.z = -sx * .25; }
     if (s.ears === 'round' || s.ears === 'monkey') { const e = add(new THREE.SphereGeometry(hw * .16, 10, 8), headM, sx * hw * (s.ears === 'monkey' ? .52 : .36), hh * (s.ears === 'monkey' ? .05 : .42), -hl * .05, head); e.scale.set(.6, 1, .5); }
     if (s.ears === 'sheep') { const e = add(new THREE.SphereGeometry(hw * .2, 10, 8), headM, sx * hw * .55, hh * .1, 0, head); e.scale.set(1.4, .45, .7); }
     if (s.ears === 'elephant') { const e = add(new THREE.SphereGeometry(.55, 16, 12, 0, Math.PI), std({ color: 0x7a7a7e, roughness: .9, side: THREE.DoubleSide }), sx * hw * .48, 0, -hl * .15, head); e.scale.set(.12, 1.1, .9); e.rotation.y = sx * .5; }

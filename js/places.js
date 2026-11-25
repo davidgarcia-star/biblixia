@@ -95,6 +95,12 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
         const legs = m.o.userData.legs; if (legs) legs.forEach((l, j) => { l.rotation.x = (j === 0 || j === 3 ? 1 : -1) * paso; });
       }
     } });
+    // burrito junto al pesebre, de pie sobre la paja mirando al niño: «el asno [conoce] el pesebre de su amo» (Isaías 1:3);
+    // de vez en cuando cambia el peso de una pata a otra (sin luces ni sombras nuevas)
+    const burro = makeAnimal('burro'); const bx0 = px - 3, bz0 = pz + .7; burro.position.set(bx0, .1, bz0);
+    burro.rotation.y = Math.atan2(px - bx0, pz - .8 - bz0); P.add(burro); addBox(bx0 - .6, bx0 + .6, bz0 - .6, bz0 + .6, 1.4);
+    out.live.push({ kind: 'fn', update: t => { const c = t % 6.3, w = c < 1.2 ? Math.sin(c / 1.2 * Math.PI) : 0, legs = burro.userData.legs;
+      if (legs) { legs[2].rotation.x = -w * .25; const kn = legs[2].userData.knee; if (kn) kn.rotation.x = w * .45; } } });
     // pastores con su cayado que vinieron a ver al niño: «Vamos, pues, hasta Belén» (Lucas 2:15-16)
     const staffM = std({ color: 0x6b4a2a, roughness: .9 });
     for (const [sx4, sz4, robe, mantle, cloth, skin] of [[-2.9, 4.1, 0x8a7a5a, 0x5a4a32, 0xd8cdb0, 0xa8714f], [3.1, 4.4, 0x6a5a44, 0x9a8a6a, 0x8a3a2a, 0x8a5a3a]]) {
