@@ -563,6 +563,21 @@ let world = null;
 const TEX_KEYS = ['map', 'emissiveMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'alphaMap', 'bumpMap', 'aoMap', 'lightMap'];
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let warmRT = null; const warmCam = new THREE.PerspectiveCamera();
+// Modo liviano: las texturas grandes se achican antes de subirlas a la tarjeta gráfica.
+// Antes ocupaban unos 220 MB de memoria gráfica y el celular modesto se quedaba sin memoria (se congelaba
+// o la pantalla 3D se perdía); así ocupan cerca de la cuarta parte. Las que se redibujan (pantalla, calendario) no se tocan.
+function achicarTex(t) {
+  if (t.userData.keep || t.isDataTexture || t.isCompressedTexture || t.isRenderTargetTexture || t.isVideoTexture) return;
+  const img = t.image; if (!img || !img.width || !img.height || img.__chico) return;
+  let w = img.width, h = img.height;
+  while (w * h > 32768 && w > 32 && h > 32) { w >>= 1; h >>= 1; }
+  if (w === img.width) return;
+  try {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, w, h);
+    c.__chico = true; t.image = c; t.needsUpdate = true;
+  } catch (e) {}
+}
 async function warmShaders(root, cam) {
   // en computadora el mundo se dibuja primero en una imagen intermedia (efectos): preparar esa misma versión
   if (composer && !warmRT) warmRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
@@ -585,10 +600,15 @@ async function warmShadersNow(root, cam) {
   // 1) subir las texturas a la tarjeta gráfica de a pocas (antes se subían todas en el primer cuadro)
   // fuera del modo liviano, todas las texturas se ven nítidas también de lado (suelo, paredes, telas)
   const ANI = LITE ? 1 : Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  for (const t of texs) { try { if (ANI > 1 && t.anisotropy < ANI && !t.isDataTexture && !t.isRenderTargetTexture) t.anisotropy = ANI; renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
+  for (const t of texs) { try { if (LITE) achicarTex(t); if (ANI > 1 && t.anisotropy < ANI && !t.isDataTexture && !t.isRenderTargetTexture) t.anisotropy = ANI; renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
   // 2) sombreadores: mandar a compilar un grupo pequeño, esperar sin bloquear y terminar de prepararlo
   const progs = new Set();
   let i = 0;
+  // Cada compile() recorría el mundo ENTERO (miles de objetos) solo para buscar las luces, una vez por objeto:
+  // la carga tardaba muchísimo y el celular se trababa. Ahora las luces se buscan una sola vez.
+  const lucesVis = []; scene.traverseVisible(o => { if (o.isLight) lucesVis.push(o); });
+  scene.traverseVisible = cb => { for (const l of lucesVis) cb(l); };
+  try {
   while (i < batch.length && performance.now() - t0 < 40000) {
     const grupo = new Set(), tg = performance.now();
     while (i < batch.length && performance.now() - tg < 12) {
@@ -601,6 +621,7 @@ async function warmShadersNow(root, cam) {
     for (const pr of grupo) { try { pr.getUniforms(); pr.getAttributes(); } catch (e) {} await respirar(); }
     await respirar();
   }
+  } finally { delete scene.traverseVisible; }
   // 3) dibujar todo el mundo de a pocos en un cuadrito de 1 píxel: así se suben las figuras (geometría),
   //    se preparan las sombras y no queda nada pendiente para cuando el jugador camine (antes daba tirones)
   const luces = []; scene.traverse(o => { if (o.isLight) { luces.push(o); o.layers.enable(2); } });

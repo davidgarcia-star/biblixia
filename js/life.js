@@ -907,7 +907,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       {
         // reloj despertador digital sobre la mesita: dígitos rojos con la hora real del dispositivo y los dos puntos que parpadean
         const c = document.createElement('canvas'); c.width = 128; c.height = 64; const g = c.getContext('2d');
-        const ct = new THREE.CanvasTexture(c); ct.colorSpace = THREE.SRGBColorSpace;
+        const ct = new THREE.CanvasTexture(c); ct.colorSpace = THREE.SRGBColorSpace; ct.userData.keep = true;
         let last = '';
         const draw = () => {
           const d = new Date(), h = d.getHours() % 12 || 12, m = String(d.getMinutes()).padStart(2, '0'), on = d.getSeconds() % 2 === 0;
@@ -1010,7 +1010,7 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     let wbM = null;
     // calendario de escritorio (de caballete) en cada escritorio: muestra la fecha real del dispositivo y cambia solo al pasar el día
     const calC = document.createElement('canvas'); calC.width = 128; calC.height = 100; const calG = calC.getContext('2d');
-    const calTex = new THREE.CanvasTexture(calC); calTex.colorSpace = THREE.SRGBColorSpace; calTex.anisotropy = 4;
+    const calTex = new THREE.CanvasTexture(calC); calTex.colorSpace = THREE.SRGBColorSpace; calTex.anisotropy = 4; calTex.userData.keep = true;
     let calDia = '';
     const pintaCal = () => {
       const d = new Date(), key = d.toDateString(); if (key === calDia) return; calDia = key;

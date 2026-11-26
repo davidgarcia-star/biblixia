@@ -383,7 +383,7 @@ export async function buildChurch({ group, addBox, addRamp, blockers, block, CUR
   // pantalla LED con letras de alabanza
   // a media resolución (se dibuja igual, en coordenadas de 1024×512): 4 veces menos para subir a la tarjeta gráfica
   const scr = document.createElement('canvas'); scr.width = 512; scr.height = 256; const sc = scr.getContext('2d'); sc.scale(.5, .5);
-  const scrTex = new THREE.CanvasTexture(scr); scrTex.colorSpace = THREE.SRGBColorSpace;
+  const scrTex = new THREE.CanvasTexture(scr); scrTex.colorSpace = THREE.SRGBColorSpace; scrTex.userData.keep = true; // se redibuja: no achicar
   const lyrics = ['SANTO, SANTO, SANTO', 'DIGNO ERES, SEÑOR', 'GLORIA A DIOS EN LAS ALTURAS', '¡ALELUYA!', 'CRISTO VIVE', 'MORIAH CHURCH · EPICENTRO DE AVIVAMIENTO'];
   const drawScreen = (i, t) => {
     const g2 = sc.createLinearGradient(0, 0, 1024, 512); g2.addColorStop(0, `hsl(${(t * 20) % 360},70%,22%)`); g2.addColorStop(1, `hsl(${(t * 20 + 120) % 360},70%,12%)`); sc.fillStyle = g2; sc.fillRect(0, 0, 1024, 512);
