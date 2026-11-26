@@ -3432,6 +3432,8 @@ function loopBody() {
     followShip();
     for (const c of world.coins) if (!c.taken) {
       c.coin.rotation.y = t * 2 + c.phase; c.g.position.y = c.y + Math.sin(t * 2.2 + c.phase) * .12;
+      // el brillo dorado de la moneda «respira» despacio para que se distinga mejor de lejos
+      { const pu = 2.4 + Math.sin(t * 2.6 + c.phase) * .28; c.glow.scale.set(pu, pu, 1); }
       // si la cámara queda dentro del haz o pegada al brillo, se ocultan (así la pantalla no se pone toda amarilla)
       if (c.beam) { const dc = Math.hypot(camera.position.x - c.x, camera.position.z - c.z); c.beam.visible = dc > .9; c.glow.visible = dc > 1.6 || Math.abs(camera.position.y - c.g.position.y) > 2; }
     }
