@@ -759,7 +759,21 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
     box(.7, .9, 3.2, cabM, X0 + .45, fy + .45, cz + 1.2); box(.75, .05, 3.25, counterM, X0 + .45, fy + .92, cz + 1.2); solid(X0, X0 + .85, cz - .4, cz + 2.8, fy + .95);
     box(.5, .1, .6, mat(0x9aa4ae, { metalness: .8, roughness: .2 }), X0 + .45, fy + .93, cz + 2.2);          // fregadero
-    cyl(.02, .02, .3, mat(0xc0c8d0, { metalness: .9, roughness: .2 }), X0 + .25, fy + 1.1, cz + 2.2, 8);
+    { // grifo de acero: columna, caño curvo hacia el fregadero, palanca, y una gota que cae de vez en cuando
+      const fM = mat(0xc0c8d0, { metalness: .9, roughness: .2 }), fx0 = X0 + .25, fz = cz + 2.2;
+      cyl(.02, .02, .3, fM, fx0, fy + 1.1, fz, 8);
+      const arm = cyl(.014, .014, .17, fM, fx0 + .085, fy + 1.24, fz, 8); arm.rotation.z = Math.PI / 2; arm.castShadow = false;  // caño
+      cyl(.016, .012, .05, fM, fx0 + .17, fy + 1.215, fz, 8).castShadow = false;                                                 // boquilla
+      const lev = box(.012, .012, .09, fM, fx0, fy + 1.27, fz + .04, { cast: false }); lev.rotation.x = -.35;                    // palanca
+      const drop = new THREE.Mesh(new THREE.SphereGeometry(.008, 8, 6).scale(1, 1.5, 1), new THREE.MeshStandardMaterial({ color: 0xbfe4ff, roughness: .05, metalness: .1, transparent: true, opacity: .8 }));
+      drop.castShadow = false; drop.raycast = () => {}; drop.userData.live = true; group.add(drop);
+      const dTop = fy + 1.185, dBot = fy + .99;
+      houseUpd.push(t => {
+        const c = (t % 3.2) / 3.2;   // se forma (crece) y luego cae al fondo del fregadero
+        if (c < .78) { const s = .3 + c / .78 * .7; drop.scale.setScalar(s); drop.position.set(fx0 + .17, dTop - s * .006, fz); }
+        else { const f = (c - .78) / .22; drop.scale.setScalar(1); drop.position.set(fx0 + .17, dTop - (dTop - dBot) * f * f, fz); }
+      });
+    }
     box(.6, .9, .7, mat(0xf2f2f0, { roughness: .3 }), X0 + .45, fy + .45, cz - 1); box(.62, 1.9, .7, mat(0xe8eaec, { roughness: .25, metalness: .2 }), X0 + .45, fy + .95, cz - 1.9); solid(X0, X0 + .85, cz - 2.3, cz - .6, fy + 1.9);
     { // estufa: tope de vitrocerámica negra con 4 hornillas, perillas al frente, ventana y tirador del horno, y una olla tapada
       const sx = X0 + .45, sz = cz - 1, front = X0 + .75, glassM = mat(0x0c0d10, { roughness: .12, metalness: .3 });
