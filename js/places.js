@@ -361,6 +361,21 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     const sea = std({ color: 0xd8c49a, roughness: 1 });
     const path = new THREE.Mesh(new THREE.PlaneGeometry(gap, L2), sea); path.rotation.x = -Math.PI / 2; path.position.set(px, .12, pz + 2); P.add(path);
     for (let k = 0; k < 18; k++) { const st = add(new THREE.SphereGeometry(.2 + rnd() * .2, 8, 6), std({ color: 0x8a7a68 }), px + (rnd() - .5) * gap, .05, pz + 2 + (rnd() - .5) * L2); st.scale.y = .4; }
+    { // «el SEÑOR… hizo que el mar retrocediera por medio de un fuerte viento solano» (Éxodo 14:21): granitos de arena que cruzan el camino seco
+      const n = 46, sand = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 5, 4), new THREE.MeshBasicMaterial({ color: 0xe6d3a6, transparent: true, opacity: .55, depthWrite: false }), n);
+      sand.castShadow = sand.receiveShadow = false; sand.raycast = () => {}; sand.frustumCulled = false; P.add(sand);
+      const dm = new THREE.Object3D(), sd = [];
+      for (let i = 0; i < n; i++) sd.push({ x: rnd(), z: pz + 2 + (rnd() - .5) * (L2 - 2), y: .08 + rnd() * .5, s: .025 + rnd() * .03, sp: .09 + rnd() * .12, ph: rnd() * 6.28 });
+      const upd = t => {
+        for (let i = 0; i < n; i++) {
+          const q = sd[i], u = (q.x + t * q.sp) % 1;
+          dm.position.set(px + gap / 2 - u * gap, q.y + Math.abs(Math.sin(t * 3 + q.ph)) * .18 * (1 - u), q.z + Math.sin(t * 1.3 + q.ph) * .2);
+          dm.scale.set(q.s * 2.2, q.s, q.s); dm.updateMatrix(); sand.setMatrixAt(i, dm.matrix);
+        }
+        sand.instanceMatrix.needsUpdate = true;
+      };
+      upd(0); out.live.push({ kind: 'fn', update: upd });
+    }
     // Moisés con la vara extendida
     const mo = createHuman({ detail: .6, outfit: 'robe', robe: 0xd8c9a8, mantle: 0x6a3d24, beard: { color: 0xe8e4dc, len: .16 }, hairColor: 0xe0dcd2, hair: 'long', age: 1, skin: 0xa8714f });
     mo.arms[1].shoulder.rotation.set(-2.4, 0, .2); mo.arms[1].elbow.rotation.x = -.2;
