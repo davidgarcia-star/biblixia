@@ -1104,6 +1104,19 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       box(.12, .02, .3, mat(0x9aa2aa, { metalness: .6, roughness: .3 }), wx - .26, y + .62, wz, { cast: false });
       cyl(.045, .045, .32, new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: .55, roughness: .1 }), wx, y + .78, wz - .25, 12);
       cyl(.04, .03, .05, mat(0xf4f1ea, { roughness: .8 }), wx, y + .6, wz - .25, 12);
+      // de vez en cuando suben burbujitas de aire por el botellón («glu-glu»), como cuando alguien acaba de servirse
+      { const bubG = new THREE.SphereGeometry(.014, 8, 6), bubM = new THREE.MeshBasicMaterial({ color: 0xeaf6ff, transparent: true, opacity: .7, depthWrite: false });
+        const bubs = [], ph0 = (y * .37) % 7;
+        for (let k = 0; k < 5; k++) { const b = new THREE.Mesh(bubG, bubM); b.castShadow = b.receiveShadow = false; b.raycast = () => {}; b.userData.live = true; b.visible = false; b.scale.setScalar(.6 + (k % 3) * .3); group.add(b); bubs.push({ b, d: k * .16, ox: Math.sin(k * 2.3) * .07, oz: Math.cos(k * 1.7) * .07 }); }
+        officeUpd.push(t => {
+          const c = (t + ph0) % 7;   // una tanda cada 7 s
+          for (const q of bubs) {
+            const u = (c - q.d) / 1.1;
+            if (u < 0 || u > 1) { q.b.visible = false; continue; }
+            q.b.visible = true;
+            q.b.position.set(wx + q.ox + Math.sin(t * 9 + q.d * 20) * .012, y + 1.03 + u * .4, wz + q.oz);
+          }
+        }); }
       act(wx - .9, wz, y, '💧 Tomar agua', () => life.fx('water'));
       // planta de lengua de suegra (sansevieria) en maceta, en la esquina opuesta de cada piso
       { const px = X0 + 1, pz = Z1 - 1, pH = .42;
