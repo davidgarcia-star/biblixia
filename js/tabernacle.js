@@ -75,10 +75,13 @@ export async function buildTabernacle({ group, addBox, blockers, cx, cz }) {
   const LX = 100 * C, LZ = 50 * C, HH = 5 * C;
   const x0 = cx - LX / 2, x1 = cx + LX / 2, z0 = cz - LZ / 2, z1 = cz + LZ / 2;
   const gateHalf = 10 * C;              // puerta de 20 codos
+  const bandG = new THREE.TorusGeometry(.098, .022, 5, 14);
   const pillar = (x, z) => {
     box(.38, .2, .38, M.bronze, x, .1, z);                 // basa de bronce
     cyl(.09, HH, M.acacia, x, HH / 2, z, 10);
     box(.24, .14, .24, M.silver, x, HH + .02, z);          // capitel/moldura de plata
+    // «Todas las columnas alrededor del atrio tendrán molduras de plata» (Éxodo 27:17): filete de plata que abraza la columna bajo el capitel
+    add(bandG, M.silver, x, HH - .17, z, { cast: false }).rotation.x = Math.PI / 2;
     addBox(x - .2, x + .2, z - .2, z + .2, HH + .1);
   };
   const posts = [];
