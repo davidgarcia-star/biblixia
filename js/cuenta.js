@@ -181,6 +181,8 @@
   var css = '' +
     '.cta-btn{position:fixed;left:12px;bottom:12px;z-index:99990;display:none;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,215,120,.65);background:rgba(18,22,40,.82);color:#fff;font:600 14px/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}' +
     '.cta-btn.on{display:inline-flex}.cta-btn:hover{background:rgba(35,42,72,.92)}.cta-btn .ok{color:#7be38f}' +
+    /* En celulares estrechos el botón se queda solo con el icono para no tapar las tarjetas del menú */
+    '@media (max-width:520px){.cta-btn{padding:0;width:42px;height:42px;justify-content:center;gap:0;font-size:19px}.cta-btn .tx{display:none}.cta-btn .ok{font-size:11px;margin-left:-2px}}' +
     '.cta-fondo{position:fixed;inset:0;z-index:99995;background:rgba(5,8,20,.72);display:none;align-items:center;justify-content:center;padding:16px}' +
     '.cta-fondo.on{display:flex}' +
     '.cta-caja{width:100%;max-width:380px;max-height:92vh;overflow:auto;background:#141a33;color:#eef1ff;border:1px solid rgba(255,215,120,.45);border-radius:18px;padding:22px 20px;box-shadow:0 18px 50px rgba(0,0,0,.55);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:left}' +
@@ -268,7 +270,8 @@
 
   function pintar() {
     if (sesion && introActiva) quitarIntro('cuenta');
-    btn.innerHTML = sesion ? '👤 ' + esc(sesion.u) + ' <span class="ok">✓</span>' : '💾 Guardar avance';
+    btn.innerHTML = sesion ? '👤 <span class="tx">' + esc(sesion.u) + ' </span><span class="ok">✓</span>' : '💾<span class="tx"> Guardar avance</span>';
+    btn.setAttribute('aria-label', sesion ? 'Cuenta: ' + sesion.u : 'Guardar avance');
     btn.title = sesion ? 'Tu avance se guarda en la nube' : 'Opcional: crea un usuario para seguir tu juego en otro equipo';
     if (!fondo.classList.contains('on')) return;
     if (sesion) {

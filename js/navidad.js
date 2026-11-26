@@ -218,6 +218,7 @@
       ['Y cuando vieron la estrella, se regocijaron sobremanera con gran alegría.', 'Mateo 2:10'],
       ['No temáis, porque he aquí, os traigo buenas nuevas de gran gozo que serán para todo el pueblo.', 'Lucas 2:10'],
       ['¿Dónde está el Rey de los judíos que ha nacido? Porque vimos su estrella en el oriente y hemos venido a adorarle.', 'Mateo 2:2'],
+      ['Y los pastores se volvieron, glorificando y alabando a Dios por todo lo que habían oído y visto, tal como se les había dicho.', 'Lucas 2:20'],
       ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
