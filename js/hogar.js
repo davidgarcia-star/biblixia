@@ -341,8 +341,25 @@ export function buildBathroom(group, { bx0, bx1, bz0, bz1, fy, H, T, solid }) {
   add(g, new THREE.CapsuleGeometry(.12, .7, 6, 12), S.towelWhite, bx0 + e + .1, fl + 1.2, bz0 + .25).scale.set(.6, 1, 1.2);
 
   bakeInPlace(g, [dk, ...foam, ...flames], false);
+  // vapor tibio que sube despacito del agua de la bañera y se desvanece (sprites suaves, sin luces ni sombras nuevas)
+  const bathSteam = [];
+  {
+    const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+    const gr = x.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.3)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 64); const stT = new THREE.CanvasTexture(c); stT.colorSpace = THREE.SRGBColorSpace;
+    for (let k = 0; k < 6; k++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: stT, transparent: true, depthWrite: false, opacity: 0, color: 0xf2f4f6 }));
+      sp.renderOrder = 3; sp.raycast = () => {}; g.add(sp);
+      bathSteam.push({ sp, ox: tX + (k / 5 - .5) * (tL - .5), oz: tZ + Math.sin(k * 2.3) * .14, ph: (k * .37) % 1 });
+    }
+  }
   // espuma que se mueve suavemente y llamitas de las velas
-  const update = (t) => { foamMesh.scale.set(1 + Math.sin(t * 1.3) * .02, 1 + Math.sin(t * 1.7) * .08, 1 + Math.sin(t * 1.1) * .02); dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3;
+  const update = (t) => {
+    for (const s of bathSteam) {
+      const f = ((t * .18 + s.ph) % 1 + 1) % 1;
+      s.sp.position.set(s.ox + Math.sin(t * .9 + s.ph * 8) * .03 * (1 + f * 2), fl + tH + .05 + f * .55, s.oz + Math.cos(t * .7 + s.ph * 6) * .025 * (1 + f * 2));
+      s.sp.scale.setScalar(.1 + f * .28); s.sp.material.opacity = .13 * Math.sin(f * Math.PI);
+    } foamMesh.scale.set(1 + Math.sin(t * 1.3) * .02, 1 + Math.sin(t * 1.7) * .08, 1 + Math.sin(t * 1.1) * .02); dk.position.y = fl + tH + .045 + Math.sin(t * 1.6) * .006; dk.rotation.y = .8 + Math.sin(t * .5) * .3;
     for (const f of flames) { const p = f.userData.ph, fl2 = Math.sin(t * 9 + p) * .5 + Math.sin(t * 23 + p * 3) * .3; f.scale.set(.8 - fl2 * .08, 1.6 + fl2 * .25, .8 - fl2 * .08); f.rotation.z = Math.sin(t * 5 + p) * .12; }
     flameMat.emissiveIntensity = 2.7 + Math.sin(t * 11) * .3 + Math.sin(t * 27) * .2;
   };
