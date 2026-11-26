@@ -718,7 +718,18 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       const cover = new THREE.Mesh(new THREE.BoxGeometry(.46, .015, .32), coverM); cover.position.y = .008; bb.add(cover);
       for (const s of [-1, 1]) {
         const blockP = new THREE.Mesh(new THREE.BoxGeometry(.21, .03, .29), edgeM); blockP.position.set(s * .112, .03, 0); blockP.rotation.z = s * .06; bb.add(blockP);
-        const page = new THREE.Mesh(new THREE.PlaneGeometry(.2, .28), pageM); page.rotation.set(-Math.PI / 2, -s * .06, 0); page.position.set(s * .112, .049, 0); bb.add(page);
+        if (s < 0) { const page = new THREE.Mesh(new THREE.PlaneGeometry(.2, .28), pageM); page.rotation.set(-Math.PI / 2, -s * .06, 0); page.position.set(s * .112, .049, 0); bb.add(page); continue; }
+        // la hoja derecha va en un eje junto al lomo: la brisa del abanico de techo la levanta un poquito de vez en cuando y vuelve a asentarse
+        const hinge = new THREE.Group(); hinge.position.set(.012, .043, 0); hinge.rotation.z = .06; hinge.userData.live = true; hinge.name = 'hojaBiblia'; bb.add(hinge);
+        const leaf = new THREE.Mesh(new THREE.PlaneGeometry(.2, .28), new THREE.MeshStandardMaterial({ map: pt, roughness: .9, side: THREE.DoubleSide }));
+        leaf.rotation.x = -Math.PI / 2; leaf.position.x = .1; leaf.raycast = () => {}; hinge.add(leaf);
+        // la página de abajo (con su texto) solo se dibuja mientras la hoja está alzada, para que nunca se superponga con ella
+        const under = new THREE.Mesh(new THREE.PlaneGeometry(.2, .28), pageM); under.rotation.set(-Math.PI / 2, -.06, 0); under.position.set(.112, .0475, 0); under.visible = false; under.raycast = () => {}; bb.add(under);
+        houseUpd.push(t => {
+          const c = t % 6.5, u = c < 1.6 ? c / 1.6 : 0, env = Math.sin(u * Math.PI);           // cada 6,5 s, durante 1,6 s
+          hinge.rotation.z = .06 + env * env * .38 + env * Math.sin(t * 15) * .035;            // se alza, tiembla un poco y baja
+          under.visible = hinge.rotation.z > .085;
+        });
       }
       const rib = new THREE.Mesh(new THREE.BoxGeometry(.012, .003, .2), mat(0xb3202a, { roughness: .6 })); rib.position.set(.01, .05, .12); rib.rotation.y = .15; bb.add(rib);
       bb.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = true; } });
