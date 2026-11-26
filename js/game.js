@@ -3170,6 +3170,10 @@ function drawMinimap() {
   mg.fillStyle = '#fff'; mg.beginPath(); mg.moveTo(0, -9); mg.lineTo(6, 7); mg.lineTo(0, 3); mg.lineTo(-6, 7); mg.closePath(); mg.fill();
   mg.restore();
   mg.strokeStyle = 'rgba(255,255,255,.2)'; mg.lineWidth = 2; mg.beginPath(); mg.arc(R, R, R - 1, 0, 7); mg.stroke();
+  // brújula: una «N» dorada en el borde del minimapa señala siempre el norte (el desierto y los lugares bíblicos del norte)
+  { const th = cam.yaw + Math.PI, rr = R - S * .085, nx = R + Math.sin(th) * rr, ny = R - Math.cos(th) * rr, fs = Math.max(9, Math.round(S * .11));
+    mg.save(); mg.fillStyle = 'rgba(10,16,30,.85)'; mg.beginPath(); mg.arc(nx, ny, fs * .72, 0, 7); mg.fill();
+    mg.font = `800 ${fs}px system-ui, sans-serif`; mg.textAlign = 'center'; mg.textBaseline = 'middle'; mg.fillStyle = '#f5c542'; mg.fillText('N', nx, ny + fs * .04); mg.restore(); }
 
   // moneda más cercana
   let best = null, bd = 1e9;
