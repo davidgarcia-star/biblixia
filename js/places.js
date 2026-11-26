@@ -412,6 +412,14 @@ export async function buildPlaces({ group, addBox, addObb, blockers, x0, x1, zN,
     box(2.2, 2.6, .2, std({ color: 0x050403 }), px + 8, 1.3, pz + 2.95);
     const st = add(new THREE.CylinderGeometry(1.6, 1.6, .5, 24), rock, px + 11.2, 1.6, pz + 2.6); st.rotation.x = Math.PI / 2; addBox(px + 10, px + 12.4, pz + 2.2, pz + 3, 3);
     const lg = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowT(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xfff3c8 })); lg.scale.set(5, 5, 1); lg.position.set(px + 8, 1.6, pz + 2.7); P.add(lg);
+    { // «vio las envolturas de lino puestas allí, y el sudario… no puesto con las envolturas de lino, sino enrollado en un lugar aparte» (Juan 20:5-7):
+      // poyo de piedra baja a la entrada del sepulcro con el lino doblado y el sudario enrollado a un lado (sin luces ni sombras nuevas)
+      const ledgeM = std({ color: 0x7a7468, roughness: 1 }), linenM = std({ color: 0xf1ebdc, roughness: .95 });
+      const lz = pz + 2.62;
+      box(1.9, .26, .44, ledgeM, px + 8, .13, lz); addBox(px + 7.05, px + 8.95, lz - .22, pz + 3, .26);
+      for (let k = 0; k < 3; k++) { const f = box(.62 - k * .04, .025, .22, linenM, px + 7.72 + k * .015, (.2725 + k * .025), lz + (k - 1) * .012); f.castShadow = false; f.rotation.y = (k - 1) * .05; }
+      const sud = add(new THREE.CylinderGeometry(.045, .045, .26, 12), linenM, px + 8.6, .26 + .045, lz + .02); sud.rotation.set(0, .4, Math.PI / 2, 'YXZ'); sud.castShadow = false;
+    }
     { // el ángel vestido de blanco junto al sepulcro vacío señala la entrada: «No está aquí, porque ha resucitado» (Mateo 28:2-6)
       const ax = px + 9.75, az = pz + 1.55; // entre la entrada y la piedra removida, lejos del tesoro
       const an = createHuman({ detail: .6, outfit: 'robe', robe: 0xfbfaf4, mantle: 0xf1ead2, sash: 0xe8c860, hairColor: 0xe9cf8c, hair: 'long', skin: 0xd9a77e });
