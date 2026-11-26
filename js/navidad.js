@@ -215,7 +215,9 @@
       ['Y el Verbo se hizo carne, y habitó entre nosotros, y vimos su gloria, gloria como del unigénito del Padre, lleno de gracia y de verdad.', 'Juan 1:14'],
       ['Porque ninguna cosa será imposible para Dios.', 'Lucas 1:37'],
       ['Y dio a luz a su hijo primogénito; le envolvió en pañales y le acostó en un pesebre, porque no había lugar para ellos en el mesón.', 'Lucas 2:7'],
-      ['Cuando vieron la estrella, se regocijaron sobremanera con gran alegría.', 'Mateo 2:10'],
+      ['Y cuando vieron la estrella, se regocijaron sobremanera con gran alegría.', 'Mateo 2:10'],
+      ['No temáis, porque he aquí, os traigo buenas nuevas de gran gozo que serán para todo el pueblo.', 'Lucas 2:10'],
+      ['¿Dónde está el Rey de los judíos que ha nacido? Porque vimos su estrella en el oriente y hemos venido a adorarle.', 'Mateo 2:2'],
       ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
