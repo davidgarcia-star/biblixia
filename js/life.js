@@ -616,6 +616,21 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         ring.position.set(fx0 + Math.sin(t * .11) * 1.9, fyW + Math.sin(t * 1.3) * .012, fz0 + Math.sin(t * .17) * .7);
         ring.rotation.z = t * .08; ring.rotation.y = Math.sin(t * 1.1) * .035;
       });
+      // ondas en el agua: dos anillos claros que nacen alrededor del flotador al mecerse, se agrandan y se desvanecen
+      // (sin luces ni sombras nuevas; no escriben profundidad para no parpadear sobre el agua)
+      const ripG = new THREE.RingGeometry(.44, .5, 40); ripG.rotateX(-Math.PI / 2);
+      const rips = [0, .5].map(ph => {
+        const m = new THREE.MeshBasicMaterial({ color: 0xdff6ff, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+        const r = new THREE.Mesh(ripG, m); r.raycast = () => {}; r.castShadow = false; r.receiveShadow = false; r.renderOrder = 2; r.userData.live = true; group.add(r);
+        return { r, m, ph };
+      });
+      houseUpd.push(t => {
+        for (const q of rips) {
+          const k = (t / 2.8 + q.ph) % 1;
+          q.r.position.set(ring.position.x, fy + .19, ring.position.z);
+          q.r.scale.setScalar(1 + k * 1.6); q.m.opacity = .4 * (1 - k) * Math.min(1, k * 6);
+        }
+      });
     }
     {
       // tumbonas junto a la piscina: antes estaban encimadas una sobre otra y flotaban sobre la grama;
