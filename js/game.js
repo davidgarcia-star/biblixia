@@ -2476,10 +2476,10 @@ function endLevel(won, why) {
     $('resVerse').textContent = lvlIdx + 1 < LEVELS.length ? '«Todo lo puedo en Cristo que me fortalece.» — Filipenses 4:13' : '¡Completaste todos los niveles! «He peleado la buena batalla, he terminado la carrera, he guardado la fe.» — 2 Timoteo 4:7';
     $('btnNext').textContent = lvlIdx + 1 < LEVELS.length ? 'Siguiente nivel' : 'Ver mis versículos';
     $('btnNext').classList.remove('hidden');
-    // al completar todos los niveles se desbloquea BIBLIXIA 2
-    const todo = save.stars.slice(0, LEVELS.length).every(x => x > 0);
-    $('btnB2')?.classList.toggle('hidden', !todo);
-    if (todo && lvlIdx + 1 >= LEVELS.length) $('resVerse').textContent += '  🔓 ¡Desbloqueaste BIBLIXIA 2!';
+    // al pasar el nivel Intermedio (nivel 2) se desbloquea BIBLIXIA 2
+    const todo = save.stars.slice(0, LEVELS.length).every(x => x > 0), b2ok = save.stars[1] > 0;
+    $('btnB2')?.classList.toggle('hidden', !b2ok);
+    if (b2ok && lvlIdx === 1) $('resVerse').textContent += '  🔓 ¡Desbloqueaste BIBLIXIA 2!';
     // portada de FELICIDADES al aprobar el último nivel con todos los niveles aprobados
     if (todo && lvlIdx + 1 >= LEVELS.length) setTimeout(() => window.Felicidades?.mostrar({ juego: 'BIBLIXIA', niveles: LEVELS.map(l => l.name), jugador: (save.player && save.player.name) || '', texto: 'BIBLIXIA 2 ya está desbloqueado', siguiente: { nombre: 'BIBLIXIA 2', url: 'https://davidgarcia-star.github.io/biblixia2/' }, sonido: sound.sfxOn !== false }), 900);
     window.__pintarB2?.();

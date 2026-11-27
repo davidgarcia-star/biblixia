@@ -364,14 +364,14 @@ window.NAVIDAD_CFG = {
 </script>
 <script src="js/navidad.js?v=11"></script>
 <script>
-/* BIBLIXIA 2 se desbloquea al completar los 5 niveles de BIBLIXIA */
+/* BIBLIXIA 2 se desbloquea al pasar el nivel Intermedio (nivel 2) de BIBLIXIA */
 (function () {
-  function listo() { try { var s = JSON.parse(localStorage.getItem('monedasDeFe3D_v1')); return !!(s && s.stars && s.stars.length >= 5 && s.stars.slice(0, 5).every(function (x) { return x > 0; })); } catch (e) { return false; } }
+  function listo() { try { var s = JSON.parse(localStorage.getItem('monedasDeFe3D_v1')); return !!(s && s.stars && s.stars[1] > 0); } catch (e) { return false; } }
   function pintar() {
     var ok = listo();
     document.querySelectorAll('.js-b2').forEach(function (a) {
       a.classList.toggle('b2-lock', !ok);
-      a.innerHTML = ok ? '🇩🇴 JUGAR BIBLIXIA 2' : '🔒 BIBLIXIA 2 <small>Completa los 5 niveles para desbloquearlo</small>';
+      a.innerHTML = ok ? '🇩🇴 JUGAR BIBLIXIA 2' : '🔒 BIBLIXIA 2 <small>Pasa el nivel Intermedio para desbloquearlo</small>';
       a.onclick = ok ? null : function (e) { e.preventDefault(); };
       a.setAttribute('aria-disabled', ok ? 'false' : 'true');
     });
@@ -385,7 +385,7 @@ window.NAVIDAD_CFG = {
 <script src="js/sugerencias.js?v=1" data-origen="BIBLIXIA" data-pantallas="#splash"></script>
 <script src="js/ajuste.js?v=1" data-ajuste="#splash => => .menu ; .screen:not(.hidden):not(#splash):not(.scroll):not(.creator):not(#help):not(#levelsel):not(#collection)"></script>
 <script src="js/felicidades.js?v=1"></script>
-<script type="module" src="js/biblixia.min.js?v=20261127a"></script>
+<script type="module" src="js/biblixia.min.js?v=20261127b"></script>
 <script src="js/compartir.js?v=2" data-titulo="BIBLIXIA" data-url="https://davidgarcia-star.github.io/biblixia/" data-despues="#btnWeb" data-clase="chip" data-clase-texto="chip-lbl"></script>
 </body>
 </html>
