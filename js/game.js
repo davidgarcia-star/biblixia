@@ -106,8 +106,11 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LITE && (isTouch0
 const isTouch = isTouch0;
 // "Ultra liviano": se activa solo si el teléfono ya perdió los gráficos estando en modo liviano
 let ULTRA = false; try { ULTRA = LITE && localStorage.getItem('bx_ultra') === '1'; } catch (e) {}
-const MAX_PR = LITE ? Math.min(devicePixelRatio, ULTRA ? .6 : .8) : Math.min(devicePixelRatio, isTouch ? 1.25 : 1.75);
-renderer.setPixelRatio(QL >= 1 ? Math.max(.75, MAX_PR - .35 * QL) : MAX_PR);
+// Nitidez: antes en modo liviano se dibujaba a 0,8 (o 0,6) píxeles por cada píxel de pantalla y el juego se veía borroso.
+// Ahora nunca baja de 1 píxel real en liviano (0,75 solo en «ultra liviano», el último recurso) y en el celular normal llega a 1,5.
+const MAX_PR = LITE ? Math.min(devicePixelRatio, ULTRA ? .75 : 1) : Math.min(devicePixelRatio, isTouch ? 1.5 : 1.75);
+const FLOOR_PR = Math.min(MAX_PR, LITE ? .75 : 1); // la resolución automática nunca baja de aquí
+renderer.setPixelRatio(QL >= 1 ? Math.max(FLOOR_PR, MAX_PR - .25 * QL) : MAX_PR);
 renderer.setSize(innerWidth, innerHeight);
 // Si el celular se queda sin memoria gráfica y la pantalla 3D se pierde: guardar y recargar UNA sola vez
 // (antes había dos avisos y uno recargaba siempre, lo que podía dejar el juego recargándose sin parar)
@@ -371,7 +374,7 @@ function canvasTex(w, h, draw, srgb = true) {
   const t = new THREE.CanvasTexture(src);
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = LITE ? 1 : renderer.capabilities.getMaxAnisotropy();
+  t.anisotropy = LITE ? (ULTRA ? 1 : Math.min(4, renderer.capabilities.getMaxAnisotropy())) : renderer.capabilities.getMaxAnisotropy();
   return t;
 }
 function noise(g, w, h, amount, alpha) {
@@ -573,7 +576,8 @@ function achicarTex(t) {
   if (t.userData.keep || t.isDataTexture || t.isCompressedTexture || t.isRenderTargetTexture || t.isVideoTexture) return;
   const img = t.image; if (!img || !img.width || !img.height || img.__chico) return;
   let w = img.width, h = img.height;
-  while (w * h > 32768 && w > 32 && h > 32) { w >>= 1; h >>= 1; }
+  const lim = ULTRA ? 32768 : 65536; // antes 32768 (≈181×181) también en liviano: las texturas se veían borrosas
+  while (w * h > lim && w > 32 && h > 32) { w >>= 1; h >>= 1; }
   if (w === img.width) return;
   try {
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -602,7 +606,8 @@ async function warmShadersNow(root, cam) {
   const respirar = async () => { if (performance.now() - tick > 25) { await idle(); tick = performance.now(); } };
   // 1) subir las texturas a la tarjeta gráfica de a pocas (antes se subían todas en el primer cuadro)
   // fuera del modo liviano, todas las texturas se ven nítidas también de lado (suelo, paredes, telas)
-  const ANI = LITE ? 1 : Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  // en liviano también un poco de filtrado anisotrópico (4×): el suelo y las calles ya no se ven borrosos a lo lejos
+  const ANI = LITE ? (ULTRA ? 1 : Math.min(4, renderer.capabilities.getMaxAnisotropy())) : Math.min(8, renderer.capabilities.getMaxAnisotropy());
   for (const t of texs) { try { if (LITE) achicarTex(t); if (ANI > 1 && t.anisotropy < ANI && !t.isDataTexture && !t.isRenderTargetTexture) t.anisotropy = ANI; renderer.initTexture(t); } catch (e) {} await respirar(); if (performance.now() - t0 > 15000) break; }
   // 2) sombreadores: mandar a compilar un grupo pequeño, esperar sin bloquear y terminar de prepararlo
   const progs = new Set();
@@ -3407,7 +3412,7 @@ function loopBody() {
     perf.acc += raw; perf.n++;
     if (perf.acc > 4) {
       const avg = perf.acc / perf.n; let pr = renderer.getPixelRatio();
-      const MIN_PR = Math.min(MAX_PR, .75);
+      const MIN_PR = FLOOR_PR;
       if (avg > .036) {
         // va lento: primero baja la resolución, luego quita el acabado de cine y al final redibuja la sombra con menos frecuencia
         perf.changes++; perf.lowered = true;
