@@ -464,6 +464,9 @@ export async function buildValley({ group, addBox, blockers, x, z, rnd }) {
       stone.position.copy(sp); pouch.position.copy(sp);
       const pos = rope.geometry.attributes.position; pos.setXYZ(0, hp.x, hp.y, hp.z); pos.setXYZ(1, sp.x, sp.y, sp.z); pos.needsUpdate = true;
       dv.head.rotation.y = Math.sin(t * .8) * .08;
+      // Goliat respira hondo y mira despacio de un lado a otro las filas de Israel, desafiándolas (1 Samuel 17:8-10)
+      golBaked.scale.y = 1.66 * (1 + Math.sin(t * 1.5) * .006);
+      golBaked.rotation.y = -Math.PI / 2 + Math.sin(t * .45) * .07;
     },
   };
 }
