@@ -227,7 +227,8 @@
       ['Pero cuando vino la plenitud del tiempo, Dios envió a su Hijo, nacido de mujer, nacido bajo la ley.', 'Gálatas 4:4'],
       ['Y dará a luz un hijo, y le pondrás por nombre Jesús, porque Él salvará a su pueblo de sus pecados.', 'Mateo 1:21'],
       ['Porque de tal manera amó Dios al mundo, que dio a su Hijo unigénito, para que todo aquel que cree en Él, no se pierda, mas tenga vida eterna.', 'Juan 3:16'],
-      ['Y el ángel le dijo: No temas, María, porque has hallado gracia delante de Dios. Y he aquí, concebirás en tu seno y darás a luz un hijo, y le pondrás por nombre Jesús.', 'Lucas 1:30-31']
+      ['Y el ángel le dijo: No temas, María, porque has hallado gracia delante de Dios. Y he aquí, concebirás en tu seno y darás a luz un hijo, y le pondrás por nombre Jesús.', 'Lucas 1:30-31'],
+      ['Y María dijo: Mi alma engrandece al Señor, y mi espíritu se regocija en Dios mi Salvador.', 'Lucas 1:46-47']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
