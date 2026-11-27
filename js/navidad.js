@@ -224,7 +224,8 @@
       ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6'],
       ['Pero María atesoraba todas estas cosas, reflexionando sobre ellas en su corazón.', 'Lucas 2:19'],
       ['Pero tú, Belén Efrata, aunque eres pequeña entre las familias de Judá, de ti me saldrá el que ha de ser gobernante en Israel. Y sus orígenes son desde tiempos antiguos, desde los días de la eternidad.', 'Miqueas 5:2'],
-      ['Pero cuando vino la plenitud del tiempo, Dios envió a su Hijo, nacido de mujer, nacido bajo la ley.', 'Gálatas 4:4']
+      ['Pero cuando vino la plenitud del tiempo, Dios envió a su Hijo, nacido de mujer, nacido bajo la ley.', 'Gálatas 4:4'],
+      ['Y dará a luz un hijo, y le pondrás por nombre Jesús, porque Él salvará a su pueblo de sus pecados.', 'Mateo 1:21']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
