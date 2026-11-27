@@ -221,7 +221,8 @@
       ['Y los pastores se volvieron, glorificando y alabando a Dios por todo lo que habían oído y visto, tal como se les había dicho.', 'Lucas 2:20'],
       ['Y esto os servirá de señal: hallaréis a un niño envuelto en pañales y acostado en un pesebre.', 'Lucas 2:12'],
       ['Y entrando en la casa, vieron al niño con su madre María, y postrándose le adoraron; y abriendo sus tesoros le presentaron obsequios de oro, incienso y mirra.', 'Mateo 2:11'],
-      ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6']
+      ['Porque un niño nos ha nacido, un hijo nos ha sido dado, y la soberanía reposará sobre sus hombros; y se llamará su nombre Admirable Consejero, Dios Poderoso, Padre Eterno, Príncipe de Paz.', 'Isaías 9:6'],
+      ['Pero María atesoraba todas estas cosas, reflexionando sobre ellas en su corazón.', 'Lucas 2:19']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
