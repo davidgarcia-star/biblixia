@@ -780,6 +780,40 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
       // arbolito de Navidad en la esquina de la sala junto al ventanal (solo en temporada, igual que la corona):
       // pino de tres pisos en maceta roja, bolitas de colores, estrella dorada y lucecitas que titilan por turnos
       xmasTree(X0 + .8, Z0 + .85, fy + .14, houseUpd);
+      { // nacimiento sobre una mesita de madera junto a la pared, entre el arbolito y la nevera (Lucas 2:7, 16):
+        // establo pequeño con techo de tablas, paja, el niño en el pesebre, María, José y la estrella (Mateo 2:9). Mira hacia la sala.
+        const nx = X0 + .45, nz = Z0 + 2.45, top = fy + .14 + .55;
+        const tabM = mat(0x7a5232, { roughness: .6 });
+        box(.62, .04, .9, tabM, nx, top - .02, nz);
+        for (const [a, b] of [[-.26, -.4], [.26, -.4], [-.26, .4], [.26, .4]]) box(.04, .53, .04, tabM, nx + a, fy + .14 + .265, nz + b, { cast: false });
+        solid(nx - .31, nx + .31, nz - .45, nz + .45, top + .42);
+        const barnM = mat(0x5b3b22, { roughness: .95 }), strawM = mat(0xd8b65a, { roughness: 1 });
+        const bx = nx - .08;                                                                    // el establo queda contra la pared
+        box(.4, .012, .7, strawM, nx + .02, top + .006, nz, { cast: false });                  // cama de paja
+        box(.03, .3, .62, barnM, bx - .13, top + .15, nz, { cast: false });                     // pared de atrás
+        for (const s of [-1, 1]) box(.03, .3, .03, barnM, bx + .13, top + .15, nz + s * .29, { cast: false }); // postes del frente
+        const roof = box(.36, .02, .7, barnM, bx + .01, top + .33, nz, { cast: false }); roof.rotation.z = -.22; // techo inclinado hacia la sala
+        // pesebre de madera con paja y el niño envuelto en pañales
+        const mx = nx + .02;
+        box(.08, .045, .13, barnM, mx, top + .045, nz, { cast: false });
+        box(.07, .01, .12, strawM, mx, top + .07, nz, { cast: false });
+        const babyM = mat(0xf3ede0, { roughness: .9 }), skinM = mat(0xc89270, { roughness: .8 });
+        box(.04, .025, .07, babyM, mx, top + .085, nz + .005, { cast: false });
+        const bh = new THREE.Mesh(new THREE.SphereGeometry(.018, 10, 8), skinM); bh.position.set(mx, top + .09, nz - .045); group.add(bh);
+        // María (manto azul, arrodillada) y José (túnica café, con su cayado) a los lados del pesebre
+        const figure = (fz, robe, hgt, head) => {
+          const body = new THREE.Mesh(new THREE.ConeGeometry(.045, hgt, 10), robe); body.position.set(mx - .01, top + hgt / 2, fz); body.castShadow = true; group.add(body);
+          const hd = new THREE.Mesh(new THREE.SphereGeometry(.024, 10, 8), skinM); hd.position.set(mx - .01, top + hgt + .015, fz); group.add(hd);
+          const veil = new THREE.Mesh(new THREE.SphereGeometry(.028, 10, 8, 0, Math.PI * 2, 0, Math.PI * .55), head); veil.position.copy(hd.position); veil.position.y += .004; group.add(veil);
+        };
+        figure(nz - .14, mat(0x2f5fb0, { roughness: .8 }), .12, mat(0xe9e4d8, { roughness: .9 }));
+        figure(nz + .15, mat(0x7a5434, { roughness: .85 }), .17, mat(0x9c7a52, { roughness: .9 }));
+        box(.008, .21, .008, barnM, mx + .02, top + .105, nz + .2, { cast: false });           // cayado de José
+        // estrella de Belén que brilla sobre el establo
+        const stM = new THREE.MeshStandardMaterial({ color: 0xffe38a, emissive: 0xffc23a, emissiveIntensity: 1.1, roughness: .3, metalness: .4 });
+        const st = new THREE.Mesh(new THREE.OctahedronGeometry(.035, 0), stM); st.position.set(bx + .02, top + .44, nz); group.add(st);
+        houseUpd.push(t => { stM.emissiveIntensity = .8 + Math.sin(t * 1.7) * .35; st.rotation.y = t * .6; });
+      }
     }
     // cocina: mueble, fregadero, estufa, nevera, cafetera y mesa
     const counterM = mat(0xdedad2, { roughness: .4 }), cabM = mat(0x6a4a2a);
