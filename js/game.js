@@ -7,6 +7,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VERSES } from './verses.js';
+import { recortePequenos } from './recorte.js';
 import { createHuman, animateHuman, bakeStatic, bakeInPlace, bakeColored, FAR_MAT, physM, PEOPLE_SKINS, randomStout } from './human.js';
 import { buildTabernacle, buildCamp } from './tabernacle.js';
 import { buildArk, buildJordan, buildValley } from './scenes.js';
@@ -133,6 +134,8 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 // en modo liviano la neblina tapa todo a partir de ~420 m: lo que está más lejos ya no se dibuja (antes se dibujaba hasta 700 m sin verse)
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.3, LITE ? 440 : 2600);
+// lo lejano que mide menos de ~2 px (liviano) o ~1 px (normal) no se dibuja: menos trabajo, mismo aspecto
+recortePequenos(renderer, camera, LITE ? 1.8 : 0.9);
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
