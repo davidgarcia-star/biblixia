@@ -809,6 +809,15 @@ export async function buildLife({ W, group, addBox, addRamp, blockers, M, r, CUR
         figure(nz - .14, mat(0x2f5fb0, { roughness: .8 }), .12, mat(0xe9e4d8, { roughness: .9 }));
         figure(nz + .15, mat(0x7a5434, { roughness: .85 }), .17, mat(0x9c7a52, { roughness: .9 }));
         box(.008, .21, .008, barnM, mx + .02, top + .105, nz + .2, { cast: false });           // cayado de José
+        { // corderito de los pastores recostado en la paja frente al pesebre (Lucas 2:15-16); respira despacio
+          const woolM = mat(0xf4efe4, { roughness: 1 }), faceM = mat(0x3a2e28, { roughness: .9 });
+          const lb = new THREE.Group(); lb.position.set(mx + .13, top + .012, nz + .07); lb.rotation.y = .5; group.add(lb);
+          const lbody = new THREE.Mesh(new THREE.SphereGeometry(.03, 10, 8), woolM); lbody.scale.set(.85, .75, 1.3); lbody.position.y = .022; lb.add(lbody);
+          const lhead = new THREE.Mesh(new THREE.SphereGeometry(.016, 10, 8), woolM); lhead.position.set(0, .05, -.04); lb.add(lhead);
+          const lface = new THREE.Mesh(new THREE.SphereGeometry(.011, 8, 6), faceM); lface.scale.set(.8, .9, 1.2); lface.position.set(0, .046, -.053); lb.add(lface);
+          for (const s of [-1, 1]) { const ear = new THREE.Mesh(new THREE.SphereGeometry(.006, 6, 4), faceM); ear.scale.set(1.8, .6, 1); ear.position.set(s * .018, .054, -.038); lb.add(ear); }
+          houseUpd.push(t => { const b = 1 + Math.sin(t * 2.1) * .04; lbody.scale.set(.85 * b, .75 * b, 1.3); });
+        }
         // estrella de Belén que brilla sobre el establo
         const stM = new THREE.MeshStandardMaterial({ color: 0xffe38a, emissive: 0xffc23a, emissiveIntensity: 1.1, roughness: .3, metalness: .4 });
         const st = new THREE.Mesh(new THREE.OctahedronGeometry(.035, 0), stM); st.position.set(bx + .02, top + .44, nz); group.add(st);
