@@ -225,7 +225,8 @@
       ['Pero María atesoraba todas estas cosas, reflexionando sobre ellas en su corazón.', 'Lucas 2:19'],
       ['Pero tú, Belén Efrata, aunque eres pequeña entre las familias de Judá, de ti me saldrá el que ha de ser gobernante en Israel. Y sus orígenes son desde tiempos antiguos, desde los días de la eternidad.', 'Miqueas 5:2'],
       ['Pero cuando vino la plenitud del tiempo, Dios envió a su Hijo, nacido de mujer, nacido bajo la ley.', 'Gálatas 4:4'],
-      ['Y dará a luz un hijo, y le pondrás por nombre Jesús, porque Él salvará a su pueblo de sus pecados.', 'Mateo 1:21']
+      ['Y dará a luz un hijo, y le pondrás por nombre Jesús, porque Él salvará a su pueblo de sus pecados.', 'Mateo 1:21'],
+      ['Porque de tal manera amó Dios al mundo, que dio a su Hijo unigénito, para que todo aquel que cree en Él, no se pierda, mas tenga vida eterna.', 'Juan 3:16']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
