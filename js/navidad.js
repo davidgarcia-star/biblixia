@@ -231,7 +231,8 @@
       ['Y María dijo: Mi alma engrandece al Señor, y mi espíritu se regocija en Dios mi Salvador.', 'Lucas 1:46-47'],
       ['Por tanto, el Señor mismo os dará una señal: He aquí, una virgen concebirá y dará a luz un hijo, y le pondrá por nombre Emmanuel.', 'Isaías 7:14'],
       ['Porque han visto mis ojos tu salvación, la cual has preparado en presencia de todos los pueblos; luz de revelación a los gentiles, y gloria de tu pueblo Israel.', 'Lucas 2:30-32'],
-      ['Existía la luz verdadera que, al venir al mundo, alumbra a todo hombre.', 'Juan 1:9']
+      ['Existía la luz verdadera que, al venir al mundo, alumbra a todo hombre.', 'Juan 1:9'],
+      ['Y la luz brilla en las tinieblas, y las tinieblas no la comprendieron.', 'Juan 1:5']
     ];
     var hoy = new Date(), dia = Math.floor((hoy - new Date(hoy.getFullYear(), 0, 0)) / 864e5);
     var v = VERSOS[dia % VERSOS.length];
