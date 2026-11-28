@@ -280,7 +280,8 @@
     ['El SEÑOR te bendiga y te guarde; el SEÑOR haga resplandecer su rostro sobre ti, y tenga de ti misericordia; el SEÑOR alce sobre ti su rostro, y te dé paz.', 'Números 6:24-26'],
     ['Y el SEÑOR irá delante de ti; Él estará contigo, no te dejará ni te desamparará; no temas ni te acobardes.', 'Deuteronomio 31:8'],
     ['Dad gracias al SEÑOR, porque Él es bueno; porque para siempre es su misericordia.', '1 Crónicas 16:34'],
-    ['No os entristezcáis, porque la alegría del SEÑOR es vuestra fortaleza.', 'Nehemías 8:10']
+    ['No os entristezcáis, porque la alegría del SEÑOR es vuestra fortaleza.', 'Nehemías 8:10'],
+    ['Al de firme propósito guardarás en perfecta paz, porque en ti confía.', 'Isaías 26:3']
   ];
   function regalo(boton) {
     var fondo = document.createElement('div'); fondo.className = 'nv-rf';
