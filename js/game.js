@@ -2825,7 +2825,7 @@ function showInfo(z) {
   $('info').classList.add('show'); infoTimer = 12;
 }
 
-function toast(txt, color = '#ff6b6b', mini = false) { const t = $('toast'); t.style.color = color; t.textContent = txt; t.classList.toggle('mini', mini); t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 1100); }
+function toast(txt, color = '#ff6b6b', mini = false) { const t = $('toast'); t.style.color = color; t.textContent = txt; t.classList.toggle('mini', mini); t.style.opacity = 1; t.style.scale = 1; clearTimeout(toast.h); toast.h = setTimeout(() => { t.style.opacity = 0; t.style.scale = ''; }, 1100); }
 function toastOld(txt) { const t = $('toast'); t.textContent = txt; t.style.opacity = 1; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.opacity = 0, 900); }
 
 /* =========================================================

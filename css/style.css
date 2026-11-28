@@ -87,7 +87,8 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--line);border-radius:
 #minimap{position:absolute;top:72px;right:14px;width:110px;height:110px;border-radius:50%;border:1px solid var(--line);box-shadow:0 8px 30px rgba(0,0,0,.35)}
 .hint{top:76px;left:14px;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;padding:8px 14px}
 #hArrow{display:inline-block;color:var(--gold);font-size:18px}
-#toast{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:800;color:#ff6b6b;text-shadow:0 4px 20px rgba(0,0,0,.6);opacity:0;transition:opacity .3s}
+#toast{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:800;color:#ff6b6b;text-shadow:0 4px 20px rgba(0,0,0,.6);opacity:0;transition:opacity .3s,scale .35s cubic-bezier(.2,1.5,.4,1);scale:.86;max-width:min(760px,80vw);text-align:center;line-height:1.2;background:rgba(10,16,30,.5);padding:8px 22px;border-radius:18px;pointer-events:none}
+#toast.mini{background:rgba(10,16,30,.5);padding:4px 14px;border-radius:999px}
 
 /* Táctil */
 #touch{position:fixed;inset:0;z-index:6;pointer-events:none}
